@@ -3,12 +3,12 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "InputActionValue.h"
 #include "GameFramework/Character.h"
+#include "Omega_Strikers/SM/OSImpactReceiver.h"
 #include "PlayerBase.generated.h"
 
 UCLASS()
-class OMEGA_STRIKERS_API APlayerBase : public ACharacter
+class OMEGA_STRIKERS_API APlayerBase : public ACharacter, public IOSImpactReceiver
 {
 	GENERATED_BODY()
 
@@ -28,7 +28,8 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	
 	// ================= Component =================
-	
+	// UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	// TObjectPtr<class HPComponent> HPComp;
 	
 	// =================== Input ===================
 	
@@ -53,8 +54,7 @@ public:
 	TObjectPtr<class UInputAction> IA_Flip;
 	
 	
-	// ==================== Stat ====================
-
+	// ==================== Stat ==================== (추후 구조체로 관리하거나, csv 관리 시스템 들어오면 수정 가능)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float MaxHP = 1125.f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -67,6 +67,21 @@ public:
 	float CoolDownRate = 0;
 	
 	// ========= Input Processing Function =========
-	void PlayerMove(const FInputActionValue& InputActionValue);
+	void PlayerMove(const struct FInputActionValue& InputActionValue);
 	
+	void Ready_CoreHit();
+	virtual void Ready_PrimarySkill();
+	virtual void Ready_SecondarySkill();
+	virtual void Ready_SpecialSkill();
+	virtual void Ready_Flip();
+	
+	void Use_CoreHit();
+	virtual void Use_PrimarySkill();
+	virtual void Use_SecondarySkill();
+	virtual void Use_SpecialSkill();
+	virtual void Use_Flip();
+	
+	// ====== Impact Data Processing Function ======
+	virtual void ReceiveImpact_Implementation(const FOSImpactData& ImpactData, AActor* InstigatorActor) override;
+	void ApplyKnockback(FVector2D KnockbackDir, float KnockbackPow);
 };

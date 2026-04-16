@@ -94,6 +94,21 @@ void APlayerBase::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 		if (playerInput)
 		{
 			playerInput->BindAction(IA_Move, ETriggerEvent::Triggered, this, &APlayerBase::PlayerMove);
+			
+			playerInput->BindAction(IA_Core, ETriggerEvent::Started, this, &APlayerBase::Ready_CoreHit);
+			playerInput->BindAction(IA_Core, ETriggerEvent::Completed, this, &APlayerBase::Use_CoreHit);
+			
+			playerInput->BindAction(IA_Primary, ETriggerEvent::Started, this, &APlayerBase::Ready_PrimarySkill);
+			playerInput->BindAction(IA_Primary, ETriggerEvent::Completed, this, &APlayerBase::Use_PrimarySkill);
+			
+			playerInput->BindAction(IA_Secondary, ETriggerEvent::Started, this, &APlayerBase::Ready_SecondarySkill);
+			playerInput->BindAction(IA_Secondary, ETriggerEvent::Completed, this, &APlayerBase::Use_SecondarySkill);
+			
+			playerInput->BindAction(IA_Special, ETriggerEvent::Started, this, &APlayerBase::Ready_SpecialSkill);
+			playerInput->BindAction(IA_Special, ETriggerEvent::Completed, this, &APlayerBase::Use_SpecialSkill);
+			
+			playerInput->BindAction(IA_Flip, ETriggerEvent::Started, this, &APlayerBase::Ready_Flip);
+			playerInput->BindAction(IA_Flip, ETriggerEvent::Completed, this, &APlayerBase::Use_Flip);
 		}
 	}
 
@@ -112,3 +127,54 @@ void APlayerBase::PlayerMove(const FInputActionValue& InputActionValue)
 	AddMovementInput(Right, value.Y * Speed);
 }
 
+void APlayerBase::Ready_CoreHit()
+{
+	
+}
+
+void APlayerBase::Ready_PrimarySkill() {}
+
+void APlayerBase::Ready_SecondarySkill() {}
+
+void APlayerBase::Ready_SpecialSkill() {}
+
+void APlayerBase::Ready_Flip() {}
+
+void APlayerBase::Use_CoreHit()
+{
+	// FOSImpactData CoreImpactData;
+	// CoreImpactData.Direction;
+	// CoreImpactData.PlayerDamage;
+	// CoreImpactData.PlayerKnockbackPower = 0;
+	// CoreImpactData.CoreKnockbackPower = 1230 + Power * 1.25f;
+}
+
+void APlayerBase::Use_PrimarySkill() {}
+
+void APlayerBase::Use_SecondarySkill() {}
+
+void APlayerBase::Use_SpecialSkill() {}
+
+void APlayerBase::Use_Flip() {}
+
+void APlayerBase::ReceiveImpact_Implementation(const FOSImpactData& ImpactData, AActor* InstigatorActor)
+{
+	// 1. 넉백부터 처리
+	if (ImpactData.PlayerKnockbackPower > 0)
+	{
+		ApplyKnockback(ImpactData.Direction, ImpactData.PlayerKnockbackPower);
+	}
+	// 2. HPComp에서 데미지 적용
+	// if (HPComp && ImpactData.PlayerDamage > 0)
+	// {
+	// 	HPComp->ApplyDamage(ImpactData.PlayerDamage);
+	// }
+	
+}
+
+void APlayerBase::ApplyKnockback(FVector2D KnockbackDir, float KnockbackPow)
+{
+	FVector2D temp_velocity = KnockbackDir * KnockbackPow;
+	FVector velocity = FVector(temp_velocity.X, temp_velocity.Y, 0.0f);
+	LaunchCharacter(velocity, true, false);
+}
