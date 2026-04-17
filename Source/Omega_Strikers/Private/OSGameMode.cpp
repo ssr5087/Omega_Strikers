@@ -184,12 +184,11 @@ void AOSGameMode::StartRound()
 
 void AOSGameMode::SpawnCoreBall()
 {
-	// TODO: CoreBall 구현 필요
-	/*if (!CoreBallClass)
+	if (!CoreBallClass)
 	{
 		// 클래스 미지정 시 기본 ACoreBall 사용
 		CoreBallClass = ACoreBall::StaticClass();
-	}*/
+	}
 	
 	FActorSpawnParameters spawnParams;
 	spawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
@@ -200,18 +199,71 @@ void AOSGameMode::SpawnCoreBall()
 	if (ActiveCoreBall)
 	{
 		// 골 이벤트 바인딩
-		//TODO : 
+		ActiveCoreBall->OnGoalScored.AddDynamic(this, &AOSGameMode::OnGoalScored);
+
+		LOG_GT(TEXT("CoreBall spawned at (%.0f, %.0f, %.0f)"),
+			CoreSpawnLocation.X, CoreSpawnLocation.Y, CoreSpawnLocation.Z);
 	}
 }
 
 void AOSGameMode::OnGoalScored(int32 ScoringTeam)
 {
+	AOSGameState* gs = GetGameState<AOSGameState>();
+	if (!gs) return;
+
+	if (gs->GetMatchPhase() != EOSMatchPhase::InProgress) return;
+
+	// 점수 추가
+	gs->AddScore(ScoringTeam);
+
+	int32 score = gs->GetTeamRoundScore(ScoringTeam);
+	LOG_GT(TEXT("Team %d scored! (%d / %d)"), ScoringTeam, score, ScoresToWinRound);
+
+	// 라운드 승리 체크
+	if (score >= ScoresToWinRound)
+	{
+		EndRound(ScoringTeam);
+	}
+	else
+	{
+		// TODO: Core 리셋 후 이어서 진행 (3초 후 - CoreBall 내부 타이머)
+	}
 }
 
 void AOSGameMode::EndRound(int32 WinningTeam)
 {
+	AOSGameState* gs = GetGameState<AOSGameState>();
+	if (!gs) return;
+
+	gs->SetMatchPhase(EOSMatchPhase::RoundEnd);
+	gs->AddRoundWin(WinningTeam);
+
+	int32 roundWins = gs->GetTeamRoundWins(WinningTeam);
+	LOG_GT(TEXT("Team %d wins round! (%d / %d rounds)"), roundWins, RoundsToWinMatch);
+
+	// 매치 승리 체크
+	if (roundWins >= RoundsToWinMatch)
+	{
+		EndMatch(WinningTeam);
+		return;
+	}
+
+	// 다음 라운드 준비
+	gs->AdvanceRound();
+
+	GetWorldTimerManager().SetTimer(
+		RoundEndTimer, this, &AOSGameMode::StartCountdown, RoundEndDelay, false);
 }
 
 void AOSGameMode::EndMatch(int32 WinningTeam)
 {
+	AOSGameState* gs = GetGameState<AOSGameState>();
+	if (!gs) return;
+
+	gs->SetMatchPhase(EOSMatchPhase::MatchEnd);
+	gs->SetMatchWinner(WinningTeam);
+
+	LOG_GT(TEXT("==MATCH OVER== Team %d WINS!"), WinningTeam);
+
+	// TODO: 결과 화면 -> 일정 시간 후 로비로 복귀
 }

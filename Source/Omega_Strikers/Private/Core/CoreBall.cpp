@@ -423,8 +423,8 @@ void ACoreBall::OnSphereOverlap(UPrimitiveComponent* OverlappedComp, AActor* Oth
 	// 이미 득점 상태면 무시
 	if (Rep_CoreState == ECoreState::Scored) return;
  
-	// TODO 팀 스코어 
-	int32 Team = 0;//Goal->GetScoringTeam();
+	// 팀 스코어 
+	int32 Team = Goal->GetScoringTeam();
  
 	// ─── 골 처리 ───
 	Rep_CoreState = ECoreState::Scored;

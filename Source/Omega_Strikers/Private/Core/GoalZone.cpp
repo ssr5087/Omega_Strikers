@@ -3,24 +3,20 @@
 
 #include "Core/GoalZone.h"
 
+#include "Components/BoxComponent.h"
 
-// Sets default values
 AGoalZone::AGoalZone()
 {
-	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
+
+	GoalTrigger = CreateDefaultSubobject<UBoxComponent>(TEXT("GoalTrigger"));
+	GoalTrigger->SetBoxExtent(FVector(100.0f, 200.0f, 200.0f));
+	GoalTrigger->SetCollisionProfileName(TEXT("OverlapAllDynamic"));
+	GoalTrigger->SetGenerateOverlapEvents(true);
+	SetRootComponent(GoalTrigger);
 }
 
-// Called when the game starts or when spawned
 void AGoalZone::BeginPlay()
 {
 	Super::BeginPlay();
-	
 }
-
-// Called every frame
-void AGoalZone::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-}
-
