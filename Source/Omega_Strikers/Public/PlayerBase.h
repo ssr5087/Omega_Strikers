@@ -28,45 +28,48 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	
 	// ================= Component =================
-	// UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	// TObjectPtr<class HPComponent> HPComp;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Component")
+	TObjectPtr<class UHPComponent> HPComp;
 	
 	// =================== Input ===================
 	
 	// IMC
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Input")
 	TObjectPtr<class UInputMappingContext> IMC_Player;
 	
 	// 이동
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Input")
 	TObjectPtr<class UInputAction> IA_Move;
 	
 	// 스킬
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Input")
 	TObjectPtr<class UInputAction> IA_Core;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Input")
 	TObjectPtr<class UInputAction> IA_Primary;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Input")
 	TObjectPtr<class UInputAction> IA_Secondary;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Input")
 	TObjectPtr<class UInputAction> IA_Special;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Input")
 	TObjectPtr<class UInputAction> IA_Flip;
 	
 	
 	// ==================== Stat ==================== (추후 구조체로 관리하거나, csv 관리 시스템 들어오면 수정 가능)
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stat|Base")
 	float MaxHP = 1125.f;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float CurHP;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stat|Base")
 	float Power = 50.f;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stat|Base")
 	float Speed = 450.f;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stat|Base")
 	float CoolDownRate = 0;
 	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stat|Knockback")
+	float KnockbackRatio = 1;
+	
+	
 	// ========= Input Processing Function =========
+	
 	void PlayerMove(const struct FInputActionValue& InputActionValue);
 	
 	void Ready_CoreHit();
@@ -81,7 +84,20 @@ public:
 	virtual void Use_SpecialSkill();
 	virtual void Use_Flip();
 	
-	// ====== Impact Data Processing Function ======
+	
+	// ======= Other Processing Function =======
+	
+	// Impact Data 처리 함수(인터페이스 함수)
 	virtual void ReceiveImpact_Implementation(const FOSImpactData& ImpactData, AActor* InstigatorActor) override;
 	void ApplyKnockback(FVector2D KnockbackDir, float KnockbackPow);
+	
+	// 넉백 계수 관리 함수
+	void KnockbackIncrease();
+	void KnockbackDecrease();
+	
+	// Knockout 상태 처리 함수 및 리스폰 처리 함수 등등
+	// 넉백 상태일 때 벽과의 충돌을 잠시 꺼둠
+	// 그 벽 뒤에 있는 박스와의 충돌이 일어나면 넉아웃으로 판정 - 이펙트 나오고 캐릭터 visibility를 false로 설정 
+	// 플레이어 위치를 리스폰 위치로 옮기고, 넉백 계수 등 스탯 값 초기값으로 세팅(체력은 컴포넌트 통해서)
+	// 10초 타이머 끝나면 이펙트와 함께 캐릭터 visibility true로 재설정
 };
