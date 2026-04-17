@@ -8,7 +8,9 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Omega_Strikers/SM/HPComponent.h"
 
 // Sets default values
 APlayerBase::APlayerBase()
@@ -22,6 +24,9 @@ APlayerBase::APlayerBase()
 	GetCharacterMovement()->bOrientRotationToMovement = true;							// 플레이어가 이동 방향을 바라봄
 	GetCharacterMovement()->RotationRate = FRotator(0.f, 50000.f, 0.f);	// 입력 즉시 바라보는 방향 바뀜
 	GetCharacterMovement()->MaxAcceleration = 10000.f;									// 방향 전환 시 미끄러지지 않고 즉시 전환
+	
+	// HPComponent
+	HPComp = CreateDefaultSubobject<UHPComponent>(TEXT("HPComp"));
 	
 	// =========== Input ===========
 	ConstructorHelpers::FObjectFinder<UInputMappingContext> TempMap(TEXT("/Script/EnhancedInput.InputMappingContext'/Game/SM/Inputs/IMC_Player.IMC_Player'"));
@@ -66,6 +71,9 @@ void APlayerBase::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	HPComp->InitializeHP();
+	HPComp->OnHPBecomeNegative.BindUObject(this, &APlayerBase::KnockbackIncrease);
+	HPComp->OnHPBecomePositive.BindUObject(this, &APlayerBase::KnockbackDecrease);
 }
 
 // Called every frame
@@ -94,6 +102,21 @@ void APlayerBase::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 		if (playerInput)
 		{
 			playerInput->BindAction(IA_Move, ETriggerEvent::Triggered, this, &APlayerBase::PlayerMove);
+			
+			playerInput->BindAction(IA_Core, ETriggerEvent::Started, this, &APlayerBase::Ready_CoreHit);
+			playerInput->BindAction(IA_Core, ETriggerEvent::Completed, this, &APlayerBase::Use_CoreHit);
+			
+			playerInput->BindAction(IA_Primary, ETriggerEvent::Started, this, &APlayerBase::Ready_PrimarySkill);
+			playerInput->BindAction(IA_Primary, ETriggerEvent::Completed, this, &APlayerBase::Use_PrimarySkill);
+			
+			playerInput->BindAction(IA_Secondary, ETriggerEvent::Started, this, &APlayerBase::Ready_SecondarySkill);
+			playerInput->BindAction(IA_Secondary, ETriggerEvent::Completed, this, &APlayerBase::Use_SecondarySkill);
+			
+			playerInput->BindAction(IA_Special, ETriggerEvent::Started, this, &APlayerBase::Ready_SpecialSkill);
+			playerInput->BindAction(IA_Special, ETriggerEvent::Completed, this, &APlayerBase::Use_SpecialSkill);
+			
+			playerInput->BindAction(IA_Flip, ETriggerEvent::Started, this, &APlayerBase::Ready_Flip);
+			playerInput->BindAction(IA_Flip, ETriggerEvent::Completed, this, &APlayerBase::Use_Flip);
 		}
 	}
 
@@ -112,3 +135,71 @@ void APlayerBase::PlayerMove(const FInputActionValue& InputActionValue)
 	AddMovementInput(Right, value.Y * Speed);
 }
 
+void APlayerBase::Ready_CoreHit()
+{
+	
+}
+
+void APlayerBase::Ready_PrimarySkill() {}
+
+void APlayerBase::Ready_SecondarySkill() {}
+
+void APlayerBase::Ready_SpecialSkill() {}
+
+void APlayerBase::Ready_Flip() {}
+
+void APlayerBase::Use_CoreHit()
+{
+	// 디버깅용 임시 코드
+	FOSImpactData CoreImpactData;
+	CoreImpactData.Direction = FVector2D(1, 0);
+	CoreImpactData.PlayerDamage = 100.f;
+	CoreImpactData.PlayerKnockbackPower = 100.f;
+	CoreImpactData.CoreKnockbackPower = 1230 + Power * 1.25f;
+	APlayerBase* act = Cast<APlayerBase>(UGameplayStatics::GetActorOfClass(GetWorld(), APlayerBase::StaticClass()));
+	Execute_ReceiveImpact(act, CoreImpactData, this);
+}
+
+void APlayerBase::Use_PrimarySkill() {}
+
+void APlayerBase::Use_SecondarySkill() {}
+
+void APlayerBase::Use_SpecialSkill() {}
+
+void APlayerBase::Use_Flip() {}
+
+void APlayerBase::ReceiveImpact_Implementation(const FOSImpactData& ImpactData, AActor* InstigatorActor)
+{
+	// 1. 넉백부터 처리
+	if (ImpactData.PlayerKnockbackPower > 0)
+	{
+		ApplyKnockback(ImpactData.Direction, ImpactData.PlayerKnockbackPower);
+	}
+	// 2. HPComp에서 데미지 적용
+	if (HPComp && ImpactData.PlayerDamage > 0)
+	{
+		HPComp->ApplyDamage(ImpactData.PlayerDamage);
+	}
+}
+
+void APlayerBase::ApplyKnockback(FVector2D KnockbackDir, float KnockbackPow)
+{
+	// 2차원 벡터로 받아서 z성분이 0인 3차원 벡터로 변환(Launch 함수에 넣기 위함)
+	FVector velocity = FVector(KnockbackDir.X, KnockbackDir.Y, 0.0f);
+	LaunchCharacter(velocity * KnockbackPow * KnockbackRatio, true, false);
+	
+	// 밀려난 방향을 바라보게 설정
+	SetActorRotation(UKismetMathLibrary::MakeRotFromXZ(-velocity,GetActorUpVector()));
+}
+
+void APlayerBase::KnockbackIncrease()
+{
+	// Stagger 상태에서는 넉백 거리가 3.5454배 증가, 간단하게 3.5로 맞춤
+	KnockbackRatio = 3.5f;
+}
+
+void APlayerBase::KnockbackDecrease()
+{
+	// Stagger 원상복구. 추후 넉백 계수에 관한 장비 데이터가 존재할 경우 수정할 필요성 있음.
+	KnockbackRatio = 1.f;
+}
