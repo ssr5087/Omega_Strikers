@@ -7,6 +7,7 @@
 #include "GameFramework/Actor.h"
 #include "CoreBall.generated.h"
 
+class USphereComponent;
 // ═══════════════════════════════════════════════════════
 // 코어 상태 열거형
 // ═══════════════════════════════════════════════════════

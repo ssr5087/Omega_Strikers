@@ -239,7 +239,7 @@ void AOSGameMode::EndRound(int32 WinningTeam)
 	gs->AddRoundWin(WinningTeam);
 
 	int32 roundWins = gs->GetTeamRoundWins(WinningTeam);
-	LOG_GT(TEXT("Team %d wins round! (%d / %d rounds)"), roundWins, RoundsToWinMatch);
+	LOG_GT(TEXT("Team %d wins round! (%d / %d rounds)"), WinningTeam, roundWins, RoundsToWinMatch);
 
 	// 매치 승리 체크
 	if (roundWins >= RoundsToWinMatch)
