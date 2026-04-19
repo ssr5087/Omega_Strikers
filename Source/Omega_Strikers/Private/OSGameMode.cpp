@@ -73,7 +73,7 @@ int32 AOSGameMode::AssignTeam(APlayerController* NewPlayer)
 	int32 teamBCount = GetTeamPlayerCount(1);
 	
 	// 인원 적은 팀에 배정, 같으면 A팀
-	return (teamACount < teamBCount) ? 1 : 0;
+	return (teamACount <= teamBCount) ? 0 : 1;
 }
 
 int32 AOSGameMode::GetTeamPlayerCount(int32 TeamID) const
