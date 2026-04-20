@@ -72,13 +72,13 @@ public:
 	
 	void PlayerMove(const struct FInputActionValue& InputActionValue);
 	
-	void Ready_CoreHit();
+	virtual void Ready_CoreHit();
 	virtual void Ready_PrimarySkill();
 	virtual void Ready_SecondarySkill();
 	virtual void Ready_SpecialSkill();
 	virtual void Ready_Flip();
 	
-	void Use_CoreHit();
+	virtual void Use_CoreHit();
 	virtual void Use_PrimarySkill();
 	virtual void Use_SecondarySkill();
 	virtual void Use_SpecialSkill();
