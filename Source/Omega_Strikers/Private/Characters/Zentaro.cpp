@@ -80,7 +80,27 @@ void AZentaro::PerformSlash(FVector Origin, FVector ForwardDir, float Range, flo
 // ================================================================
 //  [Strike] 맹렬한 스트라이크  쿨: 0.9s
 // ================================================================
-// TODO: Ready_CoreHit, Use_CoreHit 상속 예정
+
+void AZentaro::Ready_CoreHit()
+{
+	// TODO: 차징 모션 등 필요 시 여기에 추가
+}
+
+void AZentaro::Use_CoreHit()
+{
+	if (StrikeCharge >= StrikeChargeMax)
+	{
+		DoChargedStrike();
+		StrikeCharge = 0;
+	}
+	else
+	{
+		DoNormalStrike();
+		StrikeCharge++;
+	}
+	
+	LOG_GT(TEXT("스트라이크 - 충전: %d/%d"), StrikeCharge, StrikeChargeMax);
+}
 
 void AZentaro::DoNormalStrike()
 {
@@ -93,7 +113,7 @@ void AZentaro::DoNormalStrike()
 	PerformSlash(GetActorLocation(), GetActorLocation(), 180.f, 50.f, data);
 }
 
-void AZentaro::DoChargeStrike()
+void AZentaro::DoChargedStrike()
 {
 	// 앞으로 질주
 	FVector dashDir = GetActorForwardVector();
