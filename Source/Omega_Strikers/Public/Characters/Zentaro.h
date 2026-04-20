@@ -42,7 +42,7 @@ private:
 	void PerformSlash(
 		FVector Origin,
 		FVector ForwardDir,
-		float Renge,
+		float Range,
 		float HalfAngleDeg,
 		const FOSImpactData& ImpactData);
 
@@ -132,7 +132,7 @@ private:
 	float P2_Range = 260.f;
 
 	UPROPERTY(EditDefaultsOnly, Category="Skill|Primary")
-	float P2_HalgAngle = 30.f;
+	float P2_HalfAngle = 30.f;
 
 	void DoShatteredPhase1();
 	void DoShatteredPhase2();
