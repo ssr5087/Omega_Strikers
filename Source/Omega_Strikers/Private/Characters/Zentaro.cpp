@@ -110,7 +110,7 @@ void AZentaro::DoNormalStrike()
 	data.PlayerKnockbackPower = Calc(125.f, 0.62f);
 	data.CoreKnockbackPower = Calc(1230.f, 1.25f);
 	
-	PerformSlash(GetActorLocation(), GetActorLocation(), 180.f, 50.f, data);
+	PerformSlash(GetActorLocation(), GetActorForwardVector(), 180.f, 50.f, data);
 }
 
 void AZentaro::DoChargedStrike()
