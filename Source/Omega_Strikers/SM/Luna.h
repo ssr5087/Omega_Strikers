@@ -26,6 +26,20 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stat|SkillRange")
+	float PrimaryRange = 5000.f;
+	
+	
+	
+	
+	bool bPrimarySkillCoolDown = false;
+	bool bSecondarySkillCoolDown = false;
+	bool bSpecialCoolDown = false;
+	
+	float PrimarySkillCool = 6.5f;
+	float SecondarySkillCool = 14.f;
+	float SpecialCool = 35.f;
+	
 	virtual void Ready_CoreHit() override;
 	virtual void Ready_PrimarySkill() override;
 	virtual void Ready_SecondarySkill() override;

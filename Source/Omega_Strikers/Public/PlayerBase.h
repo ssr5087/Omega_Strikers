@@ -81,6 +81,13 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stat|Knockback")
 	float KnockbackRatio = 1;
 	
+	bool bCoreHitCoolDown = false;
+	
+	float CoreHitCool = 0.9f;
+	float PrimarySkillCool = 0.f;
+	float SecondaryCool = 0.f;
+	float SpecialCool = 0.f;
+	
 	
 	// ========= Input Processing Function =========
 	

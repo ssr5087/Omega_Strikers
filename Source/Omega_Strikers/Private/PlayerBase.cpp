@@ -7,9 +7,6 @@
 #include "InputAction.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
-#include "Blueprint/UserWidget.h"
-#include "Components/WidgetComponent.h"
-#include "EntitySystem/MovieSceneEntitySystem.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -180,15 +177,36 @@ void APlayerBase::Ready_Flip() {}
 
 void APlayerBase::Use_CoreHit()
 {
+	if (bCoreHitCoolDown) {return;}
+	bCoreHitCoolDown = true;
+	
 	// 디버깅용 임시 코드
+	// 임팩트 데이터
 	FOSImpactData CoreImpactData;
 	CoreImpactData.Direction = CursorDir;
 	CoreImpactData.PlayerDamage = 0.f;
 	CoreImpactData.PlayerKnockbackPower = 100.f;
 	CoreImpactData.CoreKnockbackPower = 1230 + Power * 1.25f;
 	
+	// 코어 찾기
 	AActor* Core = UGameplayStatics::GetActorOfClass(GetWorld(), ATempCore::StaticClass());
 	if (!Core) {return;}
+	
+	// 애니메이션 실행, 쿨타임 타이머 돌리기
+	FTimerHandle CoreHitTimer;
+	GetWorldTimerManager().SetTimer(
+		CoreHitTimer,
+		[this]()->void
+		{
+			bCoreHitCoolDown = false;
+		},
+		CoreHitCool,
+		false
+		);
+	
+	// 거리가 멀면 못 차요
+	float CoreDist = FVector::Distance(Core->GetActorLocation(), GetActorLocation());
+	if (CoreDist > 500.f) {return;}
 	Execute_ReceiveImpact(Core, CoreImpactData, this);
 }
 
