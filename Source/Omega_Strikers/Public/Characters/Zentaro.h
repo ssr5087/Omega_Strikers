@@ -42,7 +42,7 @@ private:
 	void PerformSlash(
 		FVector Origin,
 		FVector ForwardDir,
-		float Renge,
+		float Range,
 		float HalfAngleDeg,
 		const FOSImpactData& ImpactData);
 
@@ -54,9 +54,8 @@ private:
 	//  — 근접 약타 / 10회 충전 → 질주 + 관통 투사체
 	// ================================================
 public:
-	// TODO: PlayerBase에서 virtual 선언 필요
-	//virtual void Ready_CoreHit() override;
-	//virtual void Use_CoreHit() override;
+	virtual void Ready_CoreHit() override;
+	virtual void Use_CoreHit() override;
 
 private:
 	// 현재 충전 횟수 (0 ~ StrikeChargeMax)
@@ -70,7 +69,7 @@ private:
 	void DoNormalStrike();
 
 	// 10회 충전 스트라이크: 질주 + 관통 투사체 스폰
-	void DoChargeStrike();
+	void DoChargedStrike();
 
 	// 관통 투사체 라인트레이스 (스폰 없이 즉발 처리)
 	void FirePenetratingSlash();
@@ -132,7 +131,7 @@ private:
 	float P2_Range = 260.f;
 
 	UPROPERTY(EditDefaultsOnly, Category="Skill|Primary")
-	float P2_HalgAngle = 30.f;
+	float P2_HalfAngle = 30.f;
 
 	void DoShatteredPhase1();
 	void DoShatteredPhase2();
