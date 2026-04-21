@@ -11,6 +11,8 @@
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Omega_Strikers/SM/HPComponent.h"
+#include "Omega_Strikers/SM/OSPlayerController.h"
+#include "Omega_Strikers/SM/TempCore.h"
 
 // Sets default values
 APlayerBase::APlayerBase()
@@ -71,6 +73,8 @@ void APlayerBase::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	myPC = Cast<AOSPlayerController>(GetController());
+	
 	HPComp->InitializeHP();
 	HPComp->OnHPBecomeNegative.BindUObject(this, &APlayerBase::KnockbackIncrease);
 	HPComp->OnHPBecomePositive.BindUObject(this, &APlayerBase::KnockbackDecrease);
@@ -80,7 +84,30 @@ void APlayerBase::BeginPlay()
 void APlayerBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
+	
+	
+	// 마우스 커서 위치 기반 조준 방향 가져오기 (UI 및 공격에 사용)
+	
+	// 컨트롤러 캐스팅 실패 시
+	if (!myPC) {myPC = Cast<AOSPlayerController>(GetController());}
+	if (!myPC) {return;}
+	
+	// 마우스 위치 변환 성공 여부 저장
+	FVector MouseCursorLoc;
+	bool bGetMousePointSuccess = myPC->GetMousePointOnArenaPlane(MouseCursorLoc);
+	if (!bGetMousePointSuccess) {return;}
+	
+	// 벡터의 크기가 너무 작아 정규화가 실패한다면, 이전 프레임의 방향 벡터를 유지
+	FVector TempCursorDir = MouseCursorLoc - GetActorLocation();
+	FVector2D NewCursorDir = FVector2D(TempCursorDir.X, TempCursorDir.Y);
+	if (!NewCursorDir.IsNearlyZero())
+	{
+		// 정규화가 충분히 가능하다면 갱신
+		NewCursorDir.Normalize();
+		CursorDir = NewCursorDir;
+	}
+	
+	GEngine->AddOnScreenDebugMessage(2, DeltaTime, FColor::Cyan, FString::Printf(TEXT("조준 방향 : (%.2f, %.2f)"), CursorDir.X, CursorDir.Y));
 }
 
 // Called to bind functionality to input
@@ -150,14 +177,37 @@ void APlayerBase::Ready_Flip() {}
 
 void APlayerBase::Use_CoreHit()
 {
+	if (bCoreHitCoolDown) {return;}
+	bCoreHitCoolDown = true;
+	
 	// 디버깅용 임시 코드
+	// 임팩트 데이터
 	FOSImpactData CoreImpactData;
-	CoreImpactData.Direction = FVector2D(1, 0);
-	CoreImpactData.PlayerDamage = 100.f;
+	CoreImpactData.Direction = CursorDir;
+	CoreImpactData.PlayerDamage = 0.f;
 	CoreImpactData.PlayerKnockbackPower = 100.f;
 	CoreImpactData.CoreKnockbackPower = 1230 + Power * 1.25f;
-	APlayerBase* act = Cast<APlayerBase>(UGameplayStatics::GetActorOfClass(GetWorld(), APlayerBase::StaticClass()));
-	Execute_ReceiveImpact(act, CoreImpactData, this);
+	
+	// 코어 찾기
+	AActor* Core = UGameplayStatics::GetActorOfClass(GetWorld(), ATempCore::StaticClass());
+	if (!Core) {return;}
+	
+	// 애니메이션 실행, 쿨타임 타이머 돌리기
+	FTimerHandle CoreHitTimer;
+	GetWorldTimerManager().SetTimer(
+		CoreHitTimer,
+		[this]()->void
+		{
+			bCoreHitCoolDown = false;
+		},
+		CoreHitCool,
+		false
+		);
+	
+	// 거리가 멀면 못 차요
+	float CoreDist = FVector::Distance(Core->GetActorLocation(), GetActorLocation());
+	if (CoreDist > 500.f) {return;}
+	Execute_ReceiveImpact(Core, CoreImpactData, this);
 }
 
 void APlayerBase::Use_PrimarySkill() {}

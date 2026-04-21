@@ -27,9 +27,18 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	
+	// ================= Controller =================
+	
+	// 안 쓰게 되면 지울 것!!!!!!!!!
+	UPROPERTY()
+	class AOSPlayerController* myPC;
+	
+	
 	// ================= Component =================
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Component")
 	TObjectPtr<class UHPComponent> HPComp;
+	
 	
 	// =================== Input ===================
 	
@@ -53,8 +62,13 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Input")
 	TObjectPtr<class UInputAction> IA_Flip;
 	
+	// 마우스 커서 조준 방향
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Input")
+	FVector2D CursorDir = FVector2D::ZeroVector;
+	
 	
 	// ==================== Stat ==================== (추후 구조체로 관리하거나, csv 관리 시스템 들어오면 수정 가능)
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stat|Base")
 	float MaxHP = 1125.f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stat|Base")
@@ -66,6 +80,13 @@ public:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stat|Knockback")
 	float KnockbackRatio = 1;
+	
+	bool bCoreHitCoolDown = false;
+	
+	float CoreHitCool = 0.9f;
+	float PrimarySkillCool = 0.f;
+	float SecondaryCool = 0.f;
+	float SpecialCool = 0.f;
 	
 	
 	// ========= Input Processing Function =========
