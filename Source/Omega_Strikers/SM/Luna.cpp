@@ -9,6 +9,16 @@ ALuna::ALuna()
 {
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+	
+	
+	// ================= Component =================
+	
+	// 스켈레탈 메시 설정
+	ConstructorHelpers::FObjectFinder<USkeletalMesh>TempSKM(TEXT("/Script/Engine.SkeletalMesh'/Game/Resource/Luna/Luna_Default_Lig.Luna_Default_Lig'"));
+	if (TempSKM.Succeeded())
+	{
+		GetMesh()->SetSkeletalMesh(TempSKM.Object);
+	}
 }
 
 // Called when the game starts or when spawned
@@ -47,24 +57,19 @@ void ALuna::Ready_PrimarySkill()
 
 void ALuna::Use_PrimarySkill()
 {
-	// 스폰 - 걔가 알아서 이동 - 맨 처음 충돌 객체 저장 - 값 전달 - Destroy
+	// [Primary] 스폰 - 걔가 알아서 이동 - 맨 처음 충돌 객체 저장 - 값 전달 - Destroy
+	
+	// 현재 쿨타임 중이면 실행 안 됨
 	if (bPrimarySkillCoolDown) {return;}
-	bPrimarySkillCoolDown = true;
+	
 	
 	// 스폰하면서 그 친구에게 여러 가지 값들 전달
 	
 	
 	// 쿨타임
+	bPrimarySkillCoolDown = true;
 	FTimerHandle PrimarySkillTimer;
-	GetWorld()->GetTimerManager().SetTimer(
-		PrimarySkillTimer,
-		[this]()->void
-		{
-			bPrimarySkillCoolDown = false;
-		},
-		PrimarySkillCool,
-		false
-		);
+	GetWorld()->GetTimerManager().SetTimer(PrimarySkillTimer, [this]()->void {bPrimarySkillCoolDown = false;}, PrimarySkillCool, false);
 }
 
 void ALuna::Ready_SecondarySkill()
@@ -74,7 +79,14 @@ void ALuna::Ready_SecondarySkill()
 
 void ALuna::Use_SecondarySkill()
 {
-	// 직접 타고 이동 - 맨 처음 충돌 객체 저장 - 멈춤 - 저장된 객체에 값 전달
+	// [Secondary] 직접 타고 이동 - 맨 처음 충돌 객체 저장 - 멈춤 - 저장된 객체에 값 전달
+	if (bSecondarySkillCoolDown) {return;}
+	
+	
+	// 쿨타임
+	bSecondarySkillCoolDown = true;
+	FTimerHandle SecondarySkillTimer;
+	GetWorld()->GetTimerManager().SetTimer(SecondarySkillTimer, [this]()->void {bSecondarySkillCoolDown = false;}, SecondarySkillCool, false);
 }
 
 void ALuna::Ready_SpecialSkill()
@@ -84,8 +96,15 @@ void ALuna::Ready_SpecialSkill()
 
 void ALuna::Use_SpecialSkill()
 {
-	// 지정 위치에 z축 이동만 하는 로켓 소환
+	// [Special] 지정 위치에 z축 이동만 하는 로켓 소환
 	// 바닥 좌표에 도달하는 순간 모든 적군과 코어에 방향과 충격량 각각 전달
+	if (bSpecialSkillCoolDown) {return;}
+	
+	
+	// 쿨타임
+	bSpecialSkillCoolDown = true;
+	FTimerHandle SpecialSkillTimer;
+	GetWorld()->GetTimerManager().SetTimer(SpecialSkillTimer, [this]()->void {bSpecialSkillCoolDown = false;}, SpecialSkillCool, false);
 }
 
 void ALuna::Ready_Flip()
