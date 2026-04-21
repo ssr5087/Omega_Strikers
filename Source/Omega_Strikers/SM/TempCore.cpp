@@ -32,7 +32,7 @@ void ATempCore::ReceiveImpact_Implementation(const FOSImpactData& ImpactData, AA
 {
 	if (ImpactData.CoreKnockbackPower > 0)
 	{
-		Speed = ImpactData.CoreKnockbackPower / 20;
+		Speed = ImpactData.CoreKnockbackPower / 10;
 		Distance = FVector(ImpactData.Direction.X, ImpactData.Direction.Y, 0);
 	}
 }

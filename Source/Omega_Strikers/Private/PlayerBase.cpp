@@ -25,7 +25,7 @@ APlayerBase::APlayerBase()
 	// 이동 관련 MovementComponent 조정
 	GetCharacterMovement()->bOrientRotationToMovement = true;							// 플레이어가 이동 방향을 바라봄
 	GetCharacterMovement()->RotationRate = FRotator(0.f, 50000.f, 0.f);	// 입력 즉시 바라보는 방향 바뀜
-	GetCharacterMovement()->MaxAcceleration = 10000.f;									// 방향 전환 시 미끄러지지 않고 즉시 전환
+	GetCharacterMovement()->MaxAcceleration = 100000.f;									// 방향 전환 시 미끄러지지 않고 즉시 전환
 	
 	// HPComponent
 	HPComp = CreateDefaultSubobject<UHPComponent>(TEXT("HPComp"));
@@ -158,8 +158,8 @@ void APlayerBase::PlayerMove(const FInputActionValue& InputActionValue)
 	// xy축 설정 기반 순간 이동량 추가
 	FVector Forward = UKismetMathLibrary::GetForwardVector(FRotator(0.0f, GetControlRotation().Yaw, 0.0f));
 	FVector Right = UKismetMathLibrary::GetRightVector(FRotator(0.0f, GetControlRotation().Yaw, GetControlRotation().Roll));
-	AddMovementInput(Forward, value.X * Speed);
-	AddMovementInput(Right, value.Y * Speed);
+	AddMovementInput(Forward, value.X);
+	AddMovementInput(Right, value.Y);
 }
 
 void APlayerBase::Ready_CoreHit()
