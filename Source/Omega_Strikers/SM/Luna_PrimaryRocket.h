@@ -22,4 +22,12 @@ protected:
 public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Luna|Components")
+	TObjectPtr<class UBoxComponent> BoxComp;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Luna|Components")
+	TObjectPtr<class UStaticMeshComponent> RocketMesh;
+	
+	float Speed = 1000.f;
 };

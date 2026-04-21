@@ -3,6 +3,9 @@
 
 #include "Luna.h"
 
+#include "Luna_PrimaryRocket.h"
+#include "Components/CapsuleComponent.h"
+
 
 // Sets default values
 ALuna::ALuna()
@@ -13,12 +16,27 @@ ALuna::ALuna()
 	
 	// ================= Component =================
 	
+	// 캡슐 컴포넌트 크기 조정
+	GetCapsuleComponent()->SetCapsuleHalfHeight(165.0f);
+	GetCapsuleComponent()->SetCapsuleRadius(102.0f);
+	
 	// 스켈레탈 메시 설정
 	ConstructorHelpers::FObjectFinder<USkeletalMesh>TempSKM(TEXT("/Script/Engine.SkeletalMesh'/Game/Resource/Luna/Luna_Default_Lig.Luna_Default_Lig'"));
 	if (TempSKM.Succeeded())
 	{
 		GetMesh()->SetSkeletalMesh(TempSKM.Object);
 	}
+	GetMesh()->SetRelativeLocation(FVector(0.0f, 0.0f, -162.0f));
+	GetMesh()->SetRelativeRotation(FRotator(0.0f, -90.0f, 0.0f));
+	GetMesh()->SetRelativeScale3D(FVector(3.0f));
+	GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	
+	// 주 스킬 사용 시 발사할 로켓 위치
+	RocketLauncher = CreateDefaultSubobject<USceneComponent>(TEXT("RocketLauncher"));
+	RocketLauncher->SetupAttachment(RootComponent);
+	RocketLauncher->SetRelativeLocation(FVector(270.0f, 0.0f, 0.0f));
+	
+	
 }
 
 // Called when the game starts or when spawned
@@ -61,10 +79,22 @@ void ALuna::Use_PrimarySkill()
 	
 	// 현재 쿨타임 중이면 실행 안 됨
 	if (bPrimarySkillCoolDown) {return;}
-	
+
+	if (!RocketFactory)
+	{
+		UE_LOG(LogTemp, Error, TEXT("RocketFactory is null"));
+		return;
+	}
+
+	if (!GetWorld())
+	{
+		UE_LOG(LogTemp, Error, TEXT("World is null"));
+		return;
+	}
 	
 	// 스폰하면서 그 친구에게 여러 가지 값들 전달
-	
+	FTransform LauncherTransform = RocketLauncher->GetComponentTransform();
+	GetWorld()->SpawnActor<ALuna_PrimaryRocket>(RocketFactory, LauncherTransform);
 	
 	// 쿨타임
 	bPrimarySkillCoolDown = true;
