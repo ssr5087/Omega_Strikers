@@ -46,7 +46,7 @@ public:
 	bool bSecondarySkillCoolDown = false;
 	bool bSpecialSkillCoolDown = false;
 	
-	float PrimarySkillCool = 6.5f;
+	float PrimarySkillCool = 0.5f;
 	float SecondarySkillCool = 14.f;
 	float SpecialSkillCool = 35.f;
 	

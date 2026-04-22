@@ -30,4 +30,6 @@ public:
 	TObjectPtr<class UStaticMeshComponent> RocketMesh;
 	
 	float Speed = 1000.f;
+	
+	
 };
