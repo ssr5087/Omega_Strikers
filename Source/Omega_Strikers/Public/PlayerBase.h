@@ -68,6 +68,8 @@ public:
 	
 	
 	// ==================== Stat ==================== (추후 구조체로 관리하거나, csv 관리 시스템 들어오면 수정 가능)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stat|Base")
+	EOSTeam TeamSide = EOSTeam::None;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stat|Base")
 	float MaxHP = 1125.f;
