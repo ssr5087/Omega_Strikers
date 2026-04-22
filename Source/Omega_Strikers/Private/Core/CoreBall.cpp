@@ -33,9 +33,16 @@ ACoreBall::ACoreBall()
 	// ═══════════════════════════════════════════
 	// 비주얼 메시
 	// ═══════════════════════════════════════════
-	MeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshComp"));
+	MeshComp = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("MeshComp"));
 	MeshComp->SetupAttachment(SphereComp);
 	MeshComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	
+	ConstructorHelpers::FObjectFinder<USkeletalMesh> tempCoreSKM(TEXT("/Script/Engine.SkeletalMesh'/Game/GT/Environments/Rock/SK_Rock_Default/SkeletalMeshes/SK_Rock_Default.SK_Rock_Default'"));
+	if (tempCoreSKM.Succeeded())
+	{
+		MeshAsset = tempCoreSKM.Object;
+		MeshComp->SetSkeletalMesh(MeshAsset);
+	}
 }
 
 // ═══════════════════════════════════════════════════════

@@ -5,6 +5,7 @@
 
 #include "OSGameState.h"
 #include "OSPlayerState.h"
+#include "Core/CoreArena.h"
 #include "Core/CoreBall.h"
 #include "GameFramework/PlayerStart.h"
 #include "Kismet/GameplayStatics.h"
@@ -23,6 +24,23 @@ AOSGameMode::AOSGameMode()
 void AOSGameMode::BeginPlay()
 {
 	Super::BeginPlay();
+	
+	// 레벨에 배치된 CoreArena 찾기
+	TArray<AActor*> foundArenas;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ACoreArena::StaticClass(), foundArenas);
+
+	if (foundArenas.Num() > 0)
+	{
+		ArenaRef = Cast<ACoreArena>(foundArenas[0]);
+		LOG_GT(TEXT("CoreArena found at (%.0f, %.0f, %.0f)"),
+			ArenaRef->GetActorLocation().X,
+			ArenaRef->GetActorLocation().Y,
+			ArenaRef->GetActorLocation().Z);
+	}
+	else
+	{
+		LOG_GT_W(TEXT("CoreArena not found! CoreBall will spawn at CoreSpawnLocation"));
+	}
 	
 	LOG_GT(TEXT("플레이어 대기중"))
 }
@@ -177,8 +195,17 @@ void AOSGameMode::StartRound()
 	}
 	else
 	{
-		// TODO: CoreBall 구현 필요
-		//ActiveCoreBall->ResetToCenter();
+		// 아레나 중앙으로 리셋
+		FVector resetLocation = CoreSpawnLocation;
+		if (ArenaRef)
+		{
+			resetLocation = ArenaRef->GetActorLocation();
+			resetLocation.Z += CoreSpawnZOffset;
+		}
+		ActiveCoreBall->SetActorLocation(resetLocation);
+		//ActiveCoreBall->ResetVelocity();
+		LOG_GT(TEXT("CoreBall reset to center (%.0f, %.0f, %.0f)"),
+			resetLocation.X, resetLocation.Y, resetLocation.Z);
 	}
 }
 
@@ -190,11 +217,21 @@ void AOSGameMode::SpawnCoreBall()
 		CoreBallClass = ACoreBall::StaticClass();
 	}
 	
+	// 스폰 위치: CoreArena 중앙 또는 수동 지정 위치
+	FVector spawnLocation = CoreSpawnLocation;
+	
+	if (ArenaRef)
+	{
+		spawnLocation = ArenaRef->GetActorLocation();
+		spawnLocation.Z += CoreSpawnZOffset;
+		LOG_GT(TEXT("CoreBall spawning at Arena center"));
+	}
+	
 	FActorSpawnParameters spawnParams;
 	spawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 	
 	ActiveCoreBall = GetWorld()->SpawnActor<ACoreBall>(
-		CoreBallClass, CoreSpawnLocation, FRotator::ZeroRotator, spawnParams);
+		CoreBallClass, spawnLocation, FRotator::ZeroRotator, spawnParams);
 	
 	if (ActiveCoreBall)
 	{
@@ -202,7 +239,7 @@ void AOSGameMode::SpawnCoreBall()
 		ActiveCoreBall->OnGoalScored.AddDynamic(this, &AOSGameMode::OnGoalScored);
 
 		LOG_GT(TEXT("CoreBall spawned at (%.0f, %.0f, %.0f)"),
-			CoreSpawnLocation.X, CoreSpawnLocation.Y, CoreSpawnLocation.Z);
+			spawnLocation.X, spawnLocation.Y, spawnLocation.Z);
 	}
 }
 

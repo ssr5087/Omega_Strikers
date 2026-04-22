@@ -193,8 +193,11 @@ private:
 	// 컴포넌트
 	// ═══════════════════════════════════════════
 	UPROPERTY(VisibleAnywhere, Category = "Core")
-	UStaticMeshComponent* MeshComp;
+	USkeletalMeshComponent* MeshComp;
  
+	UPROPERTY(VisibleAnywhere, Category = "Core")
+	USkeletalMesh* MeshAsset;
+	
 	UPROPERTY(VisibleAnywhere, Category = "Core")
 	USphereComponent* SphereComp;
  
