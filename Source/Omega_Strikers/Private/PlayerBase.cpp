@@ -7,6 +7,7 @@
 #include "InputAction.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "Core/CoreBall.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -192,7 +193,7 @@ void APlayerBase::Use_CoreHit()
 	CoreImpactData.CoreKnockbackPower = 1230 + Power * 1.25f;
 	
 	// 코어 찾기
-	AActor* Core = UGameplayStatics::GetActorOfClass(GetWorld(), ATempCore::StaticClass());
+	AActor* Core = UGameplayStatics::GetActorOfClass(GetWorld(), ACoreBall::StaticClass());
 	if (!Core) {return;}
 	
 	// 애니메이션 실행, 쿨타임 타이머 돌리기
