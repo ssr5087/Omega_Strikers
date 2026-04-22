@@ -32,7 +32,7 @@ void ALuna_PrimaryRocket::BeginPlay()
 	Super::BeginPlay();
 	
 	FTimerHandle SpeedChanger;
-	GetWorld()->GetTimerManager().SetTimer(SpeedChanger, [this]()->void {Speed = 5000.f;}, 1.f, false);
+	GetWorld()->GetTimerManager().SetTimer(SpeedChanger, [this]()->void {Speed = 5000.f;}, 0.5f, false);
 }
 
 // Called every frame
