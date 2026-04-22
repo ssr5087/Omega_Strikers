@@ -454,3 +454,25 @@ void ACoreBall::OnSphereOverlap(UPrimitiveComponent* OverlappedComp, AActor* Oth
 	GetWorldTimerManager().SetTimer(ResetTimer, this,
 		&ACoreBall::ResetToCenter, 3.0f, false);
 }
+
+void ACoreBall::ReceiveImpact_Implementation(const FOSImpactData& ImpactData, AActor* InstigatorActor)
+{
+	// ImpactData의 넉백 방향, 충격량 사용
+	// 서버에서만 물리 적용
+	if (!HasAuthority()) return;
+	
+	// Scored 상태면 무시
+	if (Rep_CoreState == ECoreState::Scored) return;
+	
+	// FVector2D -> FVector 변환 (2D이므로 Z=0)
+	FVector knockbackDir = FVector(ImpactData.Direction.X, ImpactData.Direction.Y, 0.f).GetSafeNormal();
+	
+	// 유효성 체크
+	if (knockbackDir.IsNearlyZero() || ImpactData.CoreKnockbackPower <= 0.f) return;
+	
+	// 기존 ApplyHitForce 재사용 - 연속 타격 보너스, 상태 전이, 히트 이벤트 리플리케이션 모두 포함
+	ApplyHitForce(knockbackDir, ImpactData.CoreKnockbackPower);
+	
+	// Multicast VFX
+	Multicast_PlayHitFX(GetActorLocation(), knockbackDir, ImpactData.CoreKnockbackPower);
+}

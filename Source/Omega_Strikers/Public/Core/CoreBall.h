@@ -5,6 +5,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Omega_Strikers/SM/OSImpactReceiver.h"
 #include "CoreBall.generated.h"
 
 class USphereComponent;
@@ -76,7 +77,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCoreGoalScored, int32, ScoringTea
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnCoreHit, FVector, Direction, float, Power);
 
 UCLASS()
-class OMEGA_STRIKERS_API ACoreBall : public AActor
+class OMEGA_STRIKERS_API ACoreBall : public AActor, public IOSImpactReceiver
 {
 	GENERATED_BODY()
 
@@ -232,4 +233,10 @@ private:
 		AActor* OtherActor, UPrimitiveComponent* OtherComp,
 		int32 OtherBodyIndex, bool bFromSweep,
 		const FHitResult& SweepResult);
+	
+	// ═══════════════════════════════════════════
+	// 임팩트 리시버 인터페이스 재정의
+	// ═══════════════════════════════════════════
+public:
+	virtual void ReceiveImpact_Implementation(const FOSImpactData& ImpactData, AActor* InstigatorActor) override;
 };
