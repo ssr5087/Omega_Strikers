@@ -210,7 +210,7 @@ void APlayerBase::Use_CoreHit()
 	
 	// 거리가 멀면 못 차요
 	float CoreDist = FVector::Distance(Core->GetActorLocation(), GetActorLocation());
-	if (CoreDist > 500.f) {return;}
+	if (CoreDist > 700.f) {return;}
 	Execute_ReceiveImpact(Core, CoreImpactData, this);
 }
 
