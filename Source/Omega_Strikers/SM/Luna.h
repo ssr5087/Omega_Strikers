@@ -28,10 +28,12 @@ public:
 	
 	// ================= Component =================
 	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	TObjectPtr<class USceneComponent> RocketLauncher;
 	
 	
-	
-	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Component|Primary")
+	TSubclassOf<class ALuna_PrimaryRocket> RocketFactory;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stat|SkillRange")
 	float PrimaryRange = 5000.f;

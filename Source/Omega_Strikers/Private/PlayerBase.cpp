@@ -23,6 +23,7 @@ APlayerBase::APlayerBase()
 	// ========= Component =========
 	
 	// 이동 관련 MovementComponent 조정
+	bUseControllerRotationYaw = false;
 	GetCharacterMovement()->bOrientRotationToMovement = true;							// 플레이어가 이동 방향을 바라봄
 	GetCharacterMovement()->RotationRate = FRotator(0.f, 50000.f, 0.f);	// 입력 즉시 바라보는 방향 바뀜
 	GetCharacterMovement()->MaxAcceleration = 100000.f;									// 방향 전환 시 미끄러지지 않고 즉시 전환
