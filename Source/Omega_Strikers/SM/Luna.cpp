@@ -5,6 +5,7 @@
 
 #include "Luna_PrimaryRocket.h"
 #include "Components/CapsuleComponent.h"
+#include "Kismet/KismetMathLibrary.h"
 
 
 // Sets default values
@@ -93,7 +94,15 @@ void ALuna::Use_PrimarySkill()
 	}
 	
 	// 스폰하면서 그 친구에게 여러 가지 값들 전달
-	FTransform LauncherTransform = RocketLauncher->GetComponentTransform();
+	FTransform LauncherTransform;
+	
+	// 발사 방향 (플레이어 -> 커서 방향)
+	FVector LaunchDir = FVector(CursorDir.X, CursorDir.Y, 0);
+	FRotator SpawnRot = UKismetMathLibrary::MakeRotFromXZ(LaunchDir, GetActorUpVector());
+	
+	LauncherTransform.SetLocation(GetActorLocation() + LaunchDir * 270);
+	LauncherTransform.SetRotation(SpawnRot.Quaternion());
+	
 	GetWorld()->SpawnActor<ALuna_PrimaryRocket>(RocketFactory, LauncherTransform);
 	
 	// 쿨타임

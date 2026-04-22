@@ -79,6 +79,8 @@ void APlayerBase::BeginPlay()
 	HPComp->InitializeHP();
 	HPComp->OnHPBecomeNegative.BindUObject(this, &APlayerBase::KnockbackIncrease);
 	HPComp->OnHPBecomePositive.BindUObject(this, &APlayerBase::KnockbackDecrease);
+	
+	TeamSide = EOSTeam::Blue;
 }
 
 // Called every frame

@@ -33,6 +33,7 @@ UENUM(BlueprintType)
 enum class EOSTeam : uint8
 {
 	None,
+	Core,
 	Blue,
 	Red
 };
