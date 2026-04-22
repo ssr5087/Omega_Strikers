@@ -78,15 +78,45 @@ public:
 	
 	// 좌측 (Blue) 골 트리거 위치 (아레나 중심 기준)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Arena|Goals")
-	FVector LeftGoalLocation = FVector(0.f, -4500.f, 0.f);
+	FVector LeftGoalLocation = FVector(0.f, -3400.f, 0.f);
 	
 	// 우측 (Red) 골 트리거 위치
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Arena|Goals")
-	FVector RightGoalLocation = FVector(0.f, 4500.f, 0.f);
+	FVector RightGoalLocation = FVector(0.f, 3400.f, 0.f);
 	
 	// 골 트리거 크기
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Arena|Goals")
 	FVector GoalExtent = FVector(1200.f, 300.f, 200.f);
+	
+	// 골 트리거 스태틱 메시
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Goals")
+	UStaticMeshComponent* LeftGoalMesh;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Goals")
+	UStaticMeshComponent* RightGoalMesh;
+	
+	// 골 트리거 메쉬 에셋
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Arena|Goals")
+	UStaticMesh* LeftGoalMeshAsset;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Arena|Goals")
+	UStaticMesh* RightGoalMeshAsset;
+	
+	// 골대 메시 스케일
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Arena|Goals")
+	FVector GoalMeshScale = FVector(1.f, 1.f, 1.f);
+	
+	// 골대 메시 위치 오프셋 (트리거 기준)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Arena|Goals")
+	FVector LeftGoalMeshOffset = FVector(0.f, 600.f, 0.f);
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Arena|Goals")
+	FVector RightGoalMeshOffset = FVector(0.f, -600.f, 0.f);
+ 
+	// 골대 메시 회전 오프셋 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Arena|Goals")
+	FRotator GoalMeshRotation = FRotator::ZeroRotator;
+ 
+	// 오른쪽 골대 180도 회전 여부 (보통 true)
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Arena|Goals")
+	//bool bMirrorRightGoal = true;
 	
 	// ───────────────────────────────────────────
 	// 골 게이트 (배리어 전부 파괴 후 열림)

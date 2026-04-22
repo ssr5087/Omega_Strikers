@@ -68,6 +68,29 @@ ACoreArena::ACoreArena()
 	RightGoalTrigger->ShapeColor = FColor::Red;
 	
 	// ═══════════════════════════════════════════
+	// 골대 비주얼 메시 (트리거에 붙힘)
+	// ═══════════════════════════════════════════
+	LeftGoalMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("LeftGoalMesh"));
+	LeftGoalMesh->SetupAttachment(LeftGoalTrigger);
+	LeftGoalMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	
+	RightGoalMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("RightGoalMesh"));
+	RightGoalMesh->SetupAttachment(RightGoalTrigger);
+	RightGoalMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	
+	ConstructorHelpers::FObjectFinder<UStaticMesh> tempLeftGoalMesh(TEXT("/Script/Engine.StaticMesh'/Game/GT/Environments/Season02/Arena/GoalDesigns/Meshes/FBX/SM_GoalDesign_Overhang_01_Team01.SM_GoalDesign_Overhang_01_Team01'"));
+	if (tempLeftGoalMesh.Succeeded())
+	{
+		LeftGoalMeshAsset = tempLeftGoalMesh.Object;
+	}
+	
+	ConstructorHelpers::FObjectFinder<UStaticMesh> tempRightGoalMesh(TEXT("/Script/Engine.StaticMesh'/Game/GT/Environments/Season02/Arena/GoalDesigns/Meshes/FBX/SM_GoalDesign_Overhang_01_Team02.SM_GoalDesign_Overhang_01_Team02'"));
+	if (tempRightGoalMesh.Succeeded())
+	{
+		RightGoalMeshAsset = tempRightGoalMesh.Object;
+	}
+	
+	// ═══════════════════════════════════════════
 	// 넉아웃 경계
 	// ═══════════════════════════════════════════
 	KnockoutBounds = CreateDefaultSubobject<UBoxComponent>(TEXT("KnockoutBounds"));
@@ -393,6 +416,29 @@ void ACoreArena::SetupGoalTriggers()
 		RightGoalTrigger->SetBoxExtent(GoalExtent);
 		RightGoalTrigger->ComponentTags.Empty();
 		RightGoalTrigger->ComponentTags.Add(FName("Goal_Right"));
+	}
+	
+	// 골대 메시
+	if (LeftGoalMesh)
+	{
+		if (LeftGoalMeshAsset) LeftGoalMesh->SetStaticMesh(LeftGoalMeshAsset);
+		LeftGoalMesh->SetRelativeLocation(LeftGoalMeshOffset);
+		// 좌측 골대는 -90도 회전
+		FRotator leftRot = GoalMeshRotation;
+		leftRot.Yaw -= 90;
+		LeftGoalMesh->SetRelativeRotation(leftRot);
+		LeftGoalMesh->SetRelativeScale3D(GoalMeshScale);
+	}
+	
+	if (RightGoalMesh)
+	{
+		if (RightGoalMeshAsset) RightGoalMesh->SetStaticMesh(RightGoalMeshAsset);
+		RightGoalMesh->SetRelativeLocation(RightGoalMeshOffset);
+		// 우측 골대는 90도 회전
+		FRotator rightRot = GoalMeshRotation;
+		rightRot.Yaw += 90;
+		RightGoalMesh->SetRelativeRotation(rightRot);
+		RightGoalMesh->SetRelativeScale3D(GoalMeshScale);
 	}
 	
 	if (KnockoutBounds)
