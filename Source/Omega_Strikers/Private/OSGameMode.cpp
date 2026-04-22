@@ -10,12 +10,14 @@
 #include "GameFramework/PlayerStart.h"
 #include "Kismet/GameplayStatics.h"
 #include "Omega_Strikers/Omega_Strikers.h"
+#include "OSTopDownController.h"
 
 AOSGameMode::AOSGameMode()
 {
 	// ** 기본 클래스 지정
 	GameStateClass = AOSGameState::StaticClass();
 	PlayerStateClass = AOSPlayerState::StaticClass();
+	PlayerControllerClass = AOSTopDownController::StaticClass();
 	
 	// 심리스 트래블 지원
 	bUseSeamlessTravel = true;
