@@ -3,6 +3,7 @@
 
 #include "Core/CoreBall.h"
 
+#include "PlayerBase.h"
 #include "Components/SphereComponent.h"
 #include "Core/GoalZone.h"
 #include "Net/UnrealNetwork.h"
@@ -312,6 +313,10 @@ void ACoreBall::ServerPhysicsTick(float DeltaTime)
 			FQuat::Identity,
 			ECC_WorldStatic,
 			FCollisionShape::MakeSphere(SphereComp->GetScaledSphereRadius()));
+		
+		// 플레이어랑 겹쳐있는 경우는 무시
+		auto* player = Cast<APlayerBase>(hit.GetActor());
+		if (player) bHit = false;
 		
 		if (bHit && hit.bBlockingHit)
 		{
