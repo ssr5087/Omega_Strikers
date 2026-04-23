@@ -80,20 +80,8 @@ void ALuna::Use_PrimarySkill()
 	
 	// 현재 쿨타임 중이면 실행 안 됨
 	if (bPrimarySkillCoolDown) {return;}
-
-	if (!RocketFactory)
-	{
-		UE_LOG(LogTemp, Error, TEXT("RocketFactory is null"));
-		return;
-	}
-
-	if (!GetWorld())
-	{
-		UE_LOG(LogTemp, Error, TEXT("World is null"));
-		return;
-	}
 	
-	// 스폰하면서 그 친구에게 여러 가지 값들 전달
+	// 스폰 트랜스폼 만들기
 	FTransform LauncherTransform;
 	
 	// 발사 방향 (플레이어 -> 커서 방향)
@@ -103,7 +91,23 @@ void ALuna::Use_PrimarySkill()
 	LauncherTransform.SetLocation(GetActorLocation() + LaunchDir * 270);
 	LauncherTransform.SetRotation(SpawnRot.Quaternion());
 	
-	GetWorld()->SpawnActor<ALuna_PrimaryRocket>(RocketFactory, LauncherTransform);
+	// 일단 스폰 파라미터에 누가 스폰했는지만 넣기
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = this;
+	// SpawnParams.Instigator = GetInstigator();
+	// SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+	
+	ALuna_PrimaryRocket* Rocket = GetWorld()->SpawnActor<ALuna_PrimaryRocket>(RocketFactory, LauncherTransform, SpawnParams);
+
+	// FOSImpactData PrimaryImpactData;
+	// PrimaryImpactData.Direction;
+	// PrimaryImpactData.CoreKnockbackPower;
+	// PrimaryImpactData.PlayerKnockbackPower;
+	// PrimaryImpactData.PlayerDamage;
+	if (Rocket)
+	{
+		Rocket->InitRocket(Power, this, TeamSide);
+	}
 	
 	// 쿨타임
 	bPrimarySkillCoolDown = true;
