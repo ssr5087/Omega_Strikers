@@ -7,7 +7,7 @@
 DECLARE_LOG_CATEGORY_EXTERN(LogTeam, Log, All);
 
 // =====================
-// GT (팀원1)
+// GT (문경태)
 // =====================
 #define LOG_GT(Format, ...) \
 UE_LOG(LogTeam, Log, TEXT("[GT][%s:%d] " Format), TEXT(__FUNCTION__), __LINE__, ##__VA_ARGS__)
@@ -20,7 +20,7 @@ UE_LOG(LogTeam, Error, TEXT("[GT][E][%s:%d] " Format), TEXT(__FUNCTION__), __LIN
 
 
 // =====================
-// SR (팀원2)
+// SR (서승률)
 // =====================
 #define LOG_SR(Format, ...) \
 UE_LOG(LogTeam, Log, TEXT("[SR][%s:%d] " Format), TEXT(__FUNCTION__), __LINE__, ##__VA_ARGS__)
@@ -33,7 +33,7 @@ UE_LOG(LogTeam, Error, TEXT("[SR][E][%s:%d] " Format), TEXT(__FUNCTION__), __LIN
 
 
 // =====================
-// SM (팀원3)
+// SM (천성민)
 // =====================
 #define LOG_SM(Format, ...) \
 UE_LOG(LogTeam, Log, TEXT("[SM][%s:%d] " Format), TEXT(__FUNCTION__), __LINE__, ##__VA_ARGS__)
