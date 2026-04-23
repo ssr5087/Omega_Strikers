@@ -38,4 +38,16 @@ public:
 	virtual void Use_SecondarySkill() override;
 	virtual void Use_SpecialSkill() override;
 	virtual void Use_Flip() override;
+	
+public:
+	// 콤보 상태일때
+	bool bIsPrimaryAttacking = false;
+	// 맞은 대상 기록 (중복 방지)
+	TSet<AActor*> HitActors;
+	
+	FTimerHandle PrimaryHit2Timer;
+	FTimerHandle PrimaryEndTimer;
+	
+	void DoPrimaryHit1();
+	void DoPrimaryHit2();
 };
