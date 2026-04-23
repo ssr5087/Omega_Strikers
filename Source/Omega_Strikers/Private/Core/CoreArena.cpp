@@ -29,7 +29,7 @@ ACoreArena::ACoreArena()
 	ArenaMesh->SetupAttachment(ArenaRoot);
 	ArenaMesh->SetMobility(EComponentMobility::Static);
 	
-	ConstructorHelpers::FObjectFinder<UStaticMesh> tempArenaMesh(TEXT("/Script/Engine.StaticMesh'/Game/GT/Environments/Arena/Arenas/AhtenCity/Meshes/LOD0/FBX/OS_Arena_AhtenCity.OS_Arena_AhtenCity'"));
+	ConstructorHelpers::FObjectFinder<UStaticMesh> tempArenaMesh(TEXT("/Script/Engine.StaticMesh'/Game/GT/Environments/Arena/Arenas/ArenaDefault/OS_Arena_Default.OS_Arena_Default'"));
 	
 	if (tempArenaMesh.Succeeded())
 	{
