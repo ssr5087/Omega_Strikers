@@ -6,6 +6,7 @@
 #include "Components/SphereComponent.h"
 #include "Core/GoalZone.h"
 #include "Net/UnrealNetwork.h"
+#include "Omega_Strikers/Omega_Strikers.h"
 
 
 class AGoalZone;
@@ -223,6 +224,8 @@ void ACoreBall::Multicast_PlayGoalFX_Implementation(int32 ScoringTeam)
 // ═══════════════════════════════════════════════════════
 void ACoreBall::ApplyHitForce(FVector Direction, float Power)
 {
+	LOG_GT(TEXT("Dir: %s, Power: %.1f, Velocity BEFORE: %s"), *Direction.ToString(), Power, *ServerVelocity.ToString());
+	
 	if (!HasAuthority()) return;
  
 	// ─── 연속 타격 보너스 ───
