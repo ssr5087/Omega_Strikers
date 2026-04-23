@@ -48,6 +48,12 @@ public:
 	FTimerHandle PrimaryHit2Timer;
 	FTimerHandle PrimaryEndTimer;
 	
+	// boolean 스킬 쿨타임 체크
+	bool bPrimarySkillCoolDown = false;
+	
+	// 스킬 쿨타임 시간
+	float PrimarySkillCool = 4.0f;
+	
 	void DoPrimaryHit1();
 	void DoPrimaryHit2();
 };

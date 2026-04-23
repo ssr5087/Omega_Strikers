@@ -82,7 +82,7 @@ void AAsher::Use_PrimarySkill()
 {
 	Super::Use_PrimarySkill();
 	
-	if (PrimarySkillCool > 0.f)
+	if (bPrimarySkillCoolDown)
 		return;
 	if (bIsPrimaryAttacking)
 		return;
@@ -132,7 +132,7 @@ void AAsher::Use_Flip()
 
 void AAsher::DoPrimaryHit1()
 {
-	FVector Forward = FVector(CursorDir.X, CursorDir.Y, 0.f);
+	FVector Forward = FVector(CursorDir.X, CursorDir.Y, 0.f).GetSafeNormal();
 	FVector Center = GetActorLocation() + Forward * 150.f;
 
 	TArray<FHitResult> Hits;
@@ -177,7 +177,7 @@ void AAsher::DoPrimaryHit1()
 
 void AAsher::DoPrimaryHit2()
 {
-	FVector Forward = FVector(CursorDir.X, CursorDir.Y, 0.f);
+	FVector Forward = FVector(CursorDir.X, CursorDir.Y, 0.f).GetSafeNormal();
 	FVector Center = GetActorLocation() + Forward * 200.f;
 
 	TArray<FHitResult> Hits;
@@ -227,10 +227,14 @@ void AAsher::DoPrimaryHit2()
 			Damage = 200.f;
 			Knockback = 1200.f;
 		}
-		else // 👉 사이드 판정
+		else if (Dot > 0.3f)    // 사이드
 		{
 			Damage = 80.f;
 			Knockback = 700.f;
+		}
+		else
+		{
+			continue; // 뒤쪽 무시
 		}
 
 		FOSImpactData Data;
@@ -243,4 +247,9 @@ void AAsher::DoPrimaryHit2()
 		
 	}
 	HitActors.Empty();
+	
+	// 쿨타임
+	bPrimarySkillCoolDown = true;
+	FTimerHandle PrimarySkillTimer;
+	GetWorld()->GetTimerManager().SetTimer(PrimarySkillTimer, [this]()->void {bPrimarySkillCoolDown = false;}, PrimarySkillCool, false);
 }
