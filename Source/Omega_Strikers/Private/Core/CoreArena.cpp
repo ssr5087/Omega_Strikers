@@ -90,14 +90,6 @@ ACoreArena::ACoreArena()
 		RightGoalMeshAsset = tempRightGoalMesh.Object;
 	}
 	
-	// ═══════════════════════════════════════════
-	// 넉아웃 경계
-	// ═══════════════════════════════════════════
-	KnockoutBounds = CreateDefaultSubobject<UBoxComponent>(TEXT("KnockoutBounds"));
-	KnockoutBounds->SetupAttachment(ArenaRoot);
-	KnockoutBounds->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	KnockoutBounds->ShapeColor = FColor::Yellow;
-	
 	// 기본값 세팅
 	SetupDefaultSpawns();
 }
@@ -439,11 +431,5 @@ void ACoreArena::SetupGoalTriggers()
 		rightRot.Yaw += 90;
 		RightGoalMesh->SetRelativeRotation(rightRot);
 		RightGoalMesh->SetRelativeScale3D(GoalMeshScale);
-	}
-	
-	if (KnockoutBounds)
-	{
-		KnockoutBounds->SetRelativeLocation(FVector::ZeroVector);
-		KnockoutBounds->SetBoxExtent(KnockoutBoundsExtent);
 	}
 }

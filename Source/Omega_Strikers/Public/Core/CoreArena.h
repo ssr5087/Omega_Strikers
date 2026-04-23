@@ -198,9 +198,6 @@ private:
 	UBoxComponent* RightGoalTrigger;
 	
 	UPROPERTY()
-	UBoxComponent* KnockoutBounds;
-	
-	UPROPERTY()
 	class UPhysicalMaterial* ArenaPhysMat;
 	
 	// 레벨에 배치된 GoalBarrier 참조 (BeginPlay에서 자동으로 수집)
