@@ -85,10 +85,13 @@ void ALuna::Use_PrimarySkill()
 	FTransform LauncherTransform;
 	
 	// 발사 방향 (플레이어 -> 커서 방향)
+	FVector PlayerLoc = GetActorLocation();
+	float zLoc = PlayerLoc.Z;
+	PlayerLoc = FVector(PlayerLoc.X, PlayerLoc.Y, zLoc);
 	FVector LaunchDir = FVector(CursorDir.X, CursorDir.Y, 0);
 	FRotator SpawnRot = UKismetMathLibrary::MakeRotFromXZ(LaunchDir, GetActorUpVector());
 	
-	LauncherTransform.SetLocation(GetActorLocation() + LaunchDir * 270);
+	LauncherTransform.SetLocation(PlayerLoc + LaunchDir * 270);
 	LauncherTransform.SetRotation(SpawnRot.Quaternion());
 	
 	// 일단 스폰 파라미터에 누가 스폰했는지만 넣기
