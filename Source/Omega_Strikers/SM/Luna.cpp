@@ -86,7 +86,7 @@ void ALuna::Use_PrimarySkill()
 	
 	// 발사 방향 (플레이어 -> 커서 방향)
 	FVector PlayerLoc = GetActorLocation();
-	float zLoc = PlayerLoc.Z;
+	float zLoc = PlayerLoc.Z - 50.f;
 	PlayerLoc = FVector(PlayerLoc.X, PlayerLoc.Y, zLoc);
 	FVector LaunchDir = FVector(CursorDir.X, CursorDir.Y, 0);
 	FRotator SpawnRot = UKismetMathLibrary::MakeRotFromXZ(LaunchDir, GetActorUpVector());
