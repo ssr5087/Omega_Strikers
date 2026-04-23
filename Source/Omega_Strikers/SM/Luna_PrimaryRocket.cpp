@@ -37,7 +37,7 @@ void ALuna_PrimaryRocket::BeginPlay()
 	
 	// 데이터 적용 필요
 	ImpactData.Direction = FVector2D(GetActorForwardVector().X, GetActorForwardVector().Y).GetSafeNormal();
-	ImpactData.CoreKnockbackPower = 100.f;
+	ImpactData.CoreKnockbackPower = 3390.f;
 	ImpactData.PlayerKnockbackPower = 1500.f;
 	ImpactData.PlayerDamage = 100.0f;
 	
@@ -64,8 +64,10 @@ void ALuna_PrimaryRocket::InitRocket(float Owner_Power, AActor* InOwnerActor, EO
 void ALuna_PrimaryRocket::OnRocketOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
+	// OtherActor가 존재하고 그 놈이 인터페이스 구현했으면
 	if (OtherActor && OtherActor->Implements<UOSImpactReceiver>())
 	{
+		// 그 대상에 대해 인터페이스 함수를 실행해라
 		IOSImpactReceiver::Execute_ReceiveImpact(OtherActor, ImpactData, GetOwner());
 	}
 	
