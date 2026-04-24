@@ -145,7 +145,7 @@ void AAsher::DoPrimaryHit1()
 		UEngineTypes::ConvertToTraceType(ECC_Pawn),
 		false,
 		TArray<AActor*>(),
-		EDrawDebugTrace::ForDuration,
+		EDrawDebugTrace::None,
 		Hits,
 		true
 	);
@@ -190,7 +190,7 @@ void AAsher::DoPrimaryHit2()
 		UEngineTypes::ConvertToTraceType(ECC_Pawn),
 		false,
 		TArray<AActor*>(),
-		EDrawDebugTrace::ForDuration,
+		EDrawDebugTrace::None,
 		Hits,
 		true
 	);
