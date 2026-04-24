@@ -15,10 +15,17 @@ UCLASS()
 class OMEGA_STRIKERS_API AOSTopDownController : public AOSPlayerController
 {
 	GENERATED_BODY()
+
+public:
+	AOSTopDownController();
 	
 protected:
 	virtual void BeginPlay() override;
 	
 private:
 	void BindTopDownCamera();
+
+	UPROPERTY()
+	int32 CameraBindRetryCount = 0; // 재시도 횟수 제한용
+	static constexpr int32 MaxRetryCount = 10;
 };

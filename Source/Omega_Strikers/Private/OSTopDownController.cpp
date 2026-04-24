@@ -7,13 +7,18 @@
 #include "Kismet/GameplayStatics.h"
 #include "Omega_Strikers/Omega_Strikers.h"
 
+AOSTopDownController::AOSTopDownController()
+{
+	bAutoManageActiveCameraTarget = false; // Possess해도 뷰타겟 자동변경 하지 않도록 설정
+}
+
 void AOSTopDownController::BeginPlay()
 {
 	Super::BeginPlay();
 	
 	if (IsLocalController())
 	{
-		BindTopDownCamera();
+		GetWorldTimerManager().SetTimerForNextTick(this, &AOSTopDownController::BindTopDownCamera);
 	}
 }
 
@@ -25,7 +30,13 @@ void AOSTopDownController::BindTopDownCamera()
 	if (cameras.Num() > 0)
 	{
 		SetViewTargetWithBlend(cameras[0]);
+		CameraBindRetryCount = 0;
 		LOG_GT(TEXT("TopDown 카메라 바인딩 완료"));
+	}
+	else if (CameraBindRetryCount < MaxRetryCount)
+	{
+		CameraBindRetryCount++;
+		GetWorldTimerManager().SetTimerForNextTick(this, &AOSTopDownController::BindTopDownCamera);
 	}
 	else
 	{
