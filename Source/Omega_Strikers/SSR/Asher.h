@@ -40,8 +40,9 @@ public:
 	virtual void Use_Flip() override;
 	
 public:
+	// Primary Skill
 	// 콤보 상태일때
-	bool bIsPrimaryAttacking = false;
+	bool bIsPrimary_Attacking = false;
 	// 맞은 대상 기록 (중복 방지)
 	TSet<AActor*> HitActors;
 	
@@ -49,11 +50,29 @@ public:
 	FTimerHandle PrimaryEndTimer;
 	
 	// boolean 스킬 쿨타임 체크
-	bool bPrimarySkillCoolDown = false;
+	bool bPrimary_SkillCoolDown = false;
 	
 	// 스킬 쿨타임 시간
-	float PrimarySkillCool = 4.0f;
+	float Primary_SkillCool = 4.0f;
 	
+	// 1타
 	void DoPrimaryHit1();
+	// 2타
 	void DoPrimaryHit2();
+	
+	// ------------------------------------------------------------
+	
+	// Special Skill
+	
+	// boolean 스킬 쿨타임 체크
+	bool bSpecial_SkillCoolDown = false;
+	
+	// 스킬 타이머 설정
+	FTimerHandle SpecialSkillTimer;
+	
+	// 스킬 쿨타임 시간
+	float Special_SkillCool = 4.0f;
+	
+	void DoSpecialProjectile();
+	void DoSpecialShield();
 };
