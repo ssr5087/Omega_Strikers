@@ -28,11 +28,13 @@ void ATempCore::Tick(float DeltaTime)
 }
 
 // 충격 받은 방향으로 이동하는 초기화만 진행. 벽에 튕기는 건 추후에 만들기
-void ATempCore::ReceiveImpact_Implementation(const FOSImpactData& ImpactData, AActor* InstigatorActor)
+bool ATempCore::ReceiveImpact_Implementation(const FOSImpactData& ImpactData, AActor* InstigatorActor)
 {
 	if (ImpactData.CoreKnockbackPower > 0)
 	{
 		Speed = ImpactData.CoreKnockbackPower / 10;
 		Distance = FVector(ImpactData.Direction.X, ImpactData.Direction.Y, 0);
+		return true;
 	}
+	return false;
 }

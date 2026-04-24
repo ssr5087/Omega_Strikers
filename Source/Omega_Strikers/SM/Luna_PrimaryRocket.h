@@ -40,9 +40,6 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Rocket")
 	TObjectPtr<AActor> OwnerActorRef = nullptr;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Rocket")
-	EOSTeam TeamSide = EOSTeam::None;
 	
 	void InitRocket(float Owner_Power, AActor* InOwnerActor, EOSTeam InTeamSide);
 	

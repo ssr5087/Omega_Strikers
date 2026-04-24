@@ -22,5 +22,5 @@ public:
 	// Hit Data와 Impact 원인 제공 캐릭터에 대한 정보를 받음
 	// 추후 Instigator Actor는 필요 없다고 느껴질 경우 삭제해도 무방
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category="Impact")
-	void ReceiveImpact(const FOSImpactData& ImpactData, AActor* InstigatorActor);
+	bool ReceiveImpact(const FOSImpactData& ImpactData, AActor* InstigatorActor);
 };

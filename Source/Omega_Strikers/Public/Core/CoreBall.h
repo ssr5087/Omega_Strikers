@@ -238,5 +238,5 @@ private:
 	// 임팩트 리시버 인터페이스 재정의
 	// ═══════════════════════════════════════════
 public:
-	virtual void ReceiveImpact_Implementation(const FOSImpactData& ImpactData, AActor* InstigatorActor) override;
+	virtual bool ReceiveImpact_Implementation(const FOSImpactData& ImpactData, AActor* InstigatorActor) override;
 };
