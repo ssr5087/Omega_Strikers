@@ -13,6 +13,7 @@ AAsher::AAsher()
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 	
+	
 	// 스켈레탈 메시 설정
 	ConstructorHelpers::FObjectFinder<USkeletalMesh>TempSKM(TEXT("/Script/Engine.SkeletalMesh'/Game/Resource/Asher/Animations/SK_ShieldUser_Default/SkeletalMeshes/SK_ShieldUser_Default.SK_ShieldUser_Default'"));
 	if (TempSKM.Succeeded())
@@ -55,7 +56,12 @@ void AAsher::Ready_PrimarySkill()
 {
 	Super::Ready_PrimarySkill();
 	
-	
+	// 쿨타임 중일때는 사용금지
+	if (bPrimary_SkillCoolDown)
+		return;
+	// 콤보중일때도 사용 금지
+	if (bIsPrimary_Attacking)
+		return;
 }
 
 void AAsher::Ready_SecondarySkill()
@@ -66,6 +72,11 @@ void AAsher::Ready_SecondarySkill()
 void AAsher::Ready_SpecialSkill()
 {
 	Super::Ready_SpecialSkill();
+	
+	// 쿨타임 중일때는 사용금지
+	if (bSpecial_SkillCoolDown)
+		return;
+	
 }
 
 void AAsher::Ready_Flip()
@@ -82,12 +93,14 @@ void AAsher::Use_PrimarySkill()
 {
 	Super::Use_PrimarySkill();
 	
-	if (bPrimarySkillCoolDown)
+	// 스킬 쿨타임일때는 사용금지
+	if (bPrimary_SkillCoolDown)
 		return;
-	if (bIsPrimaryAttacking)
+	// 스킬 쿨타임일때는 사용금지
+	if (bIsPrimary_Attacking)
 		return;
 	
-	bIsPrimaryAttacking = true;
+	bIsPrimary_Attacking = true;
 	HitActors.Empty();
 	
 	// 1타 실행
@@ -107,7 +120,7 @@ void AAsher::Use_PrimarySkill()
 		PrimaryEndTimer,
 		[this]()
 		{
-			bIsPrimaryAttacking = false;
+			bIsPrimary_Attacking = false;
 			PrimarySkillCool = 4.f;
 		},
 		0.6f,
@@ -123,6 +136,24 @@ void AAsher::Use_SecondarySkill()
 void AAsher::Use_SpecialSkill()
 {
 	Super::Use_SpecialSkill();
+	
+	// 쿨타임 중일때는 사용금지
+	if (bSpecial_SkillCoolDown)
+		return;
+	
+	HitActors.Empty();
+	DoSpecialProjectile();
+	
+	// 👉 쿨타임 시작
+	GetWorld()->GetTimerManager().SetTimer(
+		SpecialSkillTimer,
+		[this]()
+		{
+			bSpecial_SkillCoolDown = false;
+		},
+		Special_SkillCool,
+		false
+		);
 }
 
 void AAsher::Use_Flip()
@@ -166,6 +197,7 @@ void AAsher::DoPrimaryHit1()
 		FOSImpactData Data;
 		Data.Direction = CursorDir;
 		Data.PlayerDamage = 100.f;
+		Data.CoreKnockbackPower = 1000.f;
 		Data.PlayerKnockbackPower = 600.f;
 
 		IOSImpactReceiver::Execute_ReceiveImpact(Target, Data, this);
@@ -249,7 +281,19 @@ void AAsher::DoPrimaryHit2()
 	HitActors.Empty();
 	
 	// 쿨타임
-	bPrimarySkillCoolDown = true;
+	bPrimary_SkillCoolDown = true;
 	FTimerHandle PrimarySkillTimer;
-	GetWorld()->GetTimerManager().SetTimer(PrimarySkillTimer, [this]()->void {bPrimarySkillCoolDown = false;}, PrimarySkillCool, false);
+	GetWorld()->GetTimerManager().SetTimer(PrimarySkillTimer, [this]()->void {bPrimary_SkillCoolDown = false;}, PrimarySkillCool, false);
+}
+
+void AAsher::DoSpecialProjectile()
+{
+	FVector Forward = FVector(CursorDir.X, CursorDir.Y,0.f).GetSafeNormal();
+	FVector SpawnLocation = GetActorLocation() + Forward * 100.f;
+	
+}
+
+void AAsher::DoSpecialShield()
+{
+	
 }
