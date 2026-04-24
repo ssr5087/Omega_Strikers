@@ -4,6 +4,16 @@
 #include "Engine/DataTable.h"
 #include "OSType.generated.h"
 
+// 팀 사이드 구분용
+UENUM(BlueprintType)
+enum class EOSTeam : uint8
+{
+	None,
+	Core,
+	Blue,
+	Red
+};
+
 // 공격이 맞았을 때 피격자에게 Interface로 전달할 공통 Hit Data
 // 추후 상태이상에 대한 데이터가 추가적으로 들어올 수 있음
 USTRUCT(BlueprintType)
@@ -11,6 +21,10 @@ struct FOSImpactData
 {
 	GENERATED_BODY()
 
+	// 공격자의 팀 사이드
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	EOSTeam TeamSide = EOSTeam::None;
+	
 	// 대상 넉백 방향
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FVector2D Direction = FVector2D::ZeroVector;
@@ -26,16 +40,6 @@ struct FOSImpactData
 	// 플레이어 피격 피해량
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float PlayerDamage = 0.f;
-};
-
-// 팀 사이드 구분용
-UENUM(BlueprintType)
-enum class EOSTeam : uint8
-{
-	None,
-	Core,
-	Blue,
-	Red
 };
 
 // 캐릭터의 현재 상태(사용 안 할 가능성 매우 높음)

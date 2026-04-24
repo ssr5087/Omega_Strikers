@@ -3,18 +3,21 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "OSImpactReceiver.h"
 #include "GameFramework/Actor.h"
-#include "TempCore.generated.h"
+#include "Asher_Special_Projectile.generated.h"
+
+// 히트 이벤트 델리게이트
+DECLARE_DELEGATE_TwoParams(FOnSpecialProjectileHit, FVector  /* HitLocation */, FVector /*Direction*/);
+
 
 UCLASS()
-class OMEGA_STRIKERS_API ATempCore : public AActor, public IOSImpactReceiver
+class OMEGA_STRIKERS_API AAsher_Special_Projectile : public AActor
 {
 	GENERATED_BODY()
 
 public:
 	// Sets default values for this actor's properties
-	ATempCore();
+	AAsher_Special_Projectile();
 
 protected:
 	// Called when the game starts or when spawned
@@ -23,11 +26,4 @@ protected:
 public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
-	
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FVector Distance = FVector::ZeroVector;
-	float Speed = 0;
-	
-	bool ReceiveImpact_Implementation(const FOSImpactData& ImpactData, AActor* InstigatorActor);
 };

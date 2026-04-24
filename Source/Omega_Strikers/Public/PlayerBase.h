@@ -111,7 +111,7 @@ public:
 	// ======= Other Processing Function =======
 	
 	// Impact Data 처리 함수(인터페이스 함수)
-	virtual void ReceiveImpact_Implementation(const FOSImpactData& ImpactData, AActor* InstigatorActor) override;
+	virtual bool ReceiveImpact_Implementation(const FOSImpactData& ImpactData, AActor* InstigatorActor) override;
 	void ApplyKnockback(FVector2D KnockbackDir, float KnockbackPow);
 	
 	// 넉백 계수 관리 함수

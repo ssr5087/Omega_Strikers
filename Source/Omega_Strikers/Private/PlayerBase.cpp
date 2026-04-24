@@ -222,18 +222,28 @@ void APlayerBase::Use_SpecialSkill() {}
 
 void APlayerBase::Use_Flip() {}
 
-void APlayerBase::ReceiveImpact_Implementation(const FOSImpactData& ImpactData, AActor* InstigatorActor)
+bool APlayerBase::ReceiveImpact_Implementation(const FOSImpactData& ImpactData, AActor* InstigatorActor)
 {
-	// 1. 넉백부터 처리
+	// 1. 팀 사이드 체크 (공격자의 팀 사이드가 내 팀 사이드와 다를 경우에만 적용)
+	if (ImpactData.TeamSide == TeamSide)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("야 이놈아 맞았으면 말을 해"));
+		return false;
+	}
+	
+	// 2. 넉백부터 처리
 	if (ImpactData.PlayerKnockbackPower > 0)
 	{
 		ApplyKnockback(ImpactData.Direction, ImpactData.PlayerKnockbackPower);
 	}
-	// 2. HPComp에서 데미지 적용
+	
+	// 3. HPComp에서 데미지 적용
 	if (HPComp && ImpactData.PlayerDamage > 0)
 	{
 		HPComp->ApplyDamage(ImpactData.PlayerDamage);
 	}
+	
+	return true;
 }
 
 void APlayerBase::ApplyKnockback(FVector2D KnockbackDir, float KnockbackPow)

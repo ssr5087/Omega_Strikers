@@ -35,12 +35,6 @@ void ALuna_PrimaryRocket::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	// 데이터 적용 필요
-	ImpactData.Direction = FVector2D(GetActorForwardVector().X, GetActorForwardVector().Y).GetSafeNormal();
-	ImpactData.CoreKnockbackPower = 3390.f;
-	ImpactData.PlayerKnockbackPower = 1500.f;
-	ImpactData.PlayerDamage = 100.0f;
-	
 	FTimerHandle SpeedChanger;
 	GetWorld()->GetTimerManager().SetTimer(SpeedChanger, [this]()->void {Speed = 5000.f;}, 0.5f, false);
 }
@@ -57,7 +51,13 @@ void ALuna_PrimaryRocket::InitRocket(float Owner_Power, AActor* InOwnerActor, EO
 {
 	Luna_Power = Owner_Power;
 	OwnerActorRef = InOwnerActor;
-	TeamSide = InTeamSide;
+	
+	// 데이터 적용 필요
+	ImpactData.TeamSide = InTeamSide;
+	ImpactData.Direction = FVector2D(GetActorForwardVector().X, GetActorForwardVector().Y).GetSafeNormal();
+	ImpactData.CoreKnockbackPower = 3390.f;
+	ImpactData.PlayerKnockbackPower = 1500.f;
+	ImpactData.PlayerDamage = 100.0f;
 }
 
 // 충돌 시 데미지 전달해주는 로직 넣기
@@ -68,9 +68,12 @@ void ALuna_PrimaryRocket::OnRocketOverlap(UPrimitiveComponent* OverlappedCompone
 	if (OtherActor && OtherActor->Implements<UOSImpactReceiver>())
 	{
 		// 그 대상에 대해 인터페이스 함수를 실행해라
-		IOSImpactReceiver::Execute_ReceiveImpact(OtherActor, ImpactData, GetOwner());
-	}
+		bool bIsSuccess = IOSImpactReceiver::Execute_ReceiveImpact(OtherActor, ImpactData, OwnerActorRef);
 	
-	this->Destroy();
+		if (bIsSuccess)
+		{
+			this->Destroy();
+		}
+	}
 }
 
