@@ -29,5 +29,5 @@ public:
 	FVector Distance = FVector::ZeroVector;
 	float Speed = 0;
 	
-	void ReceiveImpact_Implementation(const FOSImpactData& ImpactData, AActor* InstigatorActor);
+	bool ReceiveImpact_Implementation(const FOSImpactData& ImpactData, AActor* InstigatorActor);
 };

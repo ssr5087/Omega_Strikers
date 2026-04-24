@@ -45,6 +45,7 @@ void ALuna::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	TeamSide = EOSTeam::Red;
 }
 
 // Called every frame
