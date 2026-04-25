@@ -1,6 +1,6 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
-#include "Characters/Zentaro.h"
+#include "Zentaro.h"
 
 #include "Engine/OverlapResult.h"
 #include "GameFramework/CharacterMovementComponent.h"
