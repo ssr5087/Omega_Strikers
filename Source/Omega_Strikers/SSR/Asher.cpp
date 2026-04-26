@@ -6,6 +6,7 @@
 #include "Asher_Special_Projectile.h"
 #include "Asher_Special_Shield.h"
 #include "Core/CoreBall.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/KismetSystemLibrary.h"
 
 
@@ -71,6 +72,21 @@ void AAsher::Ready_PrimarySkill()
 void AAsher::Ready_SecondarySkill()
 {
 	Super::Ready_SecondarySkill();
+
+	if (bSecondary_SkillCoolDown || bIsSecondary_Dashing)
+	{
+		return;
+	}
+
+	SecondaryDashDirection = FVector(CursorDir.X, CursorDir.Y, 0.f).GetSafeNormal();
+	if (SecondaryDashDirection.IsNearlyZero())
+	{
+		SecondaryDashDirection = GetActorForwardVector();
+		SecondaryDashDirection.Z = 0.f;
+		SecondaryDashDirection.Normalize();
+	}
+
+	SetActorRotation(SecondaryDashDirection.Rotation());
 }
 
 void AAsher::Ready_SpecialSkill()
@@ -135,6 +151,27 @@ void AAsher::Use_PrimarySkill()
 void AAsher::Use_SecondarySkill()
 {
 	Super::Use_SecondarySkill();
+
+	if (bSecondary_SkillCoolDown || bIsSecondary_Dashing)
+	{
+		return;
+	}
+
+	if (SecondaryDashDirection.IsNearlyZero())
+	{
+		SecondaryDashDirection = FVector(CursorDir.X, CursorDir.Y, 0.f).GetSafeNormal();
+	}
+
+	if (SecondaryDashDirection.IsNearlyZero())
+	{
+		SecondaryDashDirection = GetActorForwardVector();
+		SecondaryDashDirection.Z = 0.f;
+		SecondaryDashDirection.Normalize();
+	}
+
+	bSecondary_SkillCoolDown = true;
+	SecondaryHitActors.Empty();
+	DoSecondaryDash();
 }
 
 void AAsher::Use_SpecialSkill()
@@ -330,4 +367,131 @@ void AAsher::DoSpecialShield(FVector SpawnLocation, FVector Direction)
 		// 기존 경로를 유지하려면 방향 기반 회전값도 같이 전달해야 함
 		Shield->Init(Direction, Direction.Rotation());
 	}
+}
+
+void AAsher::DoSecondaryDash()
+{
+	if (!GetWorld())
+	{
+		return;
+	}
+
+	bIsSecondary_Dashing = true;
+	SecondaryLastTraceLocation = GetActorLocation();
+
+	if (GetCharacterMovement())
+	{
+		GetCharacterMovement()->StopMovementImmediately();
+		LaunchCharacter(SecondaryDashDirection * (Secondary_DashDistance / Secondary_DashDuration), true, false);
+	}
+
+	GetWorldTimerManager().SetTimer(
+		SecondaryDashTimer,
+		this,
+		&AAsher::DoSecondaryDashTrace,
+		Secondary_DashTraceInterval,
+		true
+	);
+
+	FTimerHandle SecondaryDashEndTimer;
+	GetWorldTimerManager().SetTimer(
+		SecondaryDashEndTimer,
+		this,
+		&AAsher::EndSecondaryDash,
+		Secondary_DashDuration,
+		false
+	);
+
+	GetWorldTimerManager().SetTimer(
+		SecondarySkillTimer,
+		[this]()
+		{
+			bSecondary_SkillCoolDown = false;
+		},
+		Secondary_SkillCool,
+		false
+	);
+}
+
+void AAsher::DoSecondaryDashTrace()
+{
+	if (!GetWorld())
+	{
+		return;
+	}
+
+	const FVector CurrentLocation = GetActorLocation();
+	const FVector TraceStart = SecondaryLastTraceLocation;
+	const FVector TraceEnd = CurrentLocation;
+
+	if (TraceStart.Equals(TraceEnd, 1.f))
+	{
+		return;
+	}
+
+	TArray<FHitResult> Hits;
+	FCollisionObjectQueryParams ObjectQueryParams;
+	ObjectQueryParams.AddObjectTypesToQuery(ECC_Pawn);
+	ObjectQueryParams.AddObjectTypesToQuery(ECC_WorldDynamic);
+
+	FCollisionQueryParams QueryParams;
+	QueryParams.AddIgnoredActor(this);
+
+	GetWorld()->SweepMultiByObjectType(
+		Hits,
+		TraceStart,
+		TraceEnd,
+		FQuat::Identity,
+		ObjectQueryParams,
+		FCollisionShape::MakeSphere(Secondary_HitRadius),
+		QueryParams
+	);
+
+	for (const FHitResult& Hit : Hits)
+	{
+		AActor* Target = Hit.GetActor();
+		if (!Target || SecondaryHitActors.Contains(Target))
+		{
+			continue;
+		}
+
+		if (!Target->Implements<UOSImpactReceiver>())
+		{
+			continue;
+		}
+
+		FOSImpactData Data;
+		Data.TeamSide = TeamSide;
+		Data.Direction = FVector2D(SecondaryDashDirection.X, SecondaryDashDirection.Y);
+		Data.PlayerDamage = Secondary_PlayerDamage;
+		Data.PlayerKnockbackPower = Secondary_PlayerKnockback;
+		Data.CoreKnockbackPower = Secondary_CoreKnockback;
+
+		if (IOSImpactReceiver::Execute_ReceiveImpact(Target, Data, this))
+		{
+			SecondaryHitActors.Add(Target);
+		}
+	}
+
+	SecondaryLastTraceLocation = CurrentLocation;
+}
+
+void AAsher::EndSecondaryDash()
+{
+	if (!bIsSecondary_Dashing)
+	{
+		return;
+	}
+
+	DoSecondaryDashTrace();
+	GetWorldTimerManager().ClearTimer(SecondaryDashTimer);
+
+	if (GetCharacterMovement())
+	{
+		GetCharacterMovement()->StopMovementImmediately();
+	}
+
+	bIsSecondary_Dashing = false;
+	SecondaryDashDirection = FVector::ZeroVector;
+	SecondaryHitActors.Empty();
 }
