@@ -83,4 +83,32 @@ public:
 	
 	void DoSpecialProjectile();
 	void DoSpecialShield(FVector SpawnLocation, FVector Direction);
+	
+	// ---------------------------------------
+	
+	// Secondary Skill
+	bool bSecondary_SkillCoolDown = false;
+	bool bIsSecondary_Dashing = false;
+
+	FTimerHandle SecondarySkillTimer;
+	FTimerHandle SecondaryDashTimer;
+
+	float Secondary_SkillCool = 4.0f;
+	float Secondary_DashDistance = 700.0f;
+	float Secondary_DashDuration = 0.18f;
+	float Secondary_DashTraceInterval = 0.02f;
+	float Secondary_HitRadius = 120.0f;
+	
+	// 데미지
+	float Secondary_PlayerDamage = 120.0f;
+	float Secondary_PlayerKnockback = 850.0f;
+	float Secondary_CoreKnockback = 1500.0f;
+
+	FVector SecondaryDashDirection = FVector::ZeroVector;
+	FVector SecondaryLastTraceLocation = FVector::ZeroVector;
+	TSet<AActor*> SecondaryHitActors;
+
+	void DoSecondaryDash();
+	void DoSecondaryDashTrace();
+	void EndSecondaryDash();
 };
