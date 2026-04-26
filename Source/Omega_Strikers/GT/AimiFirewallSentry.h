@@ -1,0 +1,93 @@
+﻿// Fill out your copyright notice in the Description page of Project Settings.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "../../../../../../Game/Epic Games/UE_5.7/Engine/Source/Runtime/CoreUObject/Public/UObject/ObjectPtr.h"
+
+#include "AimiFirewallSentry.generated.h"
+
+class UStaticMeshComponent;
+
+/**
+ * 방화벽 파수꾼 (Firewall Sentry)
+ *
+ * - 고정 위치에 터렛 설치
+ * - 지정된 방향으로 기술 억제 방화벽 투사체 연사
+ * - 각 화살은 처음 적중한 적만 타격 (관통 X)
+ * - 일정 시간 후 자동 소멸
+ */
+UCLASS()
+class OMEGA_STRIKERS_API AAimiFirewallSentry : public AActor
+{
+	GENERATED_BODY()
+
+public:
+	AAimiFirewallSentry();
+
+protected:
+	virtual void BeginPlay() override;
+
+public:
+	virtual void Tick(float DeltaTime) override;
+
+	// 터렛 초기화 - 발사 방향, 오너 설정
+	void Initialize(AActor* IsOwner, const FVector& FireDirection);
+
+	// ──────────────────────────────────────────
+	//  터렛 속성
+	// ──────────────────────────────────────────
+
+	// 터렛 지속 시간 (초)
+	UPROPERTY(EditDefaultsOnly, Category="Sentry")
+	float Duration = 6.f;
+
+	// 발사 간격 (초)
+	UPROPERTY(EditDefaultsOnly, Category="Sentry")
+	float FireInterval = 0.6f;
+
+	// 투사체 속도
+	UPROPERTY(EditDefaultsOnly, Category="Sentry")
+	float ProjectileSpeed = 2200.f;
+
+	// 투사체 사거리
+	UPROPERTY(EditDefaultsOnly, Category="Sentry")
+	float ProjectileRange = 1500.f;
+
+	// 투사체 1발당 코어 밀치기
+	UPROPERTY(EditDefaultsOnly, Category="Sentry|Damage")
+	float ProjectileCoreKnockback = 865.f;
+
+	// 투사체 1발당 플레이어 밀치기
+	UPROPERTY(EditDefaultsOnly, Category="Sentry|Damage")
+	float ProjectilePlayerKnockback = 175.f;
+
+	// 투사체 1발당 피해
+	UPROPERTY(EditDefaultsOnly, Category="Sentry|Damage")
+	float ProjectileDamage = 175.f;
+
+	// 투사체 BP 클래스 (없으면 라인트레이스로 대체)
+	UPROPERTY(EditDefaultsOnly, Category="Sentry")
+	TSubclassOf<AActor> ProjectileClass;
+
+	// 터렛 체력 (파괴 가능)
+	UPROPERTY(EditDefaultsOnly, Category="Sentry")
+	float SentryHP = 300.f;
+
+protected:
+	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<UStaticMeshComponent> SentryMesh;
+
+private:
+	FVector FireDir;
+	float ElapsedTime = 0.f;
+	float FireTimer = 0.f;
+	float CurrentHP;
+	bool bInitialized = false;
+
+	UPROPERTY()
+	TObjectPtr<AActor> OwnerCharacter;
+
+	// 투사체 발사 or 라인트레이스 히트
+	void FireProjectile();
+};
