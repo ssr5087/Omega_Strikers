@@ -64,6 +64,12 @@ public:
 	
 	// Special Skill
 	
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<class AAsher_Special_Projectile> SpecialProjectileClass;
+
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<class AAsher_Special_Shield> SpecialShieldClass;
+	
 	// boolean 스킬 쿨타임 체크
 	bool bSpecial_SkillCoolDown = false;
 	
@@ -73,6 +79,8 @@ public:
 	// 스킬 쿨타임 시간
 	float Special_SkillCool = 4.0f;
 	
+	EOSTeam MyTeam = EOSTeam::Red;
+	
 	void DoSpecialProjectile();
-	void DoSpecialShield();
+	void DoSpecialShield(FVector SpawnLocation, FVector Direction);
 };

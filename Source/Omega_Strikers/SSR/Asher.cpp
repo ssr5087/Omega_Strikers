@@ -3,6 +3,8 @@
 
 #include "Asher.h"
 
+#include "Asher_Special_Projectile.h"
+#include "Asher_Special_Shield.h"
 #include "Core/CoreBall.h"
 #include "Kismet/KismetSystemLibrary.h"
 
@@ -62,6 +64,8 @@ void AAsher::Ready_PrimarySkill()
 	// 콤보중일때도 사용 금지
 	if (bIsPrimary_Attacking)
 		return;
+	
+	UE_LOG(LogTemp, Warning, TEXT("1234"))
 }
 
 void AAsher::Ready_SecondarySkill()
@@ -121,7 +125,7 @@ void AAsher::Use_PrimarySkill()
 		[this]()
 		{
 			bIsPrimary_Attacking = false;
-			PrimarySkillCool = 4.f;
+			Primary_SkillCool = 4.f;
 		},
 		0.6f,
 		false
@@ -140,6 +144,8 @@ void AAsher::Use_SpecialSkill()
 	// 쿨타임 중일때는 사용금지
 	if (bSpecial_SkillCoolDown)
 		return;
+	
+	bSpecial_SkillCoolDown = true;
 	
 	HitActors.Empty();
 	DoSpecialProjectile();
@@ -283,17 +289,45 @@ void AAsher::DoPrimaryHit2()
 	// 쿨타임
 	bPrimary_SkillCoolDown = true;
 	FTimerHandle PrimarySkillTimer;
-	GetWorld()->GetTimerManager().SetTimer(PrimarySkillTimer, [this]()->void {bPrimary_SkillCoolDown = false;}, PrimarySkillCool, false);
+	GetWorld()->GetTimerManager().SetTimer(PrimarySkillTimer, [this]()->void {bPrimary_SkillCoolDown = false;}, Primary_SkillCool, false);
 }
 
 void AAsher::DoSpecialProjectile()
 {
-	FVector Forward = FVector(CursorDir.X, CursorDir.Y,0.f).GetSafeNormal();
+	FVector Forward = FVector(CursorDir.X, CursorDir.Y, 0.f).GetSafeNormal();
 	FVector SpawnLocation = GetActorLocation() + Forward * 100.f;
-	
+
+	auto Projectile = GetWorld()->SpawnActor<AAsher_Special_Projectile>(
+		SpecialProjectileClass,
+		SpawnLocation,
+		Forward.Rotation()
+	);
+
+	if (Projectile)
+	{
+		Projectile->SetOwner(this);
+
+		// 🔥 방향 + 팀 전달
+		Projectile->Init(Forward, MyTeam); // MyTeam은 네 캐릭터 팀 변수
+
+		// 🔥 히트 시 방패 생성 연결
+		Projectile->OnHit.BindUObject(this, &AAsher::DoSpecialShield);
+	}
 }
 
-void AAsher::DoSpecialShield()
+void AAsher::DoSpecialShield(FVector SpawnLocation, FVector Direction)
 {
-	
+	auto Shield = GetWorld()->SpawnActor<AAsher_Special_Shield>(
+		SpecialShieldClass,
+		SpawnLocation,
+		FRotator::ZeroRotator
+	);
+
+	if (Shield)
+	{
+		Shield->SetOwner(this);
+
+		// 기존 경로를 유지하려면 방향 기반 회전값도 같이 전달해야 함
+		Shield->Init(Direction, Direction.Rotation());
+	}
 }
