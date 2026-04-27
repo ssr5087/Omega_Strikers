@@ -8,6 +8,7 @@
 #include "Core/CoreBall.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Omega_Strikers/SM/HPComponent.h"
 
 
 // Sets default values
@@ -35,6 +36,18 @@ void AAsher::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	// 데이터 셋
+	FCharacterStat* Stat = GetStatByLevel(Level);
+	
+	if (Stat)
+	{
+		ApplyStat(*Stat);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Stat Load Failed"));
+	}
+	
 }
 
 // Called every frame
@@ -47,6 +60,57 @@ void AAsher::Tick(float DeltaTime)
 void AAsher::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
+}
+
+FCharacterStat* AAsher::GetStatByLevel(int32 InLevel)
+{
+	if (!CharacterStatTable)
+	{
+		UE_LOG(LogTemp, Error, TEXT("CharacterStatTable is NULL"));
+		return nullptr;
+	}
+	
+	FName RowName = FName(*FString::Printf(TEXT("%s_%d"), *CharacterName.ToString(), InLevel));
+	
+	UE_LOG(LogTemp, Warning, TEXT("Trying Row: %s"), *RowName.ToString());
+	
+	return CharacterStatTable->FindRow<FCharacterStat>(RowName, TEXT(""));
+}
+
+void AAsher::ApplyStat(const FCharacterStat& Stat)
+{
+	CurrentStat = Stat;
+	
+	// PlayerBase 변수 덮어쓰기
+	MaxHP = Stat.MaxHP;
+	Power = Stat.Power;
+	Speed = Stat.Speed;
+	CoolDownRate = Stat.Cooldown;
+	
+	// 이동속도 적용
+	GetCharacterMovement()->MaxWalkSpeed = Speed;
+	
+	if (HPComp)
+	{
+		HPComp->UpdateMaxHP(MaxHP);
+		HPComp->InitializeHP();
+	}
+	
+	// 테스트 용
+	UE_LOG(LogTemp, Warning, TEXT("HP: %.1f / Power: %.1f / Speed: %.1f"),
+	MaxHP, Power, Speed);
+}
+
+void AAsher::LevelUp()
+{
+	Level++;
+	
+	FCharacterStat* Stat = GetStatByLevel(Level);
+	
+	if (Stat)
+	{
+		ApplyStat(*Stat);
+	}
 }
 
 void AAsher::Ready_CoreHit()
@@ -78,15 +142,15 @@ void AAsher::Ready_SecondarySkill()
 		return;
 	}
 
-	SecondaryDashDirection = FVector(CursorDir.X, CursorDir.Y, 0.f).GetSafeNormal();
-	if (SecondaryDashDirection.IsNearlyZero())
-	{
-		SecondaryDashDirection = GetActorForwardVector();
-		SecondaryDashDirection.Z = 0.f;
-		SecondaryDashDirection.Normalize();
-	}
-
-	SetActorRotation(SecondaryDashDirection.Rotation());
+	// SecondaryDashDirection = FVector(CursorDir.X, CursorDir.Y, 0.f).GetSafeNormal();
+	// if (SecondaryDashDirection.IsNearlyZero())
+	// {
+	// 	SecondaryDashDirection = GetActorForwardVector();
+	// 	SecondaryDashDirection.Z = 0.f;
+	// 	SecondaryDashDirection.Normalize();
+	// }
+	//
+	// SetActorRotation(SecondaryDashDirection.Rotation());
 }
 
 void AAsher::Ready_SpecialSkill()
@@ -156,18 +220,28 @@ void AAsher::Use_SecondarySkill()
 	{
 		return;
 	}
-
-	if (SecondaryDashDirection.IsNearlyZero())
-	{
-		SecondaryDashDirection = FVector(CursorDir.X, CursorDir.Y, 0.f).GetSafeNormal();
-	}
-
+	
+	SecondaryDashDirection = FVector(CursorDir.X, CursorDir.Y, 0.f).GetSafeNormal();
 	if (SecondaryDashDirection.IsNearlyZero())
 	{
 		SecondaryDashDirection = GetActorForwardVector();
 		SecondaryDashDirection.Z = 0.f;
 		SecondaryDashDirection.Normalize();
 	}
+
+	SetActorRotation(SecondaryDashDirection.Rotation());
+
+	// if (SecondaryDashDirection.IsNearlyZero())
+	// {
+	// 	SecondaryDashDirection = FVector(CursorDir.X, CursorDir.Y, 0.f).GetSafeNormal();
+	// }
+	//
+	// if (SecondaryDashDirection.IsNearlyZero())
+	// {
+	// 	SecondaryDashDirection = GetActorForwardVector();
+	// 	SecondaryDashDirection.Z = 0.f;
+	// 	SecondaryDashDirection.Normalize();
+	// }
 
 	bSecondary_SkillCoolDown = true;
 	SecondaryHitActors.Empty();
@@ -332,7 +406,7 @@ void AAsher::DoPrimaryHit2()
 void AAsher::DoSpecialProjectile()
 {
 	FVector Forward = FVector(CursorDir.X, CursorDir.Y, 0.f).GetSafeNormal();
-	FVector SpawnLocation = GetActorLocation() + Forward * 100.f;
+	FVector SpawnLocation = GetActorLocation() + Forward * 200.f;
 
 	auto Projectile = GetWorld()->SpawnActor<AAsher_Special_Projectile>(
 		SpecialProjectileClass,
