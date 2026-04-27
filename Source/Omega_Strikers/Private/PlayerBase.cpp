@@ -8,6 +8,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "OSTopDownController.h"
+#include "Components/CapsuleComponent.h"
 #include "Core/CoreBall.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -22,6 +23,8 @@ APlayerBase::APlayerBase()
 	PrimaryActorTick.bCanEverTick = true;
 
 	// ========= Component =========
+	
+	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 	
 	// 이동 관련 MovementComponent 조정
 	bUseControllerRotationYaw = false;
