@@ -93,10 +93,15 @@ public:
 	FTimerHandle SecondarySkillTimer;
 	FTimerHandle SecondaryDashTimer;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Secondary")
 	float Secondary_SkillCool = 4.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Secondary")
 	float Secondary_DashDistance = 700.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Secondary")
 	float Secondary_DashDuration = 0.18f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Secondary")
 	float Secondary_DashTraceInterval = 0.02f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Secondary")
 	float Secondary_HitRadius = 120.0f;
 	
 	// 데미지
