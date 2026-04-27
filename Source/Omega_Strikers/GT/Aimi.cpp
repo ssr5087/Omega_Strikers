@@ -50,6 +50,19 @@ void AAimi::Tick(float DeltaTime)
 	{
 		return !IsValid(sentry);
 	});
+	
+	LOG_GT(TEXT("Tick — bAimingPrimary: %d"), bAimingPrimary);
+	DrawAimIndicator();
+}
+
+// ════════════════════════════════════════════════════════════
+//  ClearAllAiming
+// ════════════════════════════════════════════════════════════
+void AAimi::ClearAllAiming()
+{
+	bAimingPrimary   = false;
+	bAimingSecondary = false;
+	bAimingSpecial   = false;
 }
 
 // ════════════════════════════════════════════════════════════
@@ -120,11 +133,23 @@ void AAimi::DoStrike()
 // ════════════════════════════════════════════════════════════
 void AAimi::Ready_PrimarySkill()
 {
-	Use_PrimarySkill();
+	LOG_GT(TEXT("Ready_PrimarySkill called! bAimingPrimary will be set true"));
+	
+	if (ActiveOrb && !ActiveOrb->HasDetonated())
+	{
+		bAimingPrimary = true;  // 재시전 대기 UI
+		return;
+	}
+	if (CD_Primary > 0.f) return;
+
+	ClearAllAiming();
+	bAimingPrimary = true;  // ← 이게 켜지면 Tick에서 궤적선 그림
 }
 
 void AAimi::Use_PrimarySkill()
 {
+	LOG_GT(TEXT("Use_PrimarySkill called! — bAimingPrimary was %d"), bAimingPrimary);
+	
 	if (ActiveOrb && !ActiveOrb->HasDetonated())
 	{
 		RecastGlitchOrb();
@@ -399,4 +424,207 @@ bool AAimi::PerformSlash(const FVector& Origin, const FVector& ForwardDir,
 	}
  
 	return bHitAny;
+}
+
+// ════════════════════════════════════════════════════════════
+//  커서 에이밍
+// ════════════════════════════════════════════════════════════
+FVector AAimi::GetCursorWorldPosition() const
+{
+	APlayerController* pc = Cast<APlayerController>(GetController());
+	if (!pc) return GetActorLocation() + GetActorForwardVector() * 300.f;
+	
+	FHitResult hit;
+	if (pc->GetHitResultUnderCursor(ECC_Visibility, false, hit))
+	{
+		FVector pos = hit.ImpactPoint;
+		pos.Z = GetActorLocation().Z;
+		return pos;
+	}
+	
+	// 히트 실패 -> 스크린 -> 월드 역투영
+	FVector worldPos, worldDir;
+	if (pc->DeprojectMousePositionToWorld(worldPos, worldDir))
+	{
+		const float charZ = GetActorLocation().Z;
+		if (FMath::Abs(worldDir.Z) > KINDA_SMALL_NUMBER)
+		{
+			const float t = (charZ - worldPos.Z) / worldDir.Z;
+			return worldPos + worldDir * t;
+		}
+	}
+	return GetActorLocation() + GetActorForwardVector() * 300.f;
+}
+
+FVector AAimi::GetAimDirection() const
+{
+	FVector dir = GetCursorWorldPosition() - GetActorLocation();
+	dir.Z = 0.f;
+	return dir.GetSafeNormal();
+}
+
+// ════════════════════════════════════════════════════════════
+//  DrawAimIndicator — 플래그 기반 분기
+// ════════════════════════════════════════════════════════════
+void AAimi::DrawAimIndicator()
+{
+#if ENABLE_DRAW_DEBUG
+	LOG_GT(TEXT("DrawAimIndicator — P:%d S:%d Sp:%d"), bAimingPrimary, bAimingSecondary, bAimingSpecial);
+#else
+	LOG_GT(TEXT("ENABLE_DRAW_DEBUG is OFF!"));
+#endif
+	
+#if ENABLE_ANIM_DEBUG
+	// 오브 비행 중 -> 플래그 무관, 항상 폭발 범위 표시
+	if (ActiveOrb && !ActiveOrb->HasDetonated())
+	{
+		DrawGlitchPopAim();
+		return;
+	}
+	
+	// Ready() 에서 켠 플래그에 따라 해당 스킬만
+	if (bAimingPrimary) DrawGlitchPopAim();
+	if (bAimingSecondary) DrawCyberSwipeAim();
+	if (bAimingSpecial) DrawSentryAim();
+#endif
+}
+
+// ════════════════════════════════════════════════════════════
+//  DrawGlitchPopAim — 글리치.팝 궤적 + 폭발 범위
+// ════════════════════════════════════════════════════════════
+void AAimi::DrawGlitchPopAim()
+{
+#if ENABLE_ANIM_DEBUG
+	const FVector charPos = GetActorLocation();
+	
+	// 오브 활성 -> 오브 주변 폭발 범위
+	if (ActiveOrb && !ActiveOrb->HasDetonated())
+	{
+		const FVector orbPos = ActiveOrb->GetActorLocation();
+		const float orbR = ActiveOrb->GetCurrentRadius();
+		const float explosionR = orbR * ActiveOrb->ExplosionRadiusMultiplier;
+		
+		DrawGroundCircle(orbPos, orbR, FColor::White, 24, 2.f);
+		DrawGroundCircle(orbPos, explosionR, FColor::Cyan, 24, 1.5f);
+		DrawDebugLine(GetWorld(), charPos, orbPos, FColor(0, 200, 255, 100), false, 0.f, 0, 1.f);
+		
+		// 범위 안 코어에 Push 방향 표시
+		TArray<FOverlapResult> overlaps;
+		FCollisionShape sphere = FCollisionShape::MakeSphere(explosionR);
+		FCollisionQueryParams params;
+		params.AddIgnoredActor(this);
+		params.AddIgnoredActor(ActiveOrb);
+		GetWorld()->OverlapMultiByChannel(overlaps, orbPos, FQuat::Identity, ECC_Pawn, sphere, params);
+		
+		for (const FOverlapResult& overlap : overlaps)
+		{
+			AActor* target = overlap.GetActor();
+			if (!target || !!target->ActorHasTag(TEXT("Core"))) continue;
+			FVector pushDire = (target->GetActorLocation() - orbPos);
+			pushDire.Z = 0.f;
+			pushDire.Normalize();
+			DrawDebugDirectionalArrow(GetWorld(), target->GetActorLocation(), target->GetActorLocation() + pushDire * 150.f, 15.f, FColor::Yellow, false, 0.f, 0, 3.f);
+		}
+		return;
+	}
+	// 오브 없음 -> 발사 방향선 (원작처럼 솔리드 라인)
+	const FVector aimDir = GetAimDirection();
+	if (aimDir.IsNearlyZero()) return;
+		
+	const float maxDist = 1200.f;
+	DrawDebugLine(GetWorld(), charPos, charPos + aimDir * maxDist, FColor(0, 230, 255, 140), false, 0.f, 0, 4.f);
+		
+	// 최대 거리 폭발 범위
+	const FVector endPoint = charPos + aimDir * maxDist;
+	DrawGroundCircle(endPoint, 100.f * 2.5f, FColor(0, 200, 255, 100), 32, 1.5f);
+	
+	// 커서 십자선
+	const FVector cursorPos = GetCursorWorldPosition();
+	const float cs = 15.f;
+	DrawDebugLine(GetWorld(), cursorPos + FVector(-cs, 0, 0), cursorPos + FVector(cs, 0, 0), FColor::White, false, 0.f, 0, 1.5f);
+	DrawDebugLine(GetWorld(), cursorPos + FVector(0, -cs, 0), cursorPos + FVector(0, cs, 0), FColor::White, false, 0.f, 0, 1.5f);
+#endif
+	
+}
+
+// ════════════════════════════════════════════════════════════
+//  DrawCyberSwipeAim — 점멸 도착지 + 부채꼴
+// ════════════════════════════════════════════════════════════
+void AAimi::DrawCyberSwipeAim()
+{
+#if ENABLE_ANIM_DEBUG
+	const FVector charPos = GetActorLocation();
+	const FVector aimDir = GetAimDirection();
+	const FVector blinkEnd = charPos + aimDir * BlinkDistance;
+	
+	// 점멸 궤적 (보라색 솔리드)
+	DrawDebugLine(GetWorld(), charPos, blinkEnd, FColor(200, 100, 255, 160), false, 0.f, 0, 3.f);
+	
+	// 도착지 원
+	DrawGroundCircle(blinkEnd, 25.f, FColor(200, 100, 255, 180), 16, 2.f);
+	
+	// 도착지 부채꼴 범위
+	DrawArcOnGround(blinkEnd, aimDir, SwipeRange, SwipeHalfAngle, FColor(200, 100, 255, 180), 20, 2.f);
+#endif
+	
+}
+
+// ════════════════════════════════════════════════════════════
+//  DrawSentryAim — 설치 위치 + 발사 방향
+// ════════════════════════════════════════════════════════════
+void AAimi::DrawSentryAim()
+{
+#if ENABLE_ANIM_DEBUG
+	const FVector aimDir = GetAimDirection();
+	const FVector placePos = GetActorLocation() + aimDir * 80.f;
+	
+	DrawGroundCircle(placePos, 30.f, FColor::Magenta, 16, 2.f);
+	DrawDebugDirectionalArrow(GetWorld(), placePos, placePos + aimDir * 200.f, 15.f, FColor::Magenta, false, 0.f, 0, 2.f);
+#endif
+	
+}
+
+// ════════════════════════════════════════════════════════════
+//  DrawGroundCircle / DrawArcOnGround — 유틸
+// ════════════════════════════════════════════════════════════
+void AAimi::DrawGroundCircle(const FVector& Center, float Radius, const FColor& Color, int32 Segments,
+	float Thickness) const
+{
+#if ENABLE_ANIM_DEBUG
+	if (!GetWorld()) return;
+	const float step = 2.f * PI / Segments;
+	FVector prev = Center + FVector(Radius, 0.f, 0.f);
+	for (int32 i = 1; i <= Segments; i++)
+	{
+		const float a = step * i;
+		const FVector next = Center + FVector(FMath::Cos(a) * Radius, FMath::Sin(a) * Radius, 0.f);
+		DrawDebugLine(GetWorld(), prev, next, Color, false, 0.f, 0, Thickness);
+		prev = next;
+	}
+#endif
+}
+
+void AAimi::DrawArcOnGround(const FVector& Center, const FVector& Forward, float Radius, float HalfAngleDeg,
+	const FColor& Color, int32 Segments, float Thickness) const
+{
+#if ENABLE_ANIM_DEBUG
+	if (!GetWorld()) return;
+	const float halfRad = FMath::DegreesToRadians(HalfAngleDeg);
+	const float step = (2.f * halfRad) / Segments;
+	const float startAngle = FMath::Atan2(Forward.Y, Forward.X) - halfRad;
+	
+	FVector arcStart = Center + FVector(FMath::Cos(startAngle) * Radius, FMath::Sin(startAngle) * Radius, 0.f);
+	DrawDebugLine(GetWorld(), Center, arcStart, Color, false, 0.f, 0, Thickness);
+	
+	FVector prev = arcStart;
+	for (int32 i = 1; i <= Segments; i++)
+	{
+		const float a = startAngle + step * i;
+		const FVector next = Center + FVector(FMath::Cos(a) * Radius, FMath::Sin(a) * Radius, 0.f);
+		DrawDebugLine(GetWorld(), prev, next, Color, false, 0.f, 0, Thickness);
+		prev = next;
+	}
+	DrawDebugLine(GetWorld(), prev, Center, Color, false, 0.f, 0, Thickness);
+#endif
+	
 }

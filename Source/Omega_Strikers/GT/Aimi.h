@@ -57,6 +57,17 @@ public:
 
 protected:
 	// ════════════════════════════════════════════
+	//  에이밍 상태 플래그
+	//
+	//  Ready()에서 true, Use()에서 false
+	//  Tick의 DrawAimIndicator()가 플래그 보고 조준선 표시
+	// ════════════════════════════════════════════
+	bool bAimingPrimary = false;
+	bool bAimingSecondary = false;
+	bool bAimingSpecial = false;
+	void ClearAllAiming();
+	
+	// ════════════════════════════════════════════
 	//  쿨다운
 	// ════════════════════════════════════════════
 	UPROPERTY(EditDefaultsOnly, Category = "Cooldown")
@@ -174,7 +185,7 @@ protected:
 
 	// 피해
 	UPROPERTY(EditDefaultsOnly, Category = "Secondary|CyberSwipe")
-	float SwipeDamage = 0.f;
+	float SwipeDamage = 262.f;
 
 private:
 	// 점멸 목표 위치 ( 마우스 / 입력 방향 기반 )
@@ -242,4 +253,25 @@ private:
 	bool PerformSlash(const FVector& Origin, const FVector& ForwardDir,
 					  float Range, float HalfAngleDeg,
 					  const FOSImpactData& InData);
+	
+	// ════════════════════════════════════════════
+	//  커서 에이밍 + 조준 UI
+	// ════════════════════════════════════════════
+	
+	// 마우스 커서 -> 바닥 히트 -> 월드 좌표
+	FVector GetCursorWorldPosition() const;
+	
+	// 캐릭터 -> 커서 방향 (Z = 0)
+	FVector GetAimDirection() const;
+	
+	// Tick에서 호출 - 플래그에 따라 조준선 그리기
+	void DrawAimIndicator();
+	
+	void DrawGlitchPopAim();
+	void DrawCyberSwipeAim();
+	void DrawSentryAim();
+	
+	void DrawGroundCircle(const FVector& Center, float Radius, const FColor& Color, int32 Segments = 32, float Thickness = 2.f) const;
+	
+	void DrawArcOnGround(const FVector& Center, const FVector& Forward, float Radius, float HalfAngleDeg, const FColor& Color, int32 Segments = 16, float Thickness = 2.f) const;
 };
