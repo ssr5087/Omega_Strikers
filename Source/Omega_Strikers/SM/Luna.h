@@ -31,9 +31,11 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TObjectPtr<class UBoxComponent> SecondaryHitBox;
 	
-	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Component|Primary")
-	TSubclassOf<class ALuna_PrimaryRocket> RocketFactory;
+	TSubclassOf<class ALuna_PrimaryRocket> PrimaryRocketFactory;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Component|Special")
+	TSubclassOf<class ALuna_SpecialRocket> SpecialRocketFactory;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stat|SkillRange")
 	float PrimaryRange = 5000.f;
@@ -46,9 +48,9 @@ public:
 	bool bSecondarySkillCoolDown = false;
 	bool bSpecialSkillCoolDown = false;
 	
-	float PrimarySkillCool = 0.5f;
-	float SecondarySkillCool = 14.f;
-	float SpecialSkillCool = 35.f;
+	float PrimarySkillCool = 0.5f;		//6.5
+	float SecondarySkillCool = 0.5f;	//14
+	float SpecialSkillCool = 0.5f;		//35
 	
 	virtual void PlayerMove(const struct FInputActionValue& InputActionValue) override;
 	

@@ -5,6 +5,7 @@
 
 #include "InputActionValue.h"
 #include "Luna_PrimaryRocket.h"
+#include "Luna_SpecialRocket.h"
 #include "Components/BoxComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -53,6 +54,7 @@ void ALuna::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	// 임의 설정
 	TeamSide = EOSTeam::Red;
 }
 
@@ -78,7 +80,13 @@ void ALuna::PlayerMove(const struct FInputActionValue& InputActionValue)
 		
 		FVector2D AimDir = InputActionValue.Get<FVector2D>();
 		NewDir = FVector(AimDir.X, AimDir.Y, 0.0f);
-		//GEngine->AddOnScreenDebugMessage(300000, 1, FColor::Magenta, FString::Printf(TEXT("%.2f, %.2f"), value.X, value.Y));
+		
+		if (AimDir.IsNearlyZero())
+		{
+			bIsChangingDirection = false;
+			NewDir = CurDir;
+			return;
+		}
 		
 		// 방향 전환 입력했으니 반영되도록 설정
 		bIsChangingDirection = true;
@@ -129,13 +137,8 @@ void ALuna::Use_PrimarySkill()
 	// SpawnParams.Instigator = GetInstigator();
 	// SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 	
-	ALuna_PrimaryRocket* Rocket = GetWorld()->SpawnActorDeferred<ALuna_PrimaryRocket>(RocketFactory, LauncherTransform);
-
-	// FOSImpactData PrimaryImpactData;
-	// PrimaryImpactData.Direction;
-	// PrimaryImpactData.CoreKnockbackPower;
-	// PrimaryImpactData.PlayerKnockbackPower;
-	// PrimaryImpactData.PlayerDamage;
+	ALuna_PrimaryRocket* Rocket = GetWorld()->SpawnActorDeferred<ALuna_PrimaryRocket>(PrimaryRocketFactory, LauncherTransform);
+	
 	if (Rocket)
 	{
 		Rocket->InitRocket(Power, this, TeamSide);
@@ -158,7 +161,11 @@ void ALuna::Use_SecondarySkill()
 	// [Secondary] 직접 타고 이동 - 맨 처음 충돌 객체 저장 - 멈춤 - 저장된 객체에 값 전달
 	if (bSecondarySkillCoolDown) {return;}
 	bSecondarySkillCoolDown = true;
-	bIsProcessingSecondary = true;
+	
+	// 즉각적으로 이동을 멈추고, 속도를 0으로 만들고, 이미 입력된 속도 벡터 값을 소모해버린 후 최대 속력 변경
+	GetCharacterMovement()->StopMovementImmediately();
+	GetCharacterMovement()->Velocity = FVector::ZeroVector;
+	GetCharacterMovement()->ConsumeInputVector();
 	GetCharacterMovement()->MaxWalkSpeed = 10000.f;
 	
 	// 최초 이동 방향
@@ -166,6 +173,8 @@ void ALuna::Use_SecondarySkill()
 	
 	// 업데이트 함수 타이머 호출
 	GetWorldTimerManager().SetTimer(MoveTimer, this, &ALuna::Update_SecondaryMove, 0.1f, true);
+	
+	bIsProcessingSecondary = true;
 	
 	// 쿨타임 관리
 	FTimerHandle SecondarySkillTimer;
@@ -183,6 +192,24 @@ void ALuna::Use_SpecialSkill()
 	// 바닥 좌표에 도달하는 순간 모든 적군과 코어에 방향과 충격량 각각 전달
 	if (bSpecialSkillCoolDown) {return;}
 	
+	// 스폰 트랜스폼 만들기
+	FTransform LauncherTransform;
+	
+	// 스폰 위치 (높이는 임의 설정)
+	FVector LaunchDir = - UKismetMathLibrary::GetUpVector(FRotator(0.0f, GetControlRotation().Yaw, 0.0f));
+	FRotator SpawnRot = UKismetMathLibrary::MakeRotFromX(LaunchDir);
+	
+	LauncherTransform.SetLocation(FVector(MouseCursorLoc.X, MouseCursorLoc.Y, 5000.f));
+	LauncherTransform.SetRotation(SpawnRot.Quaternion());
+	
+	// 스폰
+	ALuna_SpecialRocket* Rocket = GetWorld()->SpawnActorDeferred<ALuna_SpecialRocket>(SpecialRocketFactory, LauncherTransform);
+	
+	if (Rocket)
+	{
+		Rocket->InitRocket(Power, this, TeamSide);
+		Rocket->FinishSpawning(LauncherTransform);
+	}
 	
 	// 쿨타임 관리
 	bSpecialSkillCoolDown = true;
@@ -209,15 +236,19 @@ void ALuna::Update_SecondaryMove()
 	AddMovementInput(Right, CurDir.Y);
 	
 	if (!bIsChangingDirection) {return;}
-	CurDir = FMath::VInterpTo(CurDir, NewDir, 0.1, 1);
+	CurDir = FMath::VInterpTo(CurDir, NewDir, 0.1, 3);
 	CurDir.Normalize();
 	
 	// 방향 입력 종료 시 방향 전환 종료
 	bIsChangingDirection = false;
+	NewDir = CurDir;
 }
 
 void ALuna::OnDashOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
+	// 보조 스킬 처리 중일 때만 활성화
+	if (!bIsProcessingSecondary) {return;}
+	
 	// 충격 전달 구조체
 	FOSImpactData SecondaryImpactData;
 	SecondaryImpactData.TeamSide = TeamSide;
@@ -256,6 +287,7 @@ void ALuna::OnDashOverlap(UPrimitiveComponent* OverlappedComponent, AActor* Othe
 			GetWorldTimerManager().ClearTimer(MoveTimer);
 			GetCharacterMovement()->MaxWalkSpeed = 1000.f;
 			bIsProcessingSecondary = false;
+			NewDir = FVector::ZeroVector;
 		}
 	}
 }
