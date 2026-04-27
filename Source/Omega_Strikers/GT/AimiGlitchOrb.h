@@ -46,6 +46,9 @@ public:
 
 	// 이미 폭발했는지 체크
 	bool HasDetonated() const { return bDetonated; }
+	
+	// 현재 오브 반지름 (조준 UI에서 사용)
+	float GetCurrentRadius() const { return CurrentRadius; }
 
 	// ──────────────────────────────────────────
 	//  오브 속성
