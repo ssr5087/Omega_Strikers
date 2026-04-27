@@ -26,9 +26,9 @@ bool AOSPlayerController::GetMousePointOnArenaPlane(FVector& OutPoint) const
 		return false;
 	}
 
-	// 경기장의 z좌표(현재 0)에서 마우스의 월드 위치 z좌표를 빼고 방향벡터 값으로 나눔
+	// 경기장의 z좌표(현재 0)에서 마우스의 월드 위치 z좌표를 빼고 방향벡터 값으로 나눔 -> 코어의 z좌표로 변경
 	// 이 값은 음수 / 음수이므로 정상적인 경우 0보다 확실하게 큰 양수 값으로 나옴
-	const float T = - WorldLocation.Z / WorldDirection.Z;
+	const float T = 50 - WorldLocation.Z / WorldDirection.Z;
 
 	// 카메라 뒤쪽 교차는 무효 처리 (T가 음수 나오면 뭔가 잘못된 경우, ex. 카메라가 땅 속에 숨은 상황 등)
 	if (T < 0.0f)
