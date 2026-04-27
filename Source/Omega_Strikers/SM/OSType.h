@@ -8,10 +8,10 @@
 UENUM(BlueprintType)
 enum class EOSTeam : uint8
 {
-	None,
-	Core,
-	Blue,
-	Red
+	None UMETA(DisplayName = "None"),
+	Core UMETA(DisplayName = "Core"),
+	Blue UMETA(DisplayName = "Blue"),
+	Red UMETA(DisplayName = "Red")
 };
 
 // 공격이 맞았을 때 피격자에게 Interface로 전달할 공통 Hit Data
