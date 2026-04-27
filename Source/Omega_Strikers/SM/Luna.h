@@ -29,7 +29,7 @@ public:
 	// ================= Component =================
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	TObjectPtr<class USceneComponent> RocketLauncher;
+	TObjectPtr<class UBoxComponent> SecondaryHitBox;
 	
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Component|Primary")
@@ -50,6 +50,8 @@ public:
 	float SecondarySkillCool = 14.f;
 	float SpecialSkillCool = 35.f;
 	
+	virtual void PlayerMove(const struct FInputActionValue& InputActionValue) override;
+	
 	virtual void Ready_CoreHit() override;
 	virtual void Ready_PrimarySkill() override;
 	virtual void Ready_SecondarySkill() override;
@@ -61,4 +63,21 @@ public:
 	virtual void Use_SecondarySkill() override;
 	virtual void Use_SpecialSkill() override;
 	virtual void Use_Flip() override;
+	
+	// 보조 스킬이 사용 중 인지 여부
+	bool bIsProcessingSecondary = false;
+	// 방향 제어 중인지 여부
+	bool bIsChangingDirection = false;
+	// 보조 스킬 사용 중 이동 방향
+	FVector CurDir;
+	FVector NewDir;
+	// 보조 스킬 사용 중 위치 값 갱신 함수 호출용 타이머
+	FTimerHandle MoveTimer;
+	// 위치 값 갱신 함수
+	void Update_SecondaryMove();
+	// 충돌 시 정지 상태로 변환할 함수
+	UFUNCTION()
+	void OnDashOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+	
 };

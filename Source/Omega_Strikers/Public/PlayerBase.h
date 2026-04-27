@@ -62,6 +62,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Input")
 	TObjectPtr<class UInputAction> IA_Flip;
 	
+	// 마우스 커서 자체의 위치
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Input")
+	FVector MouseCursorLoc;
+	
 	// 마우스 커서 조준 방향
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Input")
 	FVector2D CursorDir = FVector2D::ZeroVector;
@@ -93,7 +97,7 @@ public:
 	
 	// ========= Input Processing Function =========
 	
-	void PlayerMove(const struct FInputActionValue& InputActionValue);
+	virtual void PlayerMove(const struct FInputActionValue& InputActionValue);
 	
 	virtual void Ready_CoreHit();
 	virtual void Ready_PrimarySkill();

@@ -55,7 +55,7 @@ void UHPComponent::ApplyDamage(float DamageAmount)
 	// 현재 체력에 데미지 반영하고 clamp 
 	CurHP = FMath::Clamp(CurHP - DamageAmount, 0.0f, MaxHP);
 	
-	GEngine->AddOnScreenDebugMessage(1, 1.f, FColor::Red, FString::Printf(TEXT("현재 체력 : %.0f / %.0f"), CurHP, MaxHP));
+	GEngine->AddOnScreenDebugMessage(5000, 1.f, FColor::Red, FString::Printf(TEXT("현재 체력 : %.0f / %.0f"), CurHP, MaxHP));
 	
 	// 체력이 처음으로 0이 되는 순간(경직이 진행되지 않은 상태에서 체력이 0이 된 순간)
 	if (CurHP <= 0 && !bIsStaggered)

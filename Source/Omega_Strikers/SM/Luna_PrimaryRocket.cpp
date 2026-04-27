@@ -3,7 +3,6 @@
 
 #include "Luna_PrimaryRocket.h"
 
-#include "PlayerBase.h"
 #include "Components/BoxComponent.h"
 #include "Core/CoreBall.h"
 
@@ -16,7 +15,7 @@ ALuna_PrimaryRocket::ALuna_PrimaryRocket()
 	
 	BoxComp = CreateDefaultSubobject<UBoxComponent>("BoxComp");
 	SetRootComponent(BoxComp);
-	BoxComp->SetBoxExtent(FVector(150.0f, 55.0f, 55.0f));
+	BoxComp->SetBoxExtent(FVector(150.0f, 70.0f, 70.0f));
 	BoxComp->OnComponentBeginOverlap.AddDynamic(this, &ALuna_PrimaryRocket::OnRocketOverlap);
 	
 	RocketMesh = CreateDefaultSubobject<UStaticMeshComponent>("RocketMesh");
@@ -36,7 +35,8 @@ void ALuna_PrimaryRocket::BeginPlay()
 	Super::BeginPlay();
 	
 	FTimerHandle SpeedChanger;
-	GetWorld()->GetTimerManager().SetTimer(SpeedChanger, [this]()->void {Speed = 5000.f;}, 0.5f, false);
+	GetWorld()->GetTimerManager().SetTimer(SpeedChanger, [this]()->void {Speed = 5000.f;}, 0.35f, false);
+	// 타이머 써서 몇 초 뒤에 사라지게 or 숨겨놓고 충돌 다 꺼놓고 다음에 소환할 때 또?(x) 그러면 결국 Luna에서도 몇 개 뜯어 고쳐야 함 나아아아ㅏ중에 리팩토링 할 시간 있으면 그 때 하자
 }
 
 // Called every frame
@@ -64,12 +64,14 @@ void ALuna_PrimaryRocket::InitRocket(float Owner_Power, AActor* InOwnerActor, EO
 void ALuna_PrimaryRocket::OnRocketOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
+	if (OtherActor == OwnerActorRef) {return;}
 	// OtherActor가 존재하고 그 놈이 인터페이스 구현했으면
 	if (OtherActor && OtherActor->Implements<UOSImpactReceiver>())
 	{
 		// 그 대상에 대해 인터페이스 함수를 실행해라
 		bool bIsSuccess = IOSImpactReceiver::Execute_ReceiveImpact(OtherActor, ImpactData, OwnerActorRef);
-	
+		
+		auto name = OtherActor->GetName();
 		if (bIsSuccess)
 		{
 			this->Destroy();

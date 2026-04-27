@@ -7,13 +7,13 @@
 #include "InputAction.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "OSTopDownController.h"
 #include "Core/CoreBall.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Omega_Strikers/SM/HPComponent.h"
 #include "Omega_Strikers/SM/OSPlayerController.h"
-#include "Omega_Strikers/SM/TempCore.h"
 
 // Sets default values
 APlayerBase::APlayerBase()
@@ -25,9 +25,10 @@ APlayerBase::APlayerBase()
 	
 	// 이동 관련 MovementComponent 조정
 	bUseControllerRotationYaw = false;
-	GetCharacterMovement()->bOrientRotationToMovement = true;							// 플레이어가 이동 방향을 바라봄
+	GetCharacterMovement()->bOrientRotationToMovement = true;								// 플레이어가 이동 방향을 바라봄
 	GetCharacterMovement()->RotationRate = FRotator(0.f, 50000.f, 0.f);	// 입력 즉시 바라보는 방향 바뀜
-	GetCharacterMovement()->MaxAcceleration = 100000.f;									// 방향 전환 시 미끄러지지 않고 즉시 전환
+	GetCharacterMovement()->MaxAcceleration = 1000000.f;									// 방향 전환 시 미끄러지지 않고 즉시 전환
+	GetCharacterMovement()->MaxWalkSpeed = 1000.f;	
 	
 	// HPComponent
 	HPComp = CreateDefaultSubobject<UHPComponent>(TEXT("HPComp"));
@@ -75,12 +76,13 @@ void APlayerBase::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	myPC = Cast<AOSPlayerController>(GetController());
+	myPC = Cast<AOSTopDownController>(GetController());
 	
 	HPComp->InitializeHP();
 	HPComp->OnHPBecomeNegative.BindUObject(this, &APlayerBase::KnockbackIncrease);
 	HPComp->OnHPBecomePositive.BindUObject(this, &APlayerBase::KnockbackDecrease);
 	
+	// 임시 팀사이드
 	TeamSide = EOSTeam::Blue;
 }
 
@@ -97,7 +99,6 @@ void APlayerBase::Tick(float DeltaTime)
 	if (!myPC) {return;}
 	
 	// 마우스 위치 변환 성공 여부 저장
-	FVector MouseCursorLoc;
 	bool bGetMousePointSuccess = myPC->GetMousePointOnArenaPlane(MouseCursorLoc);
 	if (!bGetMousePointSuccess) {return;}
 	
