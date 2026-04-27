@@ -36,6 +36,8 @@ void UHPComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorCom
 
 void UHPComponent::InitializeHP()
 {
+	UE_LOG(LogTemp, Warning, TEXT("InitializeHP: MaxHP = %.1f"), MaxHP);
+
 	CurHP = MaxHP;
 }
 
@@ -43,8 +45,16 @@ void UHPComponent::UpdateMaxHP(float NewMax)
 {
 	// 추후 레벨업을 별도 컴포넌트에서 관리하게 된다면, 캐릭터가 그 값을 전달받고 맥스 값만 HP컴포넌트에게 전달
 	// HP컴포넌트는 이 함수로 업데이트만 하면 됨
-	MaxHP = NewMax;
+	//MaxHP = NewMax;
 	// 레벨 업 시에 현재 체력은 갱신 안 되니까 dotheal함수 타이머 호출 추가할 필요 있음
+	
+	// 수정방향
+	float Ratio = (MaxHP > 0) ? CurHP / MaxHP : 0.f;
+	
+	UE_LOG(LogTemp, Warning, TEXT("UpdateMaxHP: %.1f -> %.1f"), MaxHP, NewMax);
+
+	MaxHP = NewMax;
+	CurHP = MaxHP * Ratio;
 }
 
 void UHPComponent::ApplyDamage(float DamageAmount)

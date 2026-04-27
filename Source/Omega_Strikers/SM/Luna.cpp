@@ -3,6 +3,7 @@
 
 #include "Luna.h"
 
+#include "HPComponent.h"
 #include "InputActionValue.h"
 #include "Luna_PrimaryRocket.h"
 #include "Components/BoxComponent.h"
@@ -54,6 +55,20 @@ void ALuna::BeginPlay()
 	Super::BeginPlay();
 	
 	TeamSide = EOSTeam::Red;
+	
+	// 데이터 셋 세팅
+	FCharacterStat* Stat = GetStatByLevel(Level);
+	
+	if (Stat)
+	{
+		ApplyStat(*Stat);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Stat Load Failed"));
+	}
+	
+	UE_LOG(LogTemp, Warning, TEXT("CharacterName: %s"), *CharacterName.ToString());
 }
 
 // Called every frame
@@ -86,6 +101,58 @@ void ALuna::PlayerMove(const struct FInputActionValue& InputActionValue)
 		return;
 	}
 	Super::PlayerMove(InputActionValue);
+}
+
+FCharacterStat* ALuna::GetStatByLevel(int32 InLevel)
+{
+	if (!CharacterStatTable)
+	{
+		UE_LOG(LogTemp, Error, TEXT("CharacterStatTable is NULL"));
+		return nullptr;
+	}
+	
+	FName RowName = FName(*FString::Printf(TEXT("%s_%d"), *CharacterName.ToString(), InLevel));
+	
+	UE_LOG(LogTemp, Warning, TEXT("Trying Row: %s"), *RowName.ToString());
+	
+	return CharacterStatTable->FindRow<FCharacterStat>(RowName, TEXT(""));
+}
+
+void ALuna::ApplyStat(const FCharacterStat& Stat)
+{
+	UE_LOG(LogTemp, Warning, TEXT("ApplyStat 실행됨"));
+	CurrentStat = Stat;
+	
+	// PlayerBase 변수 덮어쓰기
+	MaxHP = Stat.MaxHP;
+	Power = Stat.Power;
+	Speed = Stat.Speed;
+	CoolDownRate = Stat.Cooldown;
+	
+	// 이동속도 적용
+	GetCharacterMovement()->MaxWalkSpeed = Speed;
+	
+	if (HPComp)
+	{
+		HPComp->UpdateMaxHP(MaxHP);
+		HPComp->InitializeHP();
+	}
+	
+	// 테스트 용
+	UE_LOG(LogTemp, Warning, TEXT("HP: %.1f / Power: %.1f / Speed: %.1f"),
+	MaxHP, Power, Speed);
+}
+
+void ALuna::LevelUp()
+{
+	Level++;
+	
+	FCharacterStat* Stat = GetStatByLevel(Level);
+	
+	if (Stat)
+	{
+		ApplyStat(*Stat);
+	}
 }
 
 void ALuna::Ready_CoreHit()
