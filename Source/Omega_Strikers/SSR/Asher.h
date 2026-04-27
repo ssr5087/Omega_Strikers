@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "CharacterStat.h"
 #include "PlayerBase.h"
 #include "Asher.generated.h"
 
@@ -27,6 +28,34 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	
 public:
+	// DataTable
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stat")
+	UDataTable* CharacterStatTable;
+	
+	// 캐릭터 이름 (Asher 고정이면 기본값 줘도 됨)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Stat")
+	FName CharacterName = "Asher";
+
+	// 레벨 (나중 대비)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Stat")
+	int32 Level = 1;
+
+	// 현재 스탯 저장
+	FCharacterStat CurrentStat;
+
+	// 실제 적용되는 값
+	float MaxHP;
+	float Power;
+	float MoveSpeed;
+	float CooldownReduction;
+
+	// 함수
+	FCharacterStat* GetStatByLevel(int32 InLevel);
+	void ApplyStat(const FCharacterStat& Stat);
+	void LevelUp();
+
+	
+public:
 	virtual void Ready_CoreHit() override;
 	virtual void Ready_PrimarySkill() override;
 	virtual void Ready_SecondarySkill() override;
@@ -38,6 +67,8 @@ public:
 	virtual void Use_SecondarySkill() override;
 	virtual void Use_SpecialSkill() override;
 	virtual void Use_Flip() override;
+	
+
 	
 public:
 	// Primary Skill
@@ -79,7 +110,7 @@ public:
 	// 스킬 쿨타임 시간
 	float Special_SkillCool = 4.0f;
 	
-	EOSTeam MyTeam = EOSTeam::Red;
+	EOSTeam MyTeam = EOSTeam::Blue;
 	
 	void DoSpecialProjectile();
 	void DoSpecialShield(FVector SpawnLocation, FVector Direction);

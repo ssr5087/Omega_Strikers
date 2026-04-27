@@ -60,7 +60,7 @@ public:
 	float EdgeDamage = 50.f;
 	
 	UPROPERTY(EditAnywhere)
-	float PlayerKnockback = 200.f;
+	float PlayerKnockback = 500.f;
 	
 	UPROPERTY(EditAnywhere)
 	float CoreKnockback = 500.f;

@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "PlayerBase.h"
+#include "Omega_Strikers/SSR/CharacterStat.h"
 
 #include "Aimi.generated.h"
 
@@ -40,6 +41,35 @@ protected:
 
 public:
 	virtual void Tick(float DeltaTime) override;
+
+public:
+	// DataTable
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stat")
+	UDataTable* CharacterStatTable;
+	
+	// 캐릭터 이름 (Asher 고정이면 기본값 줘도 됨)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Stat")
+	FName CharacterName = "Aimi";
+
+	// 레벨 (나중 대비)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Stat")
+	int32 Level = 1;
+
+	// 현재 스탯 저장
+	FCharacterStat CurrentStat;
+
+	// 실제 적용되는 값
+	float MaxHP;
+	float Power;
+	float MoveSpeed;
+	float CooldownReduction;
+
+	// 함수
+	FCharacterStat* GetStatByLevel(int32 InLevel);
+	void ApplyStat(const FCharacterStat& Stat);
+	void LevelUp();
+	
+public:
 
 	// ════════════════════════════════════════════
 	//  PlayerBase virtual 구현
