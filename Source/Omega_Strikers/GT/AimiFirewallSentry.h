@@ -3,7 +3,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "../../../../../../Game/Epic Games/UE_5.7/Engine/Source/Runtime/CoreUObject/Public/UObject/ObjectPtr.h"
 
 #include "AimiFirewallSentry.generated.h"
 
