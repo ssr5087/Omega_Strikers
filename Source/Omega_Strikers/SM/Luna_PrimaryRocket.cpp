@@ -5,6 +5,7 @@
 
 #include "Components/BoxComponent.h"
 #include "Core/CoreBall.h"
+#include "Omega_Strikers/Omega_Strikers.h"
 
 
 // Sets default values
@@ -71,7 +72,6 @@ void ALuna_PrimaryRocket::OnRocketOverlap(UPrimitiveComponent* OverlappedCompone
 		// 그 대상에 대해 인터페이스 함수를 실행해라
 		bool bIsSuccess = IOSImpactReceiver::Execute_ReceiveImpact(OtherActor, ImpactData, OwnerActorRef);
 		
-		auto name = OtherActor->GetName();
 		if (bIsSuccess)
 		{
 			this->Destroy();
