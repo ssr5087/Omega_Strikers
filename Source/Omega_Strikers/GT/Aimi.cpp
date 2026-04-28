@@ -64,7 +64,6 @@ void AAimi::Tick(float DeltaTime)
 		return !IsValid(sentry);
 	});
 	
-	LOG_GT(TEXT("Tick — bAimingPrimary: %d"), bAimingPrimary);
 	DrawAimIndicator();
 }
 
@@ -427,12 +426,16 @@ bool AAimi::PerformSlash(const FVector& Origin, const FVector& ForwardDir,
 	TArray<FOverlapResult> Overlaps;
 	FCollisionShape Sphere = FCollisionShape::MakeSphere(Range);
 	FCollisionQueryParams Params;
-	// TODO: 아군 플레이어도 충돌 무시 처리해야함
 	Params.AddIgnoredActor(this);
- 
-	GetWorld()->OverlapMultiByChannel(
+	
+	FCollisionObjectQueryParams ObjectParams;
+	ObjectParams.AddObjectTypesToQuery(ECC_Pawn);
+	ObjectParams.AddObjectTypesToQuery(ECC_WorldStatic);
+	ObjectParams.AddObjectTypesToQuery(ECC_WorldDynamic);
+	
+	GetWorld()->OverlapMultiByObjectType(
 		Overlaps, Origin, FQuat::Identity,
-		ECC_Pawn, Sphere, Params);
+		ObjectParams, Sphere, Params);
  
 #if WITH_EDITOR
 	DrawDebugSphere(GetWorld(), Origin, Range, 16, FColor::Orange, false, 0.5f);
@@ -444,8 +447,16 @@ bool AAimi::PerformSlash(const FVector& Origin, const FVector& ForwardDir,
 	for (const FOverlapResult& Overlap : Overlaps)
 	{
 		AActor* Target = Overlap.GetActor();
+		LOG_GT(TEXT("Overlap found: %s, Implements IOSImpactReceiver: %d"), 
+		*Target->GetName(), Target->Implements<UOSImpactReceiver>());
 		if (!Target || !Target->Implements<UOSImpactReceiver>()) continue;
  
+		// ★ 아군 무시 — 같은 팀이면 스킵
+		if (APlayerBase* TargetPlayer = Cast<APlayerBase>(Target))
+		{
+			if (TargetPlayer->TeamSide == TeamSide) continue;
+		}
+		
 		// 각도 필터 (180° = 전방위 → 스킵)
 		if (HalfAngleDeg < 180.f)
 		{
@@ -473,6 +484,9 @@ bool AAimi::PerformSlash(const FVector& Origin, const FVector& ForwardDir,
 			Data.CoreKnockbackPower, Data.PlayerKnockbackPower, Data.PlayerDamage);
 	}
  
+	// 오버랩 자체가 없으면 이것도
+	LOG_GT(TEXT("PerformSlash — Overlaps found: %d (ObjectType, Range: %.0f)"), Overlaps.Num(), Range);
+	
 	return bHitAny;
 }
 
@@ -518,11 +532,11 @@ FVector AAimi::GetAimDirection() const
 // ════════════════════════════════════════════════════════════
 void AAimi::DrawAimIndicator()
 {
-#if ENABLE_DRAW_DEBUG
+/*#if ENABLE_DRAW_DEBUG
 	LOG_GT(TEXT("DrawAimIndicator — P:%d S:%d Sp:%d"), bAimingPrimary, bAimingSecondary, bAimingSpecial);
 #else
 	LOG_GT(TEXT("ENABLE_DRAW_DEBUG is OFF!"));
-#endif
+#endif*/
 	
 #if ENABLE_ANIM_DEBUG
 	// 매 프레인 에이밍 방향 캐싱
