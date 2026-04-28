@@ -34,17 +34,17 @@ void AAimi::BeginPlay()
 	Energy = 0.f;
 	ActiveOrb = nullptr;
 	
-	// 데이터 셋
-	FCharacterStat* Stat = GetStatByLevel(Level);
-	
-	if (Stat)
-	{
-		ApplyStat(*Stat);
-	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Stat Load Failed"));
-	}
+	// // 데이터 셋
+	// FCharacterStat* Stat = GetStatByLevel(Level);
+	//
+	// if (Stat)
+	// {
+	// 	ApplyStat(*Stat);
+	// }
+	// else
+	// {
+	// 	UE_LOG(LogTemp, Warning, TEXT("Stat Load Failed"));
+	// }
 }
 
 void AAimi::Tick(float DeltaTime)
@@ -67,56 +67,66 @@ void AAimi::Tick(float DeltaTime)
 	DrawAimIndicator();
 }
 
-FCharacterStat* AAimi::GetStatByLevel(int32 InLevel)
+// ════════════════════════════════════════════════════════════
+//  ClearAllAiming
+// ════════════════════════════════════════════════════════════
+void AAimi::ClearAllAiming()
 {
-	if (!CharacterStatTable)
-	{
-		UE_LOG(LogTemp, Error, TEXT("CharacterStatTable is NULL"));
-		return nullptr;
-	}
-	
-	FName RowName = FName(*FString::Printf(TEXT("%s_%d"), *CharacterName.ToString(), InLevel));
-	
-	UE_LOG(LogTemp, Warning, TEXT("Trying Row: %s"), *RowName.ToString());
-	
-	return CharacterStatTable->FindRow<FCharacterStat>(RowName, TEXT(""));
+	bAimingPrimary   = false;
+	bAimingSecondary = false;
+	bAimingSpecial   = false;
 }
 
-void AAimi::ApplyStat(const FCharacterStat& Stat)
-{
-	CurrentStat = Stat;
-	
-	// PlayerBase 변수 덮어쓰기
-	MaxHP = Stat.MaxHP;
-	Power = Stat.Power;
-	Speed = Stat.Speed;
-	CoolDownRate = Stat.Cooldown;
-	
-	// 이동속도 적용
-	GetCharacterMovement()->MaxWalkSpeed = Speed;
-	
-	if (HPComp)
-	{
-		HPComp->UpdateMaxHP(MaxHP);
-		HPComp->InitializeHP();
-	}
-	
-	// 테스트 용
-	UE_LOG(LogTemp, Warning, TEXT("HP: %.1f / Power: %.1f / Speed: %.1f"),
-	MaxHP, Power, Speed);
-}
-
-void AAimi::LevelUp()
-{
-	Level++;
-	
-	FCharacterStat* Stat = GetStatByLevel(Level);
-	
-	if (Stat)
-	{
-		ApplyStat(*Stat);
-	}
-}
+// FCharacterStat* AAimi::GetStatByLevel(int32 InLevel)
+// {
+// 	if (!CharacterStatTable)
+// 	{
+// 		UE_LOG(LogTemp, Error, TEXT("CharacterStatTable is NULL"));
+// 		return nullptr;
+// 	}
+// 	
+// 	FName RowName = FName(*FString::Printf(TEXT("%s_%d"), *CharacterName.ToString(), InLevel));
+// 	
+// 	UE_LOG(LogTemp, Warning, TEXT("Trying Row: %s"), *RowName.ToString());
+// 	
+// 	return CharacterStatTable->FindRow<FCharacterStat>(RowName, TEXT(""));
+// }
+//
+// void AAimi::ApplyStat(const FCharacterStat& Stat)
+// {
+// 	CurrentStat = Stat;
+// 	
+// 	// PlayerBase 변수 덮어쓰기
+// 	MaxHP = Stat.MaxHP;
+// 	Power = Stat.Power;
+// 	Speed = Stat.Speed;
+// 	CoolDownRate = Stat.Cooldown;
+// 	
+// 	// 이동속도 적용
+// 	GetCharacterMovement()->MaxWalkSpeed = Speed;
+// 	
+// 	if (HPComp)
+// 	{
+// 		HPComp->UpdateMaxHP(MaxHP);
+// 		HPComp->InitializeHP();
+// 	}
+// 	
+// 	// 테스트 용
+// 	UE_LOG(LogTemp, Warning, TEXT("HP: %.1f / Power: %.1f / Speed: %.1f"),
+// 	MaxHP, Power, Speed);
+// }
+//
+// void AAimi::LevelUp()
+// {
+// 	Level++;
+// 	
+// 	FCharacterStat* Stat = GetStatByLevel(Level);
+// 	
+// 	if (Stat)
+// 	{
+// 		ApplyStat(*Stat);
+// 	}
+// }
 
 // ════════════════════════════════════════════════════════════
 //  쿨다운
