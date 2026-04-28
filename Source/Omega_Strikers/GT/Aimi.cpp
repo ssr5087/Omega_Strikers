@@ -26,11 +26,11 @@ void AAimi::BeginPlay()
 {
 	Super::BeginPlay();
 
-	CD_Strike = 0.f;
-	CD_Primary = 0.f;
-	CD_Secondary = 0.f;
-	CD_Special = 0.f;
-	CD_Flip = 0.f;
+	CoreHitCool = 0.f;
+	PrimarySkillCool = 0.f;
+	SecondaryCool = 0.f;
+	SpecialCool = 0.f;
+
 	Energy = 0.f;
 	ActiveOrb = nullptr;
 	
@@ -66,16 +66,6 @@ void AAimi::Tick(float DeltaTime)
 	
 	LOG_GT(TEXT("Tick — bAimingPrimary: %d"), bAimingPrimary);
 	DrawAimIndicator();
-}
-
-// ════════════════════════════════════════════════════════════
-//  ClearAllAiming
-// ════════════════════════════════════════════════════════════
-void AAimi::ClearAllAiming()
-{
-	bAimingPrimary   = false;
-	bAimingSecondary = false;
-	bAimingSpecial   = false;
 }
 
 FCharacterStat* AAimi::GetStatByLevel(int32 InLevel)
@@ -129,17 +119,15 @@ void AAimi::LevelUp()
 	}
 }
 
-
 // ════════════════════════════════════════════════════════════
 //  쿨다운
 // ════════════════════════════════════════════════════════════
 void AAimi::TickCooldowns(float DeltaTime)
 {
-	if (CD_Strike	 > 0.f) CD_Strike	 = FMath::Max(0.f, CD_Strike	 - DeltaTime);
-	if (CD_Primary   > 0.f) CD_Primary	 = FMath::Max(0.f, CD_Primary	 - DeltaTime);
-	if (CD_Secondary > 0.f) CD_Secondary = FMath::Max(0.f, CD_Secondary - DeltaTime);
-	if (CD_Special	 > 0.f) CD_Special	 = FMath::Max(0.f, CD_Special   - DeltaTime);
-	if (CD_Flip		 > 0.f) CD_Flip		 = FMath::Max(0.f, CD_Flip		 - DeltaTime);
+	if (CoreHitCool	 > 0.f) CoreHitCool	 = FMath::Max(0.f, CoreHitCool	 - DeltaTime);
+	if (PrimarySkillCool   > 0.f) PrimarySkillCool	 = FMath::Max(0.f, PrimarySkillCool	 - DeltaTime);
+	if (SecondaryCool > 0.f) SecondaryCool = FMath::Max(0.f, SecondaryCool - DeltaTime);
+	if (SpecialCool	 > 0.f) SpecialCool	 = FMath::Max(0.f, SpecialCool   - DeltaTime);
 }
 
 float AAimi::GetAdjustedCD(float Base) const
@@ -157,17 +145,15 @@ float AAimi::GetAdjustedCD(float Base) const
 void AAimi::Ready_CoreHit()
 {
 	// 차징 없이 즉시 사용
-	Use_CoreHit();
+	// 좌클릭을 해제하면 PlayerBase에서 알아서 사용
+	Super::Ready_CoreHit();
 }
 
 void AAimi::Use_CoreHit()
 {
-	if (CD_Strike > 0.f) return;
-
-	DoStrike();
-	CD_Strike = GetAdjustedCD(CD_Strike_Max);
 }
 
+// PlayerBase에서 이미 평타 구현 되어있어서 안쓸 듯...
 void AAimi::DoStrike()
 {
 	const FVector origin = GetActorLocation();
@@ -198,22 +184,21 @@ void AAimi::DoStrike()
 // ════════════════════════════════════════════════════════════
 void AAimi::Ready_PrimarySkill()
 {
-	LOG_GT(TEXT("Ready_PrimarySkill called! bAimingPrimary will be set true"));
+	Super::Ready_PrimarySkill();
+	LOG_GT(TEXT("Ready_PrimarySkill called! bAimingPrimary will be set true. PrimarySkillCool: %.1f"), PrimarySkillCool);
+	if (PrimarySkillCool > 0.f) return;
 	
 	if (ActiveOrb && !ActiveOrb->HasDetonated())
 	{
-		bAimingPrimary = true;  // 재시전 대기 UI
-		return;
+		// 재시전 대기 UI
+		
 	}
-	if (CD_Primary > 0.f) return;
-
-	ClearAllAiming();
-	bAimingPrimary = true;  // ← 이게 켜지면 Tick에서 궤적선 그림
 }
 
 void AAimi::Use_PrimarySkill()
 {
 	LOG_GT(TEXT("Use_PrimarySkill called! — bAimingPrimary was %d"), bAimingPrimary);
+	Super::Use_PrimarySkill();
 	
 	if (ActiveOrb && !ActiveOrb->HasDetonated())
 	{
@@ -221,10 +206,11 @@ void AAimi::Use_PrimarySkill()
 	}
 	else
 	{
-		if (CD_Primary > 0.f) return;
+		if (PrimarySkillCool > 0.f) return;
 		FireGlitchOrb();
-		CD_Primary = GetAdjustedCD(CD_Primary_Max);
+		PrimarySkillCool = GetAdjustedCD(PrimaryCool_Max);
 	}
+	
 }
 
 void AAimi::FireGlitchOrb()
@@ -235,8 +221,8 @@ void AAimi::FireGlitchOrb()
 		return;
 	}
 
-	const FVector spawnLoc = GetActorLocation() + GetActorForwardVector() * 60.f;
-	const FVector aimDir = GetActorForwardVector();
+	const FVector spawnLoc = GetActorLocation() + CachedAimDirection * 60.f;
+	const FVector aimDir = CachedAimDirection;
 
 	FActorSpawnParameters spawnParams;
 	spawnParams.Owner = this;
@@ -264,20 +250,21 @@ void AAimi::RecastGlitchOrb()
 // ════════════════════════════════════════════════════════════
 void AAimi::Ready_SecondarySkill()
 {
-	if (CD_Secondary > 0.f) return;
-	Use_SecondarySkill();
+	if (SecondaryCool > 0.f) return;
+	Super::Ready_SecondarySkill();
 }
 
 void AAimi::Use_SecondarySkill()
 {
-	if (CD_Secondary > 0.f) return;
+	Super::Use_SecondarySkill();
+	if (SecondaryCool > 0.f) return;
 	DoCyberSwipe();
-	CD_Secondary = GetAdjustedCD(CD_Secondary_Max);
+	SecondaryCool = GetAdjustedCD(SecondaryCool_Max);
 }
 
 void AAimi::DoCyberSwipe()
 {
-	FVector blinkDir = GetActorForwardVector();
+	FVector blinkDir = CachedAimDirection;
 	blinkDir.Z = 0.f;
 	blinkDir.Normalize();
 
@@ -333,15 +320,16 @@ void AAimi::OnCyberSwipeArrived()
 
 void AAimi::Ready_SpecialSkill()
 {
-	if (CD_Special > 0.f) return;
-	Use_SpecialSkill();
+	if (SpecialCool > 0.f) return;
+	Super::Ready_SpecialSkill();
 }
 
 void AAimi::Use_SpecialSkill()
 {
-	if (CD_Special > 0.f) return;
+	Super::Use_SpecialSkill();
+	if (SpecialCool > 0.f) return;
 	PlaceSentry();
-	CD_Special = GetAdjustedCD(CD_Special_Max);
+	SpecialCool = GetAdjustedCD(CD_Special_Max);
 }
 
 void AAimi::PlaceSentry()
@@ -359,7 +347,7 @@ void AAimi::PlaceSentry()
 		ActiveSentries.RemoveAt(0);
 	}
 
-	const FVector forward = GetActorForwardVector();
+	const FVector forward = CachedAimDirection;
 	const FVector spawnLoc = GetActorLocation() + forward * 80.f;
 
 	FActorSpawnParameters spawnParams;
@@ -382,15 +370,12 @@ void AAimi::PlaceSentry()
 // ════════════════════════════════════════════════════════════
 void AAimi::Ready_Flip()
 {
-	if (CD_Flip > 0.f) return;
-	Use_Flip();
+	
 }
 
 void AAimi::Use_Flip()
 {
-	if (CD_Flip > 0.f) return;
 	Energy >= 100.f ? DoEnergyBurst() : DoDodge();
-	CD_Flip = GetAdjustedCD(CD_Flip_Max);
 }
 
 void AAimi::DoDodge()
@@ -540,6 +525,9 @@ void AAimi::DrawAimIndicator()
 #endif
 	
 #if ENABLE_ANIM_DEBUG
+	// 매 프레인 에이밍 방향 캐싱
+	CachedAimDirection = GetAimDirection();
+	
 	// 오브 비행 중 -> 플래그 무관, 항상 폭발 범위 표시
 	if (ActiveOrb && !ActiveOrb->HasDetonated())
 	{

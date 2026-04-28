@@ -86,50 +86,26 @@ public:
 	virtual void Use_Flip() override;
 
 protected:
-	// ════════════════════════════════════════════
-	//  에이밍 상태 플래그
-	//
-	//  Ready()에서 true, Use()에서 false
-	//  Tick의 DrawAimIndicator()가 플래그 보고 조준선 표시
-	// ════════════════════════════════════════════
-	bool bAimingPrimary = false;
-	bool bAimingSecondary = false;
-	bool bAimingSpecial = false;
-	void ClearAllAiming();
+	
+	
+	// Ready 중 매 프레임 갱신되는 캐싱된 에이밍 방향
+	FVector CachedAimDirection = FVector::ForwardVector;
 	
 	// ════════════════════════════════════════════
 	//  쿨다운
 	// ════════════════════════════════════════════
 	UPROPERTY(EditDefaultsOnly, Category = "Cooldown")
-	float CD_Strike_Max = 0.9f;
+	float CoreHitCool_Max = 0.9f;
 
  	UPROPERTY(EditDefaultsOnly, Category = "Cooldown")
-	float CD_Primary_Max = 8.f;
+	float PrimaryCool_Max = 8.f;
 
  	UPROPERTY(EditDefaultsOnly, Category = "Cooldown")
-	float CD_Secondary_Max = 14.f;
+	float SecondaryCool_Max = 14.f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Cooldown")
 	float CD_Special_Max = 30.f;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Cooldown")
-	float CD_Flip_Max = 3.f;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Cooldown")
-	float CD_Strike = 0.f;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Cooldown")
-	float CD_Primary = 0.f;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Cooldown")
-	float CD_Secondary = 0.f;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Cooldown")
-	float CD_Special = 0.f;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Cooldown")
-	float CD_Flip = 0.f;
-
+	
 	// CoolDownRate 스탯 반영한 실제 쿨다운
 	float GetAdjustedCD(float Base) const;
 

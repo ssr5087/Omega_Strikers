@@ -19,6 +19,18 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+	
+	// ════════════════════════════════════════════
+	//  에이밍 상태 플래그
+	//
+	//  Ready()에서 true, Use()에서 false
+	//  Tick의 DrawAimIndicator()가 플래그 보고 조준선 표시
+	// ════════════════════════════════════════════
+	bool bAimingCoreHit = false;
+	bool bAimingPrimary = false;
+	bool bAimingSecondary = false;
+	bool bAimingSpecial = false;
+	void ClearAllAiming();
 
 public:	
 	// Called every frame

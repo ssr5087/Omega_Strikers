@@ -89,6 +89,16 @@ void APlayerBase::BeginPlay()
 	TeamSide = EOSTeam::Blue;
 }
 
+// ════════════════════════════════════════════════════════════
+//  ClearAllAiming
+// ════════════════════════════════════════════════════════════
+void APlayerBase::ClearAllAiming()
+{
+	bAimingPrimary   = false;
+	bAimingSecondary = false;
+	bAimingSpecial   = false;
+}
+
 // Called every frame
 void APlayerBase::Tick(float DeltaTime)
 {
@@ -172,19 +182,34 @@ void APlayerBase::PlayerMove(const FInputActionValue& InputActionValue)
 
 void APlayerBase::Ready_CoreHit()
 {
-	
+	ClearAllAiming();
+	bAimingCoreHit = true;
 }
 
-void APlayerBase::Ready_PrimarySkill() {}
+void APlayerBase::Ready_PrimarySkill()
+{
+	ClearAllAiming();
+	bAimingPrimary = true;
+}
 
-void APlayerBase::Ready_SecondarySkill() {}
+void APlayerBase::Ready_SecondarySkill()
+{
+	ClearAllAiming();
+	bAimingSecondary = true;
+}
 
-void APlayerBase::Ready_SpecialSkill() {}
+void APlayerBase::Ready_SpecialSkill()
+{
+	ClearAllAiming();
+	bAimingSpecial = true;
+}
 
 void APlayerBase::Ready_Flip() {}
 
 void APlayerBase::Use_CoreHit()
 {
+	bAimingCoreHit = false;
+	
 	if (bCoreHitCoolDown) {return;}
 	bCoreHitCoolDown = true;
 	
@@ -218,11 +243,11 @@ void APlayerBase::Use_CoreHit()
 	Execute_ReceiveImpact(Core, CoreImpactData, this);
 }
 
-void APlayerBase::Use_PrimarySkill() {}
+void APlayerBase::Use_PrimarySkill() { bAimingPrimary = false; }
 
-void APlayerBase::Use_SecondarySkill() {}
+void APlayerBase::Use_SecondarySkill() { bAimingSecondary = false; }
 
-void APlayerBase::Use_SpecialSkill() {}
+void APlayerBase::Use_SpecialSkill() { bAimingSpecial = false; }
 
 void APlayerBase::Use_Flip() {}
 
