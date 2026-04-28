@@ -184,7 +184,7 @@ void ALuna::Use_PrimarySkill()
 	
 	// 현재 쿨타임 중이면 실행 안 됨
 	if (bPrimarySkillCoolDown) {return;}
-	
+	bIsProcessingPrimary = true;
 	// 스폰 트랜스폼 만들기
 	FTransform LauncherTransform;
 	
@@ -216,6 +216,10 @@ void ALuna::Use_PrimarySkill()
 	bPrimarySkillCoolDown = true;
 	FTimerHandle PrimarySkillTimer;
 	GetWorld()->GetTimerManager().SetTimer(PrimarySkillTimer, [this]()->void {bPrimarySkillCoolDown = false;}, PrimarySkillCool, false);
+	
+	// 애니메이션용 임시 변수 처리 타이머
+	FTimerHandle Primary;
+	GetWorld()->GetTimerManager().SetTimer(Primary, [this]()->void {bIsProcessingPrimary = false;}, 1.f, false);
 }
 
 void ALuna::Ready_SecondarySkill()
@@ -258,6 +262,7 @@ void ALuna::Use_SpecialSkill()
 	// [Special] 지정 위치에 z축 이동만 하는 로켓 소환
 	// 바닥 좌표에 도달하는 순간 모든 적군과 코어에 방향과 충격량 각각 전달
 	if (bSpecialSkillCoolDown) {return;}
+	bIsProcessingSpecial = true;
 	
 	// 스폰 트랜스폼 만들기
 	FTransform LauncherTransform;
@@ -282,6 +287,10 @@ void ALuna::Use_SpecialSkill()
 	bSpecialSkillCoolDown = true;
 	FTimerHandle SpecialSkillTimer;
 	GetWorld()->GetTimerManager().SetTimer(SpecialSkillTimer, [this]()->void {bSpecialSkillCoolDown = false;}, SpecialSkillCool, false);
+
+	// 애니메이션용 임시 변수 처리 타이머
+	FTimerHandle Special;
+	GetWorld()->GetTimerManager().SetTimer(Special, [this]()->void {bIsProcessingSpecial = false;}, 1.f, false);
 }
 
 void ALuna::Ready_Flip()
