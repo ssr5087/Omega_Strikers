@@ -73,14 +73,17 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stat|SkillRange")
 	float PrimaryRange = 5000.f;
 	
+	// =================== Skill ===================
 	
 	// 선 입력된 동작들이 아직 실행 중 인지
 	bool bBufferedInput = false;
 	
+	// 각 스킬 쿨타임 중인지
 	bool bPrimarySkillCoolDown = false;
 	bool bSecondarySkillCoolDown = false;
 	bool bSpecialSkillCoolDown = false;
 	
+	// 각 스킬 쿨타임
 	float PrimarySkillCool = 0.5f;		//6.5
 	float SecondarySkillCool = 0.5f;	//14
 	float SpecialSkillCool = 0.5f;		//35
@@ -99,6 +102,8 @@ public:
 	virtual void Use_SpecialSkill() override;
 	virtual void Use_Flip() override;
 	
+	bool bIsProcessingPrimary = false;
+	
 	// 보조 스킬이 사용 중 인지 여부
 	bool bIsProcessingSecondary = false;
 	// 방향 제어 중인지 여부
@@ -114,5 +119,5 @@ public:
 	UFUNCTION()
 	void OnDashOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
-	
+	bool bIsProcessingSpecial = false;
 };
