@@ -139,11 +139,16 @@ void AAimiGlitchOrb::ExecuteExplosion()
 	TArray<FOverlapResult> overlaps;
 	FCollisionShape sphere = FCollisionShape::MakeSphere(explosionRadius);
 	FCollisionQueryParams params;
-	// TODO: 아군 플레이어도 충돌 무시 처리해야함
 	params.AddIgnoredActor(this);
+	
+	FCollisionObjectQueryParams ObjectParams;
+	ObjectParams.AddObjectTypesToQuery(ECC_Pawn);
+	ObjectParams.AddObjectTypesToQuery(ECC_WorldStatic);
+	ObjectParams.AddObjectTypesToQuery(ECC_WorldDynamic);
+	
 	if (OwnerCharacter) params.AddIgnoredActor(OwnerCharacter);
 
-	GetWorld()->OverlapMultiByChannel(overlaps, orbCenter, FQuat::Identity, ECC_Pawn, sphere, params);
+	GetWorld()->OverlapMultiByObjectType(overlaps, orbCenter, FQuat::Identity, ObjectParams, sphere, params);
 
 #if WITH_EDITOR
 	// 디버그: 폭발 범위 시각화
@@ -153,9 +158,22 @@ void AAimiGlitchOrb::ExecuteExplosion()
 	for (const FOverlapResult& overlap : overlaps)
 	{
 		AActor* target = overlap.GetActor();
+		LOG_GT(TEXT("Overlap found: %s, Implements IOSImpactReceiver: %d"), 
+		*target->GetName(), target->Implements<UOSImpactReceiver>());
 		if (!target) continue;
 		if (!target->Implements<UOSImpactReceiver>()) continue;
 
+		// ★ 아군 무시
+		if (APlayerBase* targetPlayer = Cast<APlayerBase>(target))
+		{
+			EOSTeam ownerTeam = EOSTeam::None;
+			if (APlayerBase* ownerPlayer = Cast<APlayerBase>(OwnerCharacter))
+			{
+				ownerTeam = ownerPlayer->TeamSide;
+			}
+			if (targetPlayer->TeamSide == ownerTeam) continue;
+		}
+		
 		// 2) Push Vector 계산
 		const FVector targetPos = target->GetActorLocation();
 		FVector pushDir = targetPos - orbCenter;
@@ -191,6 +209,9 @@ void AAimiGlitchOrb::ExecuteExplosion()
 	DrawDebugDirectionalArrow(GetWorld(), orbCenter, orbCenter + pushDir * 200.f, 20.f, FColor::Magenta, false, 1.5f);		
 #endif
 	}
+	
+	// 오버랩 자체가 없으면 이것도
+	LOG_GT(TEXT("ExecuteExplosion — Overlaps found: %d (ObjectType)"), overlaps.Num());
 }
 
 // ════════════════════════════════════════════════════════════
