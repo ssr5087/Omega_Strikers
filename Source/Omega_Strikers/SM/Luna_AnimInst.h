@@ -25,5 +25,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Luna|Move")
 	bool bIsMoving = false;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Luna|Skill")
+	bool bIsProcessingCoreHit = false;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Luna|Skill")
 	bool bIsProcessingSecondary = false;
 };

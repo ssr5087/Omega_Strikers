@@ -67,16 +67,6 @@ void AAimi::Tick(float DeltaTime)
 	DrawAimIndicator();
 }
 
-// ════════════════════════════════════════════════════════════
-//  ClearAllAiming
-// ════════════════════════════════════════════════════════════
-void AAimi::ClearAllAiming()
-{
-	bAimingPrimary   = false;
-	bAimingSecondary = false;
-	bAimingSpecial   = false;
-}
-
 // FCharacterStat* AAimi::GetStatByLevel(int32 InLevel)
 // {
 // 	if (!CharacterStatTable)
