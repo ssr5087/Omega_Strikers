@@ -38,6 +38,7 @@ ACoreBall::ACoreBall()
 	MeshComp = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("MeshComp"));
 	MeshComp->SetupAttachment(SphereComp);
 	MeshComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	MeshComp->SetWorldLocation(FVector(0.0f, 0.0f, -SphereComp->GetScaledSphereRadius()));
 	
 	ConstructorHelpers::FObjectFinder<USkeletalMesh> tempCoreSKM(TEXT("/Script/Engine.SkeletalMesh'/Game/GT/Environments/Rock/SK_Rock_Default/SkeletalMeshes/SK_Rock_Default.SK_Rock_Default'"));
 	if (tempCoreSKM.Succeeded())
@@ -465,6 +466,7 @@ void ACoreBall::OnSphereOverlap(UPrimitiveComponent* OverlappedComp, AActor* Oth
 
 bool ACoreBall::ReceiveImpact_Implementation(const FOSImpactData& ImpactData, AActor* InstigatorActor)
 {
+	LOG_GT(TEXT("ReceiveImpact - TeamSide: %s, Direction: (%.0f, %.0f), CoreKB: %.0f, PlayerKB: %.0f, PlayerDamage: %.0f"), *StaticEnum<EOSTeam>()->GetValueAsString(ImpactData.TeamSide), ImpactData.Direction.X, ImpactData.Direction.Y, ImpactData.CoreKnockbackPower, ImpactData.PlayerKnockbackPower, ImpactData.PlayerDamage);
 	// ImpactData의 넉백 방향, 충격량 사용
 	// 서버에서만 물리 적용
 	if (!HasAuthority()) return false;
