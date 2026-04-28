@@ -8,6 +8,7 @@
 #include "Omega_Strikers/Omega_Strikers.h"
 #include "NiagaraFunctionLibrary.h"
 #include "PlayerBase.h"
+#include "Core/CoreBall.h"
 #include "Engine/OverlapResult.h"
 #include "Omega_Strikers/SM/OSImpactReceiver.h"
 
@@ -201,8 +202,17 @@ void AAimiGlitchOrb::ExecuteExplosion()
 		impactData.PlayerKnockbackPower = PlayerKnockback * attenuation;
 		impactData.PlayerDamage = Damage * attenuation;
 
-		IOSImpactReceiver::Execute_ReceiveImpact(target, impactData, OwnerCharacter);
-
+		//IOSImpactReceiver::Execute_ReceiveImpact(target, impactData, OwnerCharacter);
+		if (ACoreBall* CoreBall = Cast<ACoreBall>(target))
+		{
+			FVector KnockDir = FVector(pushDir2D.X, pushDir2D.Y, 0.f).GetSafeNormal();
+			CoreBall->Server_HitCore(orbCenter, KnockDir, impactData.CoreKnockbackPower);
+		}
+		else
+		{
+			IOSImpactReceiver::Execute_ReceiveImpact(target, impactData, OwnerCharacter);
+		}
+		
 		LOG_GT(TEXT("Hit %s - Dir:(%.2f, %.2f) CoreKB:%.0f PlayerKB:%.0f (Attn:%.2f)"), *target->GetName(), pushDir2D.X, pushDir2D.Y, impactData.CoreKnockbackPower, impactData.PlayerKnockbackPower, attenuation);
 
 #if WITH_EDITOR

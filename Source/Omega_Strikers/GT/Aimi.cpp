@@ -7,6 +7,7 @@
 #include "AimiGlitchOrb.h"
 #include "DrawDebugHelpers.h"
 #include "TimerManager.h"
+#include "Core/CoreBall.h"
 #include "Engine/OverlapResult.h"
 #include "Engine/World.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -476,7 +477,17 @@ bool AAimi::PerformSlash(const FVector& Origin, const FVector& ForwardDir,
 		FOSImpactData Data = InData;
 		Data.Direction = PushDir2D;
  
-		IOSImpactReceiver::Execute_ReceiveImpact(Target, Data, this);
+		//IOSImpactReceiver::Execute_ReceiveImpact(Target, Data, this);
+		// ✅ 수정 — CoreBall이면 Server RPC 사용
+		if (ACoreBall* CoreBall = Cast<ACoreBall>(Target))
+		{
+			FVector KnockDir = FVector(Data.Direction.X, Data.Direction.Y, 0.f).GetSafeNormal();
+			CoreBall->Server_HitCore(GetActorLocation(), KnockDir, Data.CoreKnockbackPower);
+		}
+		else
+		{
+			IOSImpactReceiver::Execute_ReceiveImpact(Target, Data, this);
+		}
 		bHitAny = true;
  
 		LOG_GT(TEXT("[AiMi] Slash hit %s — Dir:(%.2f,%.2f) CoreKB:%.0f PlayerKB:%.0f Dmg:%.0f"),
