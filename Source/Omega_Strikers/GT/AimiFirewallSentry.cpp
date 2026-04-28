@@ -4,6 +4,7 @@
 #include "AimiFirewallSentry.h"
 
 #include "PlayerBase.h"
+#include "Core/CoreBall.h"
 #include "Omega_Strikers/Omega_Strikers.h"
 #include "Omega_Strikers/SM/OSImpactReceiver.h"
 
@@ -124,8 +125,18 @@ void AAimiFirewallSentry::FireProjectile()
 				data.CoreKnockbackPower = ProjectileCoreKnockback;
 				data.PlayerKnockbackPower = ProjectilePlayerKnockback;
 				data.PlayerDamage = ProjectileDamage;
-				IOSImpactReceiver::Execute_ReceiveImpact(target, data, OwnerCharacter);
-
+				//IOSImpactReceiver::Execute_ReceiveImpact(target, data, OwnerCharacter);
+				// ✅ CoreBall이면 Server RPC 사용
+				if (ACoreBall* CoreBall = Cast<ACoreBall>(target))
+				{
+					FVector KnockDir = FVector(data.Direction.X, data.Direction.Y, 0.f).GetSafeNormal();
+					CoreBall->Server_HitCore(start, KnockDir, data.CoreKnockbackPower);
+				}
+				else
+				{
+					IOSImpactReceiver::Execute_ReceiveImpact(target, data, this);
+				}
+				
 				LOG_GT(TEXT("Hit %s - CoreKB:%.0f PlayerKB:%0.f"), *target->GetName(), ProjectileCoreKnockback, ProjectilePlayerKnockback);
 			}
 		}

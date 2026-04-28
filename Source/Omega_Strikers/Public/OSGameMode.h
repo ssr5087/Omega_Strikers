@@ -92,7 +92,7 @@ public:
 	
 	// 코어 스폰 Z 오프셋 (바닥 위로 띄우기)
 	UPROPERTY(EditAnywhere, Category="OS|Core")
-	float CoreSpawnZOffset = 50.f;
+	float CoreSpawnZOffset = 150.f;
 	
 	// ═══════════════════════════════════════════
 	// 아레나 레퍼런스
