@@ -136,6 +136,4 @@ void AAsher_Special_Projectile::OnHitOverlap(UPrimitiveComponent* OverlappedComp
 		}
 		Destroy();
 	}
-	
-	
 }

@@ -6,6 +6,7 @@
 #include "Components/BoxComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Omega_Strikers/SM/OSImpactReceiver.h"
+#include "PlayerBase.h"
 
 
 // Sets default values
@@ -65,6 +66,9 @@ void AAsher_Special_Shield::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	// 🔥 Owner 캐싱 (핵심)
+	OwnerPlayer = Cast<APlayerBase>(GetOwner());
+	
 	GetWorld()->GetTimerManager().SetTimer(
 		DamageTimer,
 		this,
@@ -103,11 +107,14 @@ void AAsher_Special_Shield::Init(const FVector& InDirection, const FRotator& InR
 bool AAsher_Special_Shield::IsCenter(AActor* Target)
 {
 	float Dist = FVector::Dist(Target->GetActorLocation(), GetActorLocation());
-	return Dist < CenterRadius;
+	return Dist <= CenterRadius;
 }
 
 void AAsher_Special_Shield::ApplyDamage()
 {
+	if (!OwnerPlayer)
+		return;
+	
 	HitActors.Empty(); 
 	
 	TArray<AActor*> OverlappingActors;
@@ -128,16 +135,18 @@ void AAsher_Special_Shield::ApplyDamage()
 		// 	Target->GetActorLocation().Y - GetActorLocation().Y
 		// ).GetSafeNormal();
 		
-		FVector2D Dir = FVector2D(MoveDirection.X, MoveDirection.Y);
+		// FVector2D Dir = FVector2D(MoveDirection.X, MoveDirection.Y);
 		
-		FOSImpactData Data;
-		// 방향 수정 필요할듯
-		Data.Direction = Dir;
-		// 중앙과 사이드 데미지 
-		Data.PlayerDamage = IsCenter(Target) ? CenterDamage : EdgeDamage;
+		FName RowName = IsCenter(Target)
+			? TEXT("Asher_Special_Center")
+			: TEXT("Asher_Special_Edge");
 		
-		Data.PlayerKnockbackPower = PlayerKnockback;
-		Data.CoreKnockbackPower = CoreKnockback;
+		FCharacterSkill* Skill = OwnerPlayer->GetSkillData(RowName);
+		if (!Skill)
+			return;
+		
+		// 🔥 CSV 기반 데미지 계산
+		FOSImpactData Data = OwnerPlayer->MakeImpactData(*Skill);
 		
 		IOSImpactReceiver::Execute_ReceiveImpact(Target, Data, this);
 		

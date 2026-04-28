@@ -6,6 +6,8 @@
 #include "GameFramework/Actor.h"
 #include "Asher_Special_Shield.generated.h"
 
+class AAPlayerBase;
+
 UCLASS()
 class OMEGA_STRIKERS_API AAsher_Special_Shield : public AActor
 {
@@ -47,23 +49,14 @@ public:
 	// 맞은 대상 기록
 	TSet<AActor*> HitActors;
 	
-	// 방패 이동 관련
+	// 이동
 	FVector MoveDirection = FVector::ZeroVector;
+
 	UPROPERTY(EditAnywhere)
 	float MoveSpeed = 200.f;
 	
-	// 데미지 관련
-	UPROPERTY(EditAnywhere)
-	float CenterDamage = 50.f;
-	
-	UPROPERTY(EditAnywhere)
-	float EdgeDamage = 50.f;
-	
-	UPROPERTY(EditAnywhere)
-	float PlayerKnockback = 500.f;
-	
-	UPROPERTY(EditAnywhere)
-	float CoreKnockback = 500.f;
+	// 데이터셋 
+	class APlayerBase* OwnerPlayer = nullptr;
 	
 	UPROPERTY(EditAnywhere)
 	float CenterRadius = 100.f;
