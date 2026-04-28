@@ -29,6 +29,8 @@ AAsher::AAsher()
 	GetMesh()->SetRelativeScale3D(FVector(3.0f));
 	GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
+	// 데이터 셋
+	CharacterName = "Asher";
 }
 
 // Called when the game starts or when spawned
@@ -36,18 +38,8 @@ void AAsher::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	// 데이터 셋
-	FCharacterStat* Stat = GetStatByLevel(Level);
 	
-	if (Stat)
-	{
-		ApplyStat(*Stat);
-	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Stat Load Failed"));
-	}
-	
+	UE_LOG(LogTemp, Warning, TEXT("Power: %.1f"), CurrentStat.Power);
 }
 
 // Called every frame
@@ -60,57 +52,6 @@ void AAsher::Tick(float DeltaTime)
 void AAsher::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
-}
-
-FCharacterStat* AAsher::GetStatByLevel(int32 InLevel)
-{
-	if (!CharacterStatTable)
-	{
-		UE_LOG(LogTemp, Error, TEXT("CharacterStatTable is NULL"));
-		return nullptr;
-	}
-	
-	FName RowName = FName(*FString::Printf(TEXT("%s_%d"), *CharacterName.ToString(), InLevel));
-	
-	UE_LOG(LogTemp, Warning, TEXT("Trying Row: %s"), *RowName.ToString());
-	
-	return CharacterStatTable->FindRow<FCharacterStat>(RowName, TEXT(""));
-}
-
-void AAsher::ApplyStat(const FCharacterStat& Stat)
-{
-	CurrentStat = Stat;
-	
-	// PlayerBase 변수 덮어쓰기
-	MaxHP = Stat.MaxHP;
-	Power = Stat.Power;
-	Speed = Stat.Speed;
-	CoolDownRate = Stat.Cooldown;
-	
-	// 이동속도 적용
-	GetCharacterMovement()->MaxWalkSpeed = Speed;
-	
-	if (HPComp)
-	{
-		HPComp->UpdateMaxHP(MaxHP);
-		HPComp->InitializeHP();
-	}
-	
-	// 테스트 용
-	UE_LOG(LogTemp, Warning, TEXT("HP: %.1f / Power: %.1f / Speed: %.1f"),
-	MaxHP, Power, Speed);
-}
-
-void AAsher::LevelUp()
-{
-	Level++;
-	
-	FCharacterStat* Stat = GetStatByLevel(Level);
-	
-	if (Stat)
-	{
-		ApplyStat(*Stat);
-	}
 }
 
 void AAsher::Ready_CoreHit()
@@ -311,11 +252,17 @@ void AAsher::DoPrimaryHit1()
 		
 		if (HitActors.Contains(Target)) continue;
 
-		FOSImpactData Data;
-		Data.Direction = CursorDir;
-		Data.PlayerDamage = 100.f;
-		Data.CoreKnockbackPower = 1000.f;
-		Data.PlayerKnockbackPower = 600.f;
+		// FOSImpactData Data;
+		// Data.Direction = CursorDir;
+		// Data.PlayerDamage = 100.f;
+		// Data.CoreKnockbackPower = 1000.f;
+		// Data.PlayerKnockbackPower = 600.f;
+		
+		FCharacterSkill* Skill = GetSkillData(TEXT("Asher_Primary_Projectile"));
+		if (!Skill)
+			return;
+		
+		FOSImpactData Data = MakeImpactData(*Skill);
 
 		IOSImpactReceiver::Execute_ReceiveImpact(Target, Data, this);
 
@@ -367,30 +314,34 @@ void AAsher::DoPrimaryHit2()
 		FVector ToTarget = (Target->GetActorLocation() - GetActorLocation()).GetSafeNormal();
 
 		float Dot = FVector::DotProduct(Forward, ToTarget);
+		
+		FCharacterSkill* Skill = GetSkillData(TEXT("Asher_Primary_Projectile"));
+		if (!Skill)
+			return;
+		
+		
 
-		float Damage;
-		float Knockback;
-
-		if (Dot > 0.8f) // 👉 중앙 판정
+		if (Dot > 0.8f) //  중앙 판정
 		{
-			Damage = 200.f;
-			Knockback = 1200.f;
+			
+			Skill = GetSkillData("Asher_Primary_Center");
 		}
 		else if (Dot > 0.3f)    // 사이드
 		{
-			Damage = 80.f;
-			Knockback = 700.f;
+			
+			Skill = GetSkillData("Asher_Primary_Side");
 		}
 		else
 		{
 			continue; // 뒤쪽 무시
 		}
+		
+		if (!Skill)
+			continue;
+		
+		FOSImpactData Data = MakeImpactData(*Skill);
 
-		FOSImpactData Data;
-		Data.Direction = CursorDir;
-		Data.CoreKnockbackPower = 10000.f;
-		Data.PlayerDamage = Damage;
-		Data.PlayerKnockbackPower = Knockback;
+		
 
 		IOSImpactReceiver::Execute_ReceiveImpact(Target, Data, this);
 		
@@ -533,18 +484,24 @@ void AAsher::DoSecondaryDashTrace()
 		{
 			continue;
 		}
-
-		FOSImpactData Data;
-		Data.TeamSide = TeamSide;
-		Data.Direction = FVector2D(SecondaryDashDirection.X, SecondaryDashDirection.Y);
-		Data.PlayerDamage = Secondary_PlayerDamage;
-		Data.PlayerKnockbackPower = Secondary_PlayerKnockback;
-		Data.CoreKnockbackPower = Secondary_CoreKnockback;
-
-		if (IOSImpactReceiver::Execute_ReceiveImpact(Target, Data, this))
-		{
 			SecondaryHitActors.Add(Target);
-		}
+
+		
+		FCharacterSkill* Skill = GetSkillData(TEXT("Asher_Secondary"));
+		if (!Skill)
+			return;
+		
+		FOSImpactData Data = MakeImpactData(*Skill);
+
+		IOSImpactReceiver::Execute_ReceiveImpact(Target, Data, this);
+		
+		// FOSImpactData Data;
+		// Data.TeamSide = TeamSide;
+		// Data.Direction = FVector2D(SecondaryDashDirection.X, SecondaryDashDirection.Y);
+		// Data.PlayerDamage = Secondary_PlayerDamage;
+		// Data.PlayerKnockbackPower = Secondary_PlayerKnockback;
+		// Data.CoreKnockbackPower = Secondary_CoreKnockback;
+		
 	}
 
 	SecondaryLastTraceLocation = CurrentLocation;
@@ -557,7 +514,7 @@ void AAsher::EndSecondaryDash()
 		return;
 	}
 
-	DoSecondaryDashTrace();
+	// DoSecondaryDashTrace();
 	GetWorldTimerManager().ClearTimer(SecondaryDashTimer);
 
 	if (GetCharacterMovement())

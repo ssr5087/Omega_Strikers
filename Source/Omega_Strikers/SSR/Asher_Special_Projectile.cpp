@@ -6,6 +6,7 @@
 #include "Asher_Special_Shield.h"
 #include "Components/BoxComponent.h"
 #include "Omega_Strikers/SM/OSImpactReceiver.h"
+#include "PlayerBase.h"
 
 
 // Sets default values
@@ -36,7 +37,8 @@ AAsher_Special_Projectile::AAsher_Special_Projectile()
 		Mesh2->SetStaticMesh(TempMesh.Object);
 	}
 	
-	
+	// 충돌 설정
+	CollisionComp->SetGenerateOverlapEvents(true);
 }
 
 // Called when the game starts or when spawned
@@ -78,12 +80,17 @@ void AAsher_Special_Projectile::OnHitOverlap(UPrimitiveComponent* OverlappedComp
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	
+	// 자기 자신 or 오너 무시
 	if (!OtherActor || OtherActor == GetOwner())
 	{
 		auto name = OtherActor->GetName();
 		//GEngine->AddOnScreenDebugMessage(1,1,FColor::Magenta,name);
 		return;
 	}
+	
+	// 중복 히트 방지
+	if (HitActors.Contains(OtherActor))
+		return;
 	
 	if (!OtherActor->Implements<UOSImpactReceiver>())
 	{
@@ -94,10 +101,15 @@ void AAsher_Special_Projectile::OnHitOverlap(UPrimitiveComponent* OverlappedComp
 		return;
 	}
 	
-	FOSImpactData Data;
-	Data.TeamSide = OwnerTeam;
-	Data.Direction = FVector2D(MoveDirection.X, MoveDirection.Y);
-	Data.CoreKnockbackPower = 1.f;
+	APlayerBase* OwnerPlayer = Cast<APlayerBase>(GetOwner());
+	if (!OwnerPlayer)
+		return;
+
+	FCharacterSkill* Skill = OwnerPlayer->GetSkillData(TEXT("Asher_Special_Projectile"));
+	if (!Skill)
+		return;
+	
+	FOSImpactData Data = OwnerPlayer->MakeImpactData(*Skill);
 	
 	// 맞아도 되는 대상인지 체크
 	if (IOSImpactReceiver::Execute_ReceiveImpact(OtherActor, Data, GetOwner()))

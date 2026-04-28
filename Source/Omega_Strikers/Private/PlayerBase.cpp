@@ -15,6 +15,7 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Omega_Strikers/SM/HPComponent.h"
 #include "Omega_Strikers/SM/OSPlayerController.h"
+#include "Omega_Strikers/SSR/CharacterSkill.h"
 
 // Sets default values
 APlayerBase::APlayerBase()
@@ -72,12 +73,25 @@ APlayerBase::APlayerBase()
 	{
 		IA_Flip = TempFlip.Object;
 	}
+	
+	// 데이터 셋
+	CharacterName = "Default";
+	Level = 1;
 }
 
 // Called when the game starts or when spawned
 void APlayerBase::BeginPlay()
 {
 	Super::BeginPlay();
+	
+	// 스탯 초기 세팅중
+	FCharacterStat* Stat = GetStatByLevel(Level);
+
+	if (Stat)
+	{
+		ApplyStat(*Stat);
+	}
+	
 	
 	myPC = Cast<AOSTopDownController>(GetController());
 	
@@ -270,4 +284,63 @@ void APlayerBase::KnockbackDecrease()
 {
 	// Stagger 원상복구. 추후 넉백 계수에 관한 장비 데이터가 존재할 경우 수정할 필요성 있음.
 	KnockbackRatio = 1.f;
+}
+
+FCharacterStat* APlayerBase::GetStatByLevel(int32 InLevel)
+{
+	if (!StatTable) return nullptr;
+
+	FString RowString = FString::Printf(TEXT("%s_%d"),
+		*CharacterName.ToString(),
+		InLevel);
+
+	FName RowName = FName(*RowString);
+
+	return StatTable->FindRow<FCharacterStat>(RowName, TEXT(""));
+}
+
+void APlayerBase::ApplyStat(const FCharacterStat& NewStat)
+{
+	CurrentStat = NewStat;
+
+	// HP 갱신
+	if (HPComp)
+	{
+		HPComp->UpdateMaxHP(NewStat.MaxHP);
+	}
+}
+
+FCharacterSkill* APlayerBase::GetSkillData(FName SkillName)
+{
+	if (!SkillTable)
+		return nullptr;
+	
+	return SkillTable->FindRow<FCharacterSkill>(SkillName, TEXT(""));
+}
+
+float APlayerBase::CalculateDamage(const FCharacterSkill& SkillData)
+{
+	float AttackPower = CurrentStat.Power;
+
+	return SkillData.Damage_Flat +
+		   (AttackPower * SkillData.Damage_Scale);
+}
+
+// 
+FOSImpactData APlayerBase:: MakeImpactData(const FCharacterSkill& Skill)
+{
+	FOSImpactData Data;
+	
+	// 팀
+	Data.TeamSide = TeamSide;
+	// 방향
+	Data.Direction = CursorDir;
+	// 데미지
+	Data.PlayerDamage = CalculateDamage(Skill);
+	// 플레이어 넉백
+	Data.PlayerKnockbackPower = Skill.PlayerKB_Flat + (CurrentStat.Power * Skill.PlayerKB_Scale);
+	// 코어 넉백
+	Data.CoreKnockbackPower = Skill.CoreKB_Flat + (CurrentStat.Power * Skill.CoreKB_Scale);
+	
+	return Data;
 }

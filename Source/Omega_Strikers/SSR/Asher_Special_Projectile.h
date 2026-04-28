@@ -50,6 +50,10 @@ public:
 	// 공격자 팀
 	EOSTeam OwnerTeam = EOSTeam::None;
 	
+	// 중복 히트 방지
+	TSet<AActor*> HitActors;
+	
+	// 히트 이벤트
 	FOnSpecialProjectileHit OnHit;
 	
 	// 충돌시 생성되는 방패

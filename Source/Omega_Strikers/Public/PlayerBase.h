@@ -5,6 +5,8 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Omega_Strikers/SM/OSImpactReceiver.h"
+#include "Omega_Strikers/SSR/CharacterSkill.h"
+#include "Omega_Strikers/SSR/CharacterStat.h"
 #include "PlayerBase.generated.h"
 
 UCLASS()
@@ -121,10 +123,43 @@ public:
 	// 넉백 계수 관리 함수
 	void KnockbackIncrease();
 	void KnockbackDecrease();
-	
+
 	// Knockout 상태 처리 함수 및 리스폰 처리 함수 등등
 	// 넉백 상태일 때 벽과의 충돌을 잠시 꺼둠
 	// 그 벽 뒤에 있는 박스와의 충돌이 일어나면 넉아웃으로 판정 - 이펙트 나오고 캐릭터 visibility를 false로 설정 
 	// 플레이어 위치를 리스폰 위치로 옮기고, 넉백 계수 등 스탯 값 초기값으로 세팅(체력은 컴포넌트 통해서)
 	// 10초 타이머 끝나면 이펙트와 함께 캐릭터 visibility true로 재설정
+	
+	
+	// ------------ 스킬 데이터셋-------------------
+	// 스킬 테이블
+	UPROPERTY(EditDefaultsOnly, Category = "Skill")
+	UDataTable* SkillTable;
+	
+	// 스탯 테이블
+	UPROPERTY(EditDefaultsOnly)
+	UDataTable* StatTable;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FCharacterStat CurrentStat;
+	
+	// 초기 레벨
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 Level = 1;
+	
+	// 캐릭터 이름
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FName CharacterName;
+	
+	// -------------레벨별 스탯들----------------
+	
+	FCharacterStat* GetStatByLevel(int32 InLevel);
+	void ApplyStat(const FCharacterStat& NewStat);
+
+
+	// ------------- 스킬 데미지 -------------------
+	FCharacterSkill* GetSkillData(FName SkillName);
+	float CalculateDamage(const FCharacterSkill& SkillData);
+	FOSImpactData MakeImpactData(const FCharacterSkill& Skill);
 };
+
