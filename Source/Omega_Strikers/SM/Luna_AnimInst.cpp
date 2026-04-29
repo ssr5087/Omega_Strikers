@@ -26,3 +26,13 @@ void ULuna_AnimInst::NativeUpdateAnimation(float DeltaSeconds)
 		bIsProcessingSpecial = Luna->bIsProcessingSpecial;
 	}
 }
+
+void ULuna_AnimInst::AnimNotify_PrimarySpawn()
+{
+	Luna->SpawnPrimaryRocket();
+}
+
+void ULuna_AnimInst::AnimNotify_PrimarySpawnEnd()
+{
+	Luna->End_PrimarySkill();
+}

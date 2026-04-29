@@ -33,18 +33,17 @@ public:
 	float Speed = 1000.f;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Rocket")
-	float Luna_Power = 50.0f;
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Rocket")
 	FOSImpactData ImpactData;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Rocket")
-	TObjectPtr<AActor> OwnerActorRef = nullptr;
+	TObjectPtr<class ALuna> OwnerActorRef = nullptr;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Rocket")
 	EOSTeam TeamSide = EOSTeam::Red;
 	
-	void InitRocket(float Owner_Power, AActor* InOwnerActor, EOSTeam InTeamSide);
+	void InitRocket(AActor* InOwnerActor);
+	
+	FTimerHandle DestroyTimer;
 	
 	UFUNCTION()
 	void OnRocketOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
