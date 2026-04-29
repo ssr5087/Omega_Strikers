@@ -75,19 +75,6 @@ public:
 	
 	// =================== Skill ===================
 	
-	// 선 입력된 동작들이 아직 실행 중 인지
-	bool bBufferedInput = false;
-	
-	// 각 스킬 쿨타임 중인지
-	bool bPrimarySkillCoolDown = false;
-	bool bSecondarySkillCoolDown = false;
-	bool bSpecialSkillCoolDown = false;
-	
-	// 각 스킬 쿨타임
-	float PrimarySkillCool = 0.5f;		//6.5
-	float SecondarySkillCool = 0.5f;	//14
-	float SpecialSkillCool = 0.5f;		//35
-	
 	virtual void PlayerMove(const struct FInputActionValue& InputActionValue) override;
 	
 	virtual void Ready_CoreHit() override;
@@ -97,27 +84,78 @@ public:
 	virtual void Ready_Flip() override;
 	
 	virtual void Use_CoreHit() override;
-	virtual void Use_PrimarySkill() override;
-	virtual void Use_SecondarySkill() override;
-	virtual void Use_SpecialSkill() override;
+	
 	virtual void Use_Flip() override;
 	
+	// 선 입력된 동작들이 아직 실행 중 인지
+	bool bBufferedInput = false;
+	
+	// 각 스킬 쿨타임 중인지
+	bool bPrimarySkillCoolDown = false;
+	bool bSecondarySkillCoolDown = false;
+	bool bSpecialSkillCoolDown = false;
+	
+	// 각 스킬 쿨타임
+	float PrimarySkillCool = 6.5f;		// 6.5
+	float SecondarySkillCool = 1.5f;	// 14
+	float SpecialSkillCool = 1.5f;		// 35
+	
+	// ----------------- Primary -----------------
+	
+	// 입력 Complete 바인딩 (베이스에서 완료)
+	// 여기서 애니메이션 transition 및 쿨타임 관련 변수 관리 + 발사 방향 관리 + 시선 처리
+	virtual void Use_PrimarySkill() override;
+	
+	// 애니메이션 transition
 	bool bIsProcessingPrimary = false;
 	
-	// 보조 스킬이 사용 중 인지 여부
+	// 입력 Complete 시점의 커서 방향 저장
+	FVector2D PrimaryDir;
+	
+	// Primary Rocket 스폰
+	void SpawnPrimaryRocket();
+	
+	// 애니메이션 종료 후 다시 이동 방향을 바라보게 설정
+	void End_PrimarySkill();
+	
+	// ---------------- Secondary ----------------
+	
+	// 입력 Complete 바인딩 (베이스에서 완료)
+	// 여기서 애니메이션 transition 및 쿨타임 관련 변수 관리 + 발사 방향 관리 + 업데이트 호출
+	virtual void Use_SecondarySkill() override;
+	
+	// 애니메이션 transition
 	bool bIsProcessingSecondary = false;
+	
+	// 충돌 시 전달할 Impact Data
+	FOSImpactData SecondaryImpactData;
+	
 	// 방향 제어 중인지 여부
 	bool bIsChangingDirection = false;
+	
 	// 보조 스킬 사용 중 이동 방향
 	FVector CurDir;
 	FVector NewDir;
+	
 	// 보조 스킬 사용 중 위치 값 갱신 함수 호출용 타이머
 	FTimerHandle MoveTimer;
+	
 	// 위치 값 갱신 함수
 	void Update_SecondaryMove();
+	
 	// 충돌 시 정지 상태로 변환할 함수
 	UFUNCTION()
 	void OnDashOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
+	// ----------------- Special -----------------
+	
+	// 입력 Complete 바인딩 (베이스에서 완료)
+	// 여기서 애니메이션 transition 및 쿨타임 관련 변수 관리 + 발사 방향 관리 + 시선 처리
+	virtual void Use_SpecialSkill() override;
+	
+	// 애니메이션 transition
 	bool bIsProcessingSpecial = false;
+	
+	// Primary Rocket 스폰
+	void SpawnSpecialRocket();
 };

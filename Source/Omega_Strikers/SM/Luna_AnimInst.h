@@ -32,4 +32,9 @@ public:
 	bool bIsProcessingSecondary = false;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Luna|Skill")
 	bool bIsProcessingSpecial = false;
+	
+	UFUNCTION()
+	void AnimNotify_PrimarySpawn();
+	UFUNCTION()
+	void AnimNotify_PrimarySpawnEnd();
 };
