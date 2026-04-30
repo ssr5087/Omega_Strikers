@@ -173,5 +173,8 @@ public:
 	FCharacterSkill* GetSkillData(FName SkillName);
 	float CalculateDamage(const FCharacterSkill& SkillData);
 	FOSImpactData MakeImpactData(const FCharacterSkill& Skill);
+	
+	// EXP Component
+	
 };
 
