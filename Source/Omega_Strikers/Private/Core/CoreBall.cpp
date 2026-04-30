@@ -190,8 +190,8 @@ bool ACoreBall::Server_HitCore_Validate(FVector HitOrigin, FVector HitDirection,
 {
 	// ─── 기본 검증 ───
  
-	// 파워 범위 체크
-	if (Power <= 0.f || Power > 5000.f)
+	// 파워 범위 체크 (파워 상한선)
+	if (Power <= 0.f || Power > 50000.f)
 	{
 		return false;
 	}
