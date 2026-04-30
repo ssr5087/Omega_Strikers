@@ -188,32 +188,25 @@ void AAimiGlitchOrb::ExecuteExplosion()
 		// 3) FOSImpactData 구성 (실제 구조체에 맞춤)
 		const FVector2D pushDir2D = FVector2D(pushDir.X, pushDir.Y).GetSafeNormal();
 
-		// 오너 캐릭터의 TeamSide 가져오기
-		EOSTeam ownerTeam = EOSTeam::None;
-		if (APlayerBase* ownerPlayer = Cast<APlayerBase>(OwnerCharacter))
-		{
-			ownerTeam = ownerPlayer->TeamSide;
-		}
+		APlayerBase* ownerPlayer = Cast<APlayerBase>(GetOwner());
+		if (!ownerPlayer) return;
 
-		FOSImpactData impactData;
-		impactData.TeamSide = ownerTeam;
-		impactData.Direction = pushDir2D;
-		impactData.CoreKnockbackPower = CoreKnockback * attenuation;
-		impactData.PlayerKnockbackPower = PlayerKnockback * attenuation;
-		impactData.PlayerDamage = Damage * attenuation;
-
-		//IOSImpactReceiver::Execute_ReceiveImpact(target, impactData, OwnerCharacter);
+		FCharacterSkill* skill = ownerPlayer->GetSkillData(TEXT("Aimi_Primary"));
+		if (!skill) return;
+	
+		FOSImpactData data = ownerPlayer->MakeImpactData(*skill);
+		
 		if (ACoreBall* CoreBall = Cast<ACoreBall>(target))
 		{
 			FVector KnockDir = FVector(pushDir2D.X, pushDir2D.Y, 0.f).GetSafeNormal();
-			CoreBall->Server_HitCore(orbCenter, KnockDir, impactData.CoreKnockbackPower);
+			CoreBall->Server_HitCore(orbCenter, KnockDir, data.CoreKnockbackPower);
 		}
 		else
 		{
-			IOSImpactReceiver::Execute_ReceiveImpact(target, impactData, OwnerCharacter);
+			IOSImpactReceiver::Execute_ReceiveImpact(target, data, OwnerCharacter);
 		}
 		
-		LOG_GT(TEXT("Hit %s - Dir:(%.2f, %.2f) CoreKB:%.0f PlayerKB:%.0f (Attn:%.2f)"), *target->GetName(), pushDir2D.X, pushDir2D.Y, impactData.CoreKnockbackPower, impactData.PlayerKnockbackPower, attenuation);
+		LOG_GT(TEXT("Hit %s - Dir:(%.2f, %.2f) CoreKB:%.0f PlayerKB:%.0f (Attn:%.2f)"), *target->GetName(), pushDir2D.X, pushDir2D.Y, data.CoreKnockbackPower, data.PlayerKnockbackPower, attenuation);
 
 #if WITH_EDITOR
 	DrawDebugDirectionalArrow(GetWorld(), orbCenter, orbCenter + pushDir * 200.f, 20.f, FColor::Magenta, false, 1.5f);		
