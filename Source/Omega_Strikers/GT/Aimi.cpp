@@ -19,8 +19,8 @@ AAimi::AAimi()
 {
 	PrimaryActorTick.bCanEverTick = true;
 
-	// TODO: PlayerBase 기본 스탯 확인 후 수정
 	// Power, Speed 등은 PlayerBase에서 관리
+	CharacterName = "Aimi";
 }
 
 void AAimi::BeginPlay()
@@ -67,57 +67,6 @@ void AAimi::Tick(float DeltaTime)
 	
 	DrawAimIndicator();
 }
-
-// FCharacterStat* AAimi::GetStatByLevel(int32 InLevel)
-// {
-// 	if (!CharacterStatTable)
-// 	{
-// 		UE_LOG(LogTemp, Error, TEXT("CharacterStatTable is NULL"));
-// 		return nullptr;
-// 	}
-// 	
-// 	FName RowName = FName(*FString::Printf(TEXT("%s_%d"), *CharacterName.ToString(), InLevel));
-// 	
-// 	UE_LOG(LogTemp, Warning, TEXT("Trying Row: %s"), *RowName.ToString());
-// 	
-// 	return CharacterStatTable->FindRow<FCharacterStat>(RowName, TEXT(""));
-// }
-//
-// void AAimi::ApplyStat(const FCharacterStat& Stat)
-// {
-// 	CurrentStat = Stat;
-// 	
-// 	// PlayerBase 변수 덮어쓰기
-// 	MaxHP = Stat.MaxHP;
-// 	Power = Stat.Power;
-// 	Speed = Stat.Speed;
-// 	CoolDownRate = Stat.Cooldown;
-// 	
-// 	// 이동속도 적용
-// 	GetCharacterMovement()->MaxWalkSpeed = Speed;
-// 	
-// 	if (HPComp)
-// 	{
-// 		HPComp->UpdateMaxHP(MaxHP);
-// 		HPComp->InitializeHP();
-// 	}
-// 	
-// 	// 테스트 용
-// 	UE_LOG(LogTemp, Warning, TEXT("HP: %.1f / Power: %.1f / Speed: %.1f"),
-// 	MaxHP, Power, Speed);
-// }
-//
-// void AAimi::LevelUp()
-// {
-// 	Level++;
-// 	
-// 	FCharacterStat* Stat = GetStatByLevel(Level);
-// 	
-// 	if (Stat)
-// 	{
-// 		ApplyStat(*Stat);
-// 	}
-// }
 
 // ════════════════════════════════════════════════════════════
 //  쿨다운
@@ -303,12 +252,10 @@ void AAimi::OnCyberSwipeArrived()
 	const FVector forward = GetActorForwardVector();
 	const FVector2D dir2D = FVector2D(forward.X, forward.Y).GetSafeNormal();
 
-	FOSImpactData data;
-	data.TeamSide = TeamSide;
-	data.Direction = dir2D;
-	data.CoreKnockbackPower = SwipeCoreKnockback;
-	data.PlayerKnockbackPower = SwipePlayerKnockback;
-	data.PlayerDamage = SwipeDamage;
+	FCharacterSkill* Skill = GetSkillData(TEXT("Aimi_Secondary"));
+	if (!Skill) return;
+		
+	FOSImpactData data = MakeImpactData(*Skill);
 
 	PerformSlash(origin, forward, SwipeRange, SwipeHalfAngle, data);
 	
@@ -398,13 +345,12 @@ void AAimi::DoEnergyBurst()
 	const FVector forward = GetActorForwardVector();
 	const FVector2D dir2D = FVector2D(forward.X, forward.Y).GetSafeNormal();
 
-	FOSImpactData data;
-	data.TeamSide = TeamSide;
+	FCharacterSkill* Skill = GetSkillData(TEXT("Aimi_EnergyBurst"));
+	if (!Skill) return;
+		
+	FOSImpactData data = MakeImpactData(*Skill);
 	data.Direction = dir2D;
-	data.CoreKnockbackPower = 0.f;
-	data.PlayerKnockbackPower = EnergyBurstKnockback;
-	data.PlayerDamage = EnergyBurstDamage;
-
+	
 	PerformSlash(origin, forward, EnergyBurstRange, 180.f, data);
 	LOG_GT(TEXT("ENERGY BURST! 360°"));
 }
