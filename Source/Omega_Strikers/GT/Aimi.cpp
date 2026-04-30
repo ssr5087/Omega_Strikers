@@ -151,6 +151,7 @@ void AAimi::Ready_CoreHit()
 
 void AAimi::Use_CoreHit()
 {
+	Super::Use_CoreHit();
 }
 
 // PlayerBase에서 이미 평타 구현 되어있어서 안쓸 듯...

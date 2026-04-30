@@ -84,7 +84,7 @@ public:
 
 	// 코어 밀치기
 	UPROPERTY(EditDefaultsOnly, Category="Explosion")
-	float CoreKnockback = 1430.f;
+	float CoreKnockback = 8430.f;
 
 	// 플레이어 밀치기
 	UPROPERTY(EditDefaultsOnly, Category="Explosion")
