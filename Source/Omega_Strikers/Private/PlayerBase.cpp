@@ -363,9 +363,11 @@ FOSImpactData APlayerBase:: MakeImpactData(const FCharacterSkill& Skill)
 	// 데미지
 	Data.PlayerDamage = CalculateDamage(Skill);
 	// 플레이어 넉백
-	Data.PlayerKnockbackPower = Skill.PlayerKB_Flat + (CurrentStat.Power * Skill.PlayerKB_Scale);
+	Data.PlayerKnockbackPower = 
+		Skill.PlayerKB_Flat + (CurrentStat.Power * Skill.PlayerKB_Scale);
 	// 코어 넉백
-	Data.CoreKnockbackPower = Skill.CoreKB_Flat + (CurrentStat.Power * Skill.CoreKB_Scale);
+	Data.CoreKnockbackPower = 
+		Skill.CoreKB_Flat + (CurrentStat.Power * Skill.CoreKB_Scale);
 	
 	return Data;
 }
