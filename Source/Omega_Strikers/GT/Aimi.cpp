@@ -6,6 +6,7 @@
 #include "AimiFirewallSentry.h"
 #include "AimiGlitchOrb.h"
 #include "DrawDebugHelpers.h"
+#include "EngineUtils.h"
 #include "TimerManager.h"
 #include "Core/CoreBall.h"
 #include "Engine/OverlapResult.h"
@@ -367,6 +368,20 @@ bool AAimi::PerformSlash(const FVector& Origin, const FVector& ForwardDir,
                          float Range, float HalfAngleDeg,
                          const FOSImpactData& InData)
 {
+	// ★ 디버그: CoreBall 직접 찾기
+	for (TActorIterator<AActor> It(GetWorld()); It; ++It)
+	{
+		if (It->GetClass()->GetName().Contains(TEXT("CoreBall")))
+		{
+			float Dist = FVector::Dist(GetActorLocation(), It->GetActorLocation());
+			UPrimitiveComponent* Root = Cast<UPrimitiveComponent>(It->GetRootComponent());
+			LOG_GT(TEXT("[Debug] CoreBall 발견 — 거리:%.0f, ColEnabled:%d, ObjType:%d"),
+				Dist,
+				Root ? (int32)Root->GetCollisionEnabled() : -1,
+				Root ? (int32)Root->GetCollisionObjectType() : -1);
+		}
+	}
+	
 	FVector Forward = ForwardDir;
 	Forward.Z = 0.f;
 	Forward.Normalize();
@@ -520,12 +535,15 @@ void AAimi::DrawAimIndicator()
 void AAimi::DrawGlitchPopAim()
 {
 #if ENABLE_ANIM_DEBUG
-	const FVector charPos = GetActorLocation();
+	// ★ Z를 CoreBall 높이에 맞추기 (CoreSpawnZOffset과 동일하게)
+	FVector charPos = GetActorLocation();
+	charPos.Z += 150.f;
 	
 	// 오브 활성 -> 오브 주변 폭발 범위
 	if (ActiveOrb && !ActiveOrb->HasDetonated())
 	{
-		const FVector orbPos = ActiveOrb->GetActorLocation();
+		FVector orbPos = ActiveOrb->GetActorLocation();
+		orbPos.Z = charPos.Z; // ★ 오브 라인도 동일 높이로
 		const float orbR = ActiveOrb->GetCurrentRadius();
 		const float explosionR = orbR * ActiveOrb->ExplosionRadiusMultiplier;
 		
@@ -544,7 +562,7 @@ void AAimi::DrawGlitchPopAim()
 		for (const FOverlapResult& overlap : overlaps)
 		{
 			AActor* target = overlap.GetActor();
-			if (!target || !!target->ActorHasTag(TEXT("Core"))) continue;
+			if (!target || !target->ActorHasTag(TEXT("Core"))) continue;
 			FVector pushDire = (target->GetActorLocation() - orbPos);
 			pushDire.Z = 0.f;
 			pushDire.Normalize();

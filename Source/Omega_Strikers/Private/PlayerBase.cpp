@@ -254,7 +254,17 @@ void APlayerBase::Use_CoreHit()
 	// 거리가 멀면 못 차요
 	float CoreDist = FVector::Distance(Core->GetActorLocation(), GetActorLocation());
 	if (CoreDist > 700.f) {return;}
-	Execute_ReceiveImpact(Core, CoreImpactData, this);
+
+	// ✅ CoreBall은 Server RPC로 처리
+	if (ACoreBall* CoreBall = Cast<ACoreBall>(Core))
+	{
+		FVector KnockDir = FVector(CursorDir.X, CursorDir.Y, 0.f).GetSafeNormal();
+		CoreBall->Server_HitCore(GetActorLocation(), KnockDir, CoreImpactData.CoreKnockbackPower);
+	}
+	else
+	{
+		Execute_ReceiveImpact(Core, CoreImpactData, this);
+	}
 }
 
 void APlayerBase::Use_PrimarySkill() { bAimingPrimary = false; }
