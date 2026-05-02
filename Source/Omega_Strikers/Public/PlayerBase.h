@@ -46,7 +46,10 @@ public:
 	// 안 쓰게 되면 지울 것!!!!!!!!!
 	UPROPERTY()
 	class AOSPlayerController* myPC;
-	
+
+	// CoreBall 참조
+	UPROPERTY()
+	TObjectPtr<class ACoreBall> CachedCoreBall;
 	
 	// ================= Component =================
 	

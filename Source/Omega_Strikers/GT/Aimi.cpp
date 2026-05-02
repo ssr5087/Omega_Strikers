@@ -511,6 +511,8 @@ void AAimi::DrawAimIndicator()
 	LOG_GT(TEXT("ENABLE_DRAW_DEBUG is OFF!"));
 #endif*/
 	
+	if (!IsLocallyControlled()) return;
+	
 #if ENABLE_ANIM_DEBUG
 	// 매 프레인 에이밍 방향 캐싱
 	CachedAimDirection = GetAimDirection();
@@ -535,9 +537,7 @@ void AAimi::DrawAimIndicator()
 void AAimi::DrawGlitchPopAim()
 {
 #if ENABLE_ANIM_DEBUG
-	// ★ Z를 CoreBall 높이에 맞추기 (CoreSpawnZOffset과 동일하게)
 	FVector charPos = GetActorLocation();
-	charPos.Z += 150.f;
 	
 	// 오브 활성 -> 오브 주변 폭발 범위
 	if (ActiveOrb && !ActiveOrb->HasDetonated())
