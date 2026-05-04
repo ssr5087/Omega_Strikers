@@ -7,6 +7,8 @@
 #include "AimiGlitchOrb.h"
 #include "DrawDebugHelpers.h"
 #include "EngineUtils.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraComponent.h"
 #include "TimerManager.h"
 #include "Core/CoreBall.h"
 #include "Engine/OverlapResult.h"
@@ -47,6 +49,31 @@ void AAimi::BeginPlay()
 	// {
 	// 	UE_LOG(LogTemp, Warning, TEXT("Stat Load Failed"));
 	// }
+
+	LOG_GT(TEXT("[Aimi] NS_AimIndicator valid: %s"), NS_AimIndicator? TEXT("True") : TEXT("False"));
+
+	AimIndicatorComp = UNiagaraFunctionLibrary::SpawnSystemAttached(
+		NS_AimIndicator,
+		GetRootComponent(),
+		NAME_None,
+		FVector::ZeroVector,
+		FRotator::ZeroRotator,
+		EAttachLocation::KeepWorldPosition,
+		false,
+		true
+		);
+
+	AimIndicatorComp->SetVisibility(false);
+	
+	DecalIndicatorComp = UNiagaraFunctionLibrary::SpawnSystemAttached(
+		NS_AimIndicator,
+		GetRootComponent(),
+		NAME_None,
+		FVector::ZeroVector,
+		FRotator::ZeroRotator,
+		EAttachLocation::KeepWorldPosition,
+		false
+		);
 }
 
 void AAimi::Tick(float DeltaTime)
@@ -505,30 +532,44 @@ FVector AAimi::GetAimDirection() const
 // ════════════════════════════════════════════════════════════
 void AAimi::DrawAimIndicator()
 {
-/*#if ENABLE_DRAW_DEBUG
-	LOG_GT(TEXT("DrawAimIndicator — P:%d S:%d Sp:%d"), bAimingPrimary, bAimingSecondary, bAimingSpecial);
-#else
-	LOG_GT(TEXT("ENABLE_DRAW_DEBUG is OFF!"));
-#endif*/
-	
 	if (!IsLocallyControlled()) return;
 	
 #if ENABLE_ANIM_DEBUG
 	// 매 프레인 에이밍 방향 캐싱
 	CachedAimDirection = GetAimDirection();
 	
-	// 오브 비행 중 -> 플래그 무관, 항상 폭발 범위 표시
+	/*// 오브 비행 중 -> 플래그 무관, 항상 폭발 범위 표시
 	if (ActiveOrb && !ActiveOrb->HasDetonated())
 	{
 		DrawGlitchPopAim();
 		return;
-	}
+	}*/
 	
 	// Ready() 에서 켠 플래그에 따라 해당 스킬만
-	if (bAimingPrimary) DrawGlitchPopAim();
 	if (bAimingSecondary) DrawCyberSwipeAim();
 	if (bAimingSpecial) DrawSentryAim();
 #endif
+	if (bAimingPrimary) UpdateAimIndicator();
+}
+
+void AAimi::UpdateAimIndicator()
+{
+	if (!AimIndicatorComp) return;
+
+	// Activate 대신 Visibility로 제어
+	AimIndicatorComp->SetVisibility(bAimingPrimary);
+	DecalIndicatorComp->SetVisibility(bAimingPrimary);
+
+	if (!bAimingPrimary) return;
+
+	const FVector aimDir3D = FVector(CursorDir.X, CursorDir.Y, 0.f).GetSafeNormal();
+	const float dist = 1200.f;
+
+	AimIndicatorComp->SetWorldLocation(GetActorLocation());
+	AimIndicatorComp->SetWorldRotation(aimDir3D.Rotation());
+	AimIndicatorComp->SetVariableFloat(FName("User.AimDistance"), dist);
+
+	if (DecalIndicatorComp) DecalIndicatorComp->SetWorldLocation(GetActorLocation() + aimDir3D * dist);
 }
 
 // ════════════════════════════════════════════════════════════
