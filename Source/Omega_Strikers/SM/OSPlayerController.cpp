@@ -3,13 +3,33 @@
 
 #include "OSPlayerController.h"
 
+#include "Blueprint/UserWidget.h"
+
 void AOSPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 	
+
+	
 	bShowMouseCursor = true;
 	bEnableClickEvents = true;
 	bEnableMouseOverEvents = true;
+	
+	// 로비 UI 생성
+	if (LobbyWidgetClass)
+	{
+		LobbyWidget = CreateWidget<UUserWidget>(this, LobbyWidgetClass);
+
+		if (LobbyWidget)
+		{
+			LobbyWidget->AddToViewport();
+
+			// UI 입력 모드
+			FInputModeUIOnly InputMode;
+			InputMode.SetWidgetToFocus(LobbyWidget->TakeWidget());
+			SetInputMode(InputMode);
+		}
+	}
 }
 
 bool AOSPlayerController::GetMousePointOnArenaPlane(FVector& OutPoint) const

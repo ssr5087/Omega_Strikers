@@ -18,4 +18,14 @@ public:
 	virtual void BeginPlay() override;
 	
 	bool GetMousePointOnArenaPlane(FVector& OutPoint) const;
+	
+	
+	// Session Lobby UI 
+public:
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="UI")
+	TSubclassOf<UUserWidget> LobbyWidgetClass;
+	
+	
+	UUserWidget* LobbyWidget;
 };

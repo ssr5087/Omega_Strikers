@@ -50,6 +50,6 @@ public:
 	
 	// Delegate
 	
-	UPROPERTY(BlueprintAssignable)
-	FOnLevelUp OnLevelUp;
+	// UPROPERTY(BlueprintAssignable)
+	//  FOnLevelUp OnLevelUp;
 };
