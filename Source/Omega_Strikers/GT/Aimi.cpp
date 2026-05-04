@@ -6,6 +6,9 @@
 #include "AimiFirewallSentry.h"
 #include "AimiGlitchOrb.h"
 #include "DrawDebugHelpers.h"
+#include "EngineUtils.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraComponent.h"
 #include "TimerManager.h"
 #include "Core/CoreBall.h"
 #include "Engine/OverlapResult.h"
@@ -46,6 +49,31 @@ void AAimi::BeginPlay()
 	// {
 	// 	UE_LOG(LogTemp, Warning, TEXT("Stat Load Failed"));
 	// }
+
+	LOG_GT(TEXT("[Aimi] NS_AimIndicator valid: %s"), NS_AimIndicator? TEXT("True") : TEXT("False"));
+
+	AimIndicatorComp = UNiagaraFunctionLibrary::SpawnSystemAttached(
+		NS_AimIndicator,
+		GetRootComponent(),
+		NAME_None,
+		FVector::ZeroVector,
+		FRotator::ZeroRotator,
+		EAttachLocation::KeepWorldPosition,
+		false,
+		true
+		);
+
+	AimIndicatorComp->SetVisibility(false);
+	
+	DecalIndicatorComp = UNiagaraFunctionLibrary::SpawnSystemAttached(
+		NS_AimIndicator,
+		GetRootComponent(),
+		NAME_None,
+		FVector::ZeroVector,
+		FRotator::ZeroRotator,
+		EAttachLocation::KeepWorldPosition,
+		false
+		);
 }
 
 void AAimi::Tick(float DeltaTime)
@@ -367,6 +395,20 @@ bool AAimi::PerformSlash(const FVector& Origin, const FVector& ForwardDir,
                          float Range, float HalfAngleDeg,
                          const FOSImpactData& InData)
 {
+	// ★ 디버그: CoreBall 직접 찾기
+	for (TActorIterator<AActor> It(GetWorld()); It; ++It)
+	{
+		if (It->GetClass()->GetName().Contains(TEXT("CoreBall")))
+		{
+			float Dist = FVector::Dist(GetActorLocation(), It->GetActorLocation());
+			UPrimitiveComponent* Root = Cast<UPrimitiveComponent>(It->GetRootComponent());
+			LOG_GT(TEXT("[Debug] CoreBall 발견 — 거리:%.0f, ColEnabled:%d, ObjType:%d"),
+				Dist,
+				Root ? (int32)Root->GetCollisionEnabled() : -1,
+				Root ? (int32)Root->GetCollisionObjectType() : -1);
+		}
+	}
+	
 	FVector Forward = ForwardDir;
 	Forward.Z = 0.f;
 	Forward.Normalize();
@@ -490,28 +532,44 @@ FVector AAimi::GetAimDirection() const
 // ════════════════════════════════════════════════════════════
 void AAimi::DrawAimIndicator()
 {
-/*#if ENABLE_DRAW_DEBUG
-	LOG_GT(TEXT("DrawAimIndicator — P:%d S:%d Sp:%d"), bAimingPrimary, bAimingSecondary, bAimingSpecial);
-#else
-	LOG_GT(TEXT("ENABLE_DRAW_DEBUG is OFF!"));
-#endif*/
+	if (!IsLocallyControlled()) return;
 	
 #if ENABLE_ANIM_DEBUG
 	// 매 프레인 에이밍 방향 캐싱
 	CachedAimDirection = GetAimDirection();
 	
-	// 오브 비행 중 -> 플래그 무관, 항상 폭발 범위 표시
+	/*// 오브 비행 중 -> 플래그 무관, 항상 폭발 범위 표시
 	if (ActiveOrb && !ActiveOrb->HasDetonated())
 	{
 		DrawGlitchPopAim();
 		return;
-	}
+	}*/
 	
 	// Ready() 에서 켠 플래그에 따라 해당 스킬만
-	if (bAimingPrimary) DrawGlitchPopAim();
 	if (bAimingSecondary) DrawCyberSwipeAim();
 	if (bAimingSpecial) DrawSentryAim();
 #endif
+	if (bAimingPrimary) UpdateAimIndicator();
+}
+
+void AAimi::UpdateAimIndicator()
+{
+	if (!AimIndicatorComp) return;
+
+	// Activate 대신 Visibility로 제어
+	AimIndicatorComp->SetVisibility(bAimingPrimary);
+	DecalIndicatorComp->SetVisibility(bAimingPrimary);
+
+	if (!bAimingPrimary) return;
+
+	const FVector aimDir3D = FVector(CursorDir.X, CursorDir.Y, 0.f).GetSafeNormal();
+	const float dist = 1200.f;
+
+	AimIndicatorComp->SetWorldLocation(GetActorLocation());
+	AimIndicatorComp->SetWorldRotation(aimDir3D.Rotation());
+	AimIndicatorComp->SetVariableFloat(FName("User.AimDistance"), dist);
+
+	if (DecalIndicatorComp) DecalIndicatorComp->SetWorldLocation(GetActorLocation() + aimDir3D * dist);
 }
 
 // ════════════════════════════════════════════════════════════
@@ -520,12 +578,13 @@ void AAimi::DrawAimIndicator()
 void AAimi::DrawGlitchPopAim()
 {
 #if ENABLE_ANIM_DEBUG
-	const FVector charPos = GetActorLocation();
+	FVector charPos = GetActorLocation();
 	
 	// 오브 활성 -> 오브 주변 폭발 범위
 	if (ActiveOrb && !ActiveOrb->HasDetonated())
 	{
-		const FVector orbPos = ActiveOrb->GetActorLocation();
+		FVector orbPos = ActiveOrb->GetActorLocation();
+		orbPos.Z = charPos.Z; // ★ 오브 라인도 동일 높이로
 		const float orbR = ActiveOrb->GetCurrentRadius();
 		const float explosionR = orbR * ActiveOrb->ExplosionRadiusMultiplier;
 		
@@ -544,7 +603,7 @@ void AAimi::DrawGlitchPopAim()
 		for (const FOverlapResult& overlap : overlaps)
 		{
 			AActor* target = overlap.GetActor();
-			if (!target || !!target->ActorHasTag(TEXT("Core"))) continue;
+			if (!target || !target->ActorHasTag(TEXT("Core"))) continue;
 			FVector pushDire = (target->GetActorLocation() - orbPos);
 			pushDire.Z = 0.f;
 			pushDire.Normalize();

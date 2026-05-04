@@ -11,6 +11,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Omega_Strikers/Omega_Strikers.h"
 #include "OSTopDownController.h"
+#include "PlayerBase.h"
 
 AOSGameMode::AOSGameMode()
 {
@@ -239,6 +240,15 @@ void AOSGameMode::SpawnCoreBall()
 	{
 		// 골 이벤트 바인딩
 		ActiveCoreBall->OnGoalScored.AddDynamic(this, &AOSGameMode::OnGoalScored);
+
+		// ★ 모든 플레이어에게 CoreBall 등록
+		for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+		{
+			if (APlayerBase* Player = Cast<APlayerBase>(It->Get()->GetPawn()))
+			{
+				Player->CachedCoreBall = ActiveCoreBall;
+			}
+		}
 
 		LOG_GT(TEXT("CoreBall spawned at (%.0f, %.0f, %.0f)"),
 			spawnLocation.X, spawnLocation.Y, spawnLocation.Z);
