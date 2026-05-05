@@ -37,4 +37,8 @@ public:
 	void AnimNotify_PrimarySpawn();
 	UFUNCTION()
 	void AnimNotify_PrimarySpawnEnd();
+	UFUNCTION()
+	void AnimNotify_SpecialSpawn();
+	UFUNCTION()
+	void AnimNotify_SpecialSpawnEnd();
 };

@@ -47,17 +47,14 @@ void ALuna_SpecialRocket::Tick(float DeltaTime)
 	SetActorLocation(GetActorLocation() + GetActorForwardVector() * DeltaTime * 5000);
 }
 
-void ALuna_SpecialRocket::InitRocket(float Owner_Power, AActor* InOwnerActor, EOSTeam InTeamSide)
+void ALuna_SpecialRocket::InitRocket(AActor* InOwnerActor)
 {
-	Luna_Power = Owner_Power;
 	OwnerActorRef = InOwnerActor;
 	
 	// 데이터 적용 필요
-	SpecialNearImpactData.TeamSide = InTeamSide;
 	SpecialNearImpactData.CoreKnockbackPower = 3000.f;
 	SpecialNearImpactData.PlayerKnockbackPower = 300.f;
 	SpecialNearImpactData.PlayerDamage = 100.f;
-	SpecialFarImpactData.TeamSide = InTeamSide;
 	SpecialFarImpactData.CoreKnockbackPower = 5000.f;
 	SpecialFarImpactData.PlayerKnockbackPower = 500.f;
 	SpecialFarImpactData.PlayerDamage = 200.f;

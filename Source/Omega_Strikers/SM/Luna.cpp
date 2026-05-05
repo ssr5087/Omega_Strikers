@@ -52,20 +52,6 @@ void ALuna::BeginPlay()
 	
 	// 임의 설정
 	TeamSide = EOSTeam::Red;
-	
-	// // 데이터 셋 세팅
-	// FCharacterStat* Stat = GetStatByLevel(Level);
-	//
-	// if (Stat)
-	// {
-	// 	ApplyStat(*Stat);
-	// }
-	// else
-	// {
-	// 	UE_LOG(LogTemp, Warning, TEXT("Stat Load Failed"));
-	// }
-	//
-	// UE_LOG(LogTemp, Warning, TEXT("CharacterName: %s"), *CharacterName.ToString());
 }
 
 // Called every frame
@@ -107,58 +93,6 @@ void ALuna::PlayerMove(const struct FInputActionValue& InputActionValue)
 	}
 	Super::PlayerMove(InputActionValue);
 }
-
-// FCharacterStat* ALuna::GetStatByLevel(int32 InLevel)
-// {
-// 	if (!CharacterStatTable)
-// 	{
-// 		UE_LOG(LogTemp, Error, TEXT("CharacterStatTable is NULL"));
-// 		return nullptr;
-// 	}
-// 	
-// 	FName RowName = FName(*FString::Printf(TEXT("%s_%d"), *CharacterName.ToString(), InLevel));
-// 	
-// 	UE_LOG(LogTemp, Warning, TEXT("Trying Row: %s"), *RowName.ToString());
-// 	
-// 	return CharacterStatTable->FindRow<FCharacterStat>(RowName, TEXT(""));
-// }
-//
-// void ALuna::ApplyStat(const FCharacterStat& Stat)
-// {
-// 	UE_LOG(LogTemp, Warning, TEXT("ApplyStat 실행됨"));
-// 	CurrentStat = Stat;
-// 	
-// 	// PlayerBase 변수 덮어쓰기
-// 	MaxHP = Stat.MaxHP;
-// 	Power = Stat.Power;
-// 	Speed = Stat.Speed;
-// 	CoolDownRate = Stat.Cooldown;
-// 	
-// 	// 이동속도 적용
-// 	GetCharacterMovement()->MaxWalkSpeed = Speed;
-// 	
-// 	if (HPComp)
-// 	{
-// 		HPComp->UpdateMaxHP(MaxHP);
-// 		HPComp->InitializeHP();
-// 	}
-// 	
-// 	// 테스트 용
-// 	UE_LOG(LogTemp, Warning, TEXT("HP: %.1f / Power: %.1f / Speed: %.1f"),
-// 	MaxHP, Power, Speed);
-// }
-//
-// void ALuna::LevelUp()
-// {
-// 	Level++;
-// 	
-// 	FCharacterStat* Stat = GetStatByLevel(Level);
-// 	
-// 	if (Stat)
-// 	{
-// 		ApplyStat(*Stat);
-// 	}
-// }
 
 // ==================================================================
 // [Core] 
@@ -367,24 +301,12 @@ void ALuna::Use_SpecialSkill()
 	// 애니메이션 transition
 	bIsProcessingSpecial = true;
 	
-	// 스폰 트랜스폼 만들기
-	FTransform LauncherTransform;
+	// 발사 위치 지정
+	SpecialLoc = MouseCursorLoc;
 	
-	// 스폰 위치 (높이는 임의 설정)
-	FVector LaunchDir = - UKismetMathLibrary::GetUpVector(FRotator(0.0f, GetControlRotation().Yaw, 0.0f));
-	FRotator SpawnRot = UKismetMathLibrary::MakeRotFromX(LaunchDir);
-	
-	LauncherTransform.SetLocation(FVector(MouseCursorLoc.X, MouseCursorLoc.Y, 5000.f));
-	LauncherTransform.SetRotation(SpawnRot.Quaternion());
-	
-	// 스폰
-	ALuna_SpecialRocket* Rocket = GetWorld()->SpawnActorDeferred<ALuna_SpecialRocket>(SpecialRocketFactory, LauncherTransform);
-	
-	if (Rocket)
-	{
-		Rocket->InitRocket(Power, this, TeamSide);
-		Rocket->FinishSpawning(LauncherTransform);
-	}
+	// 스킬 사용 방향을 바라보도록 설정
+	GetCharacterMovement()->bOrientRotationToMovement = false;
+	SetActorRotation(UKismetMathLibrary::MakeRotFromXZ(FVector(CursorDir.X, CursorDir.Y, 0), GetActorUpVector()));
 	
 	// 쿨타임 관리
 	bSpecialSkillCoolDown = true;
@@ -398,6 +320,29 @@ void ALuna::Use_SpecialSkill()
 
 void ALuna::SpawnSpecialRocket()
 {
+	// 스폰 트랜스폼 만들기
+	FTransform LauncherTransform;
+	
+	// 스폰 위치 (높이는 임의 설정)
+	FVector LaunchDir = - UKismetMathLibrary::GetUpVector(FRotator(0.0f, GetControlRotation().Yaw, 0.0f));
+	FRotator SpawnRot = UKismetMathLibrary::MakeRotFromX(LaunchDir);
+	
+	LauncherTransform.SetLocation(FVector(SpecialLoc.X, SpecialLoc.Y, 5000.f));
+	LauncherTransform.SetRotation(SpawnRot.Quaternion());
+	
+	// 스폰
+	ALuna_SpecialRocket* Rocket = GetWorld()->SpawnActorDeferred<ALuna_SpecialRocket>(SpecialRocketFactory, LauncherTransform);
+	
+	if (Rocket)
+	{
+		Rocket->InitRocket(this);
+		Rocket->FinishSpawning(LauncherTransform);
+	}
+}
+
+void ALuna::End_SpecialSkill()
+{
+	GetCharacterMovement()->bOrientRotationToMovement = true;
 }
 
 // ==================================================================
@@ -415,4 +360,12 @@ void ALuna::Use_Flip()
 }
 
 
+// ==================================================================
+// [Network] 동기화 변수 등록 / OnRep 함수 / RPC 함수
+// ==================================================================
+
+void ALuna::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+}
 

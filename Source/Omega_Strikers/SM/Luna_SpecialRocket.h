@@ -45,7 +45,7 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Rocket")
 	EOSTeam TeamSide = EOSTeam::Red;
 	
-	void InitRocket(float Owner_Power, AActor* InOwnerActor, EOSTeam InTeamSide);
+	void InitRocket(AActor* InOwnerActor);
 	
 	UFUNCTION()
 	void OnSpecialRocketOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
