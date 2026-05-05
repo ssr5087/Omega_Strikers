@@ -199,6 +199,8 @@ void AAimi::FireGlitchOrb()
 		return;
 	}
 
+	bIsAimingOrb = true;
+
 	const FVector spawnLoc = GetActorLocation() + CachedAimDirection * 60.f;
 	const FVector aimDir = CachedAimDirection;
 
@@ -242,6 +244,8 @@ void AAimi::Use_SecondarySkill()
 
 void AAimi::DoCyberSwipe()
 {
+	bIsDashing = true;
+	
 	FVector blinkDir = CachedAimDirection;
 	blinkDir.Z = 0.f;
 	blinkDir.Normalize();
@@ -288,6 +292,7 @@ void AAimi::OnCyberSwipeArrived()
 	PerformSlash(origin, forward, SwipeRange, SwipeHalfAngle, data);
 	
 	LOG_GT(TEXT("Cyber Swipe - Tail slash!"));
+	bIsDashing = false;
 }
 
 // ════════════════════════════════════════════════════════════

@@ -27,6 +27,26 @@ class OMEGA_STRIKERS_API AZentaro : public APlayerBase
 public:
 	AZentaro();
 
+	// 대시 체크
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	bool bIsDashing = false;
+
+	// 현재 충전 횟수 (0 ~ StrikeChargeMax)
+	UPROPERTY(VisibleAnywhere, Category="Skill|Strike")
+	int32 StrikeChargeCount = 0;
+
+	// 에너지 체크
+	// 현재 에너지 (0.f ~ 100.f)
+	UPROPERTY(VisibleAnywhere, Category="Skill|EnergyMeter")
+	float FlipEnergy = 0.f;
+	
+	// Oni 체크
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	bool bIsOniRage = false;
+
+	// 거합돌진 체크
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	bool bIsIawaseTeleporting = false;
 protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
@@ -88,10 +108,6 @@ public:
 	virtual void Use_CoreHit() override;
 
 private:
-	// 현재 충전 횟수 (0 ~ StrikeChargeMax)
-	UPROPERTY(VisibleAnywhere, Category="Skill|Strike")
-	int32 StrikeCharge = 0;
-
 	UPROPERTY(EditDefaultsOnly, Category="Skill|Strike")
 	int32 StrikeChargeMax = 10;
 
@@ -112,10 +128,6 @@ public:
 	virtual void Use_Flip() override;
 
 private:
-	// 현재 에너지 (0.f ~ 100.f)
-	UPROPERTY(VisibleAnywhere, Category="Skill|EnergyMeter")
-	float Energy = 0.f;
-
 	// 코어 타격 시 충전량
 	UPROPERTY(EditDefaultsOnly, Category="Skill|EnergyMeter")
 	float EnergyPerCoreHit = 10.f;

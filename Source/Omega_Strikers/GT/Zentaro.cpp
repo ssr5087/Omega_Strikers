@@ -24,8 +24,8 @@ AZentaro::AZentaro()
 void AZentaro::BeginPlay()
 {
 	Super::BeginPlay();
-	Energy = 0.f;
-	StrikeCharge = 0;
+	FlipEnergy = 0.f;
+	StrikeChargeCount = 0;
 	
 	// // 데이터 셋
 	// FCharacterStat* Stat = GetStatByLevel(Level);
@@ -153,18 +153,18 @@ void AZentaro::Ready_CoreHit()
 
 void AZentaro::Use_CoreHit()
 {
-	if (StrikeCharge >= StrikeChargeMax)
+	if (StrikeChargeCount >= StrikeChargeMax)
 	{
 		DoChargedStrike();
-		StrikeCharge = 0;
+		StrikeChargeCount = 0;
 	}
 	else
 	{
 		DoNormalStrike();
-		StrikeCharge++;
+		StrikeChargeCount++;
 	}
 	
-	LOG_GT(TEXT("스트라이크 - 충전: %d/%d"), StrikeCharge, StrikeChargeMax);
+	LOG_GT(TEXT("스트라이크 - 충전: %d/%d"), StrikeChargeCount, StrikeChargeMax);
 }
 
 void AZentaro::DoNormalStrike()
@@ -232,7 +232,7 @@ void AZentaro::FirePenetratingSlash()
 
 void AZentaro::Use_Flip()
 {
-	if (FMath::IsNearlyEqual(Energy, 100.f, 1.f))
+	if (FMath::IsNearlyEqual(FlipEnergy, 100.f, 1.f))
 	{
 		DoEnergyExplosion();
 	}
@@ -246,7 +246,7 @@ void AZentaro::DoEnergyDodge()
 {
 	// 회피: 무적 상태 활성화 (피해/밀치기 면역)
 	bIsDodging = true;
-	Energy = FMath::Max(0.f, Energy - 30.f); // 에너지 소비
+	FlipEnergy = FMath::Max(0.f, FlipEnergy - 30.f); // 에너지 소비
 	
 	// 이동 입력 방향으로 짧은 대시
 	FVector dodgeDir = GetCharacterMovement()->GetLastInputVector();
@@ -258,7 +258,7 @@ void AZentaro::DoEnergyDodge()
 	// DodgeDuration 후 무적 해제
 	GetWorldTimerManager().SetTimer(DodgeTimerHandle, this, &AZentaro::EndDodge, DodgeDuration, false);
 	
-	LOG_GT(TEXT("에너지 회피 (에너지: %.0f%%)"), Energy);
+	LOG_GT(TEXT("에너지 회피 (에너지: %.0f%%)"), FlipEnergy);
 }
 
 void AZentaro::DoEnergyExplosion()
@@ -272,7 +272,7 @@ void AZentaro::DoEnergyExplosion()
 	// 360도 전방위
 	PerformSlash(GetActorLocation(), GetActorForwardVector(), ExplosionRange, 180.f, data);
 	
-	Energy = 0.f; // 에너지 전부 소진
+	FlipEnergy = 0.f; // 에너지 전부 소진
 	
 	// TODO: 다음 코어 타격 강화 버프 (별도 bool 플래그로 관리 가능)
 	
@@ -336,6 +336,8 @@ void AZentaro::DoShatteredPhase2()
 
 void AZentaro::Use_SecondarySkill()
 {
+	bIsIawaseTeleporting = true;
+	
 	IawaseDirection = GetCharacterMovement()->GetLastInputVector();
 	if (IawaseDirection.IsNearlyZero()) IawaseDirection = GetActorForwardVector();
 	IawaseDirection.Z = 0.f;
@@ -382,6 +384,7 @@ void AZentaro::ExecuteIawaseTeleport()
 	// 점멸: 도착 위치로 순간이동
 	SetActorLocation(end, true);
 	SetActorRotation(IawaseDirection.Rotation());
+	bIsIawaseTeleporting = false;
 	
 #if WITH_EDITOR
 	DrawDebugLine(GetWorld(), start, end, FColor::Purple, false, 0.5f, 0, 3.f);
@@ -409,6 +412,7 @@ void AZentaro::Use_SpecialSkill()
 	// 무적 활성화
 	bIsDodging = true;
 	OniCurrentHit = 0;
+	bIsOniRage = true;
 	
 	// 반복 약타 시작
 	GetWorldTimerManager().SetTimer(
@@ -448,6 +452,7 @@ void AZentaro::OniFinalBurst()
 	
 	// 무적 해제
 	bIsDodging = false;
+	bIsOniRage = false;
 	
 	LOG_GT(TEXT("오니의 칼날 최종 타격!"));
 }
