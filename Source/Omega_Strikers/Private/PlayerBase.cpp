@@ -13,6 +13,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Omega_Strikers/Omega_Strikers.h"
 #include "Omega_Strikers/SM/HPComponent.h"
 #include "Omega_Strikers/SM/OSPlayerController.h"
 #include "Omega_Strikers/SSR/CharacterSkill.h"
@@ -236,8 +237,19 @@ void APlayerBase::Use_CoreHit()
 	CoreImpactData.CoreKnockbackPower = 1230 + Power * 1.25f;
 	
 	// 코어 찾기
-	AActor* Core = UGameplayStatics::GetActorOfClass(GetWorld(), ACoreBall::StaticClass());
-	if (!Core) {return;}
+	/*AActor* Core = UGameplayStatics::GetActorOfClass(GetWorld(), ACoreBall::StaticClass());
+	if (!Core) {return;}*/
+	if ( !CachedCoreBall )
+	{
+		AActor* core = UGameplayStatics::GetActorOfClass(GetWorld(), ACoreBall::StaticClass());
+		CachedCoreBall = Cast<ACoreBall>(core);
+
+		// 그래도 없으면 리턴
+		if ( !CachedCoreBall )
+		{
+			LOG_GT_E(TEXT("CoreBall을 찾지 못했다!")) return;
+		}
+	}
 	
 	// 애니메이션 실행, 쿨타임 타이머 돌리기
 	FTimerHandle CoreHitTimer;
@@ -252,9 +264,19 @@ void APlayerBase::Use_CoreHit()
 		);
 	
 	// 거리가 멀면 못 차요
-	float CoreDist = FVector::Distance(Core->GetActorLocation(), GetActorLocation());
+	float CoreDist = FVector::Distance(CachedCoreBall->GetActorLocation(), GetActorLocation());
 	if (CoreDist > 700.f) {return;}
-	Execute_ReceiveImpact(Core, CoreImpactData, this);
+
+	// ✅ CoreBall은 Server RPC로 처리
+	if ( CachedCoreBall )
+	{
+		FVector KnockDir = FVector(CursorDir.X, CursorDir.Y, 0.f).GetSafeNormal();
+		CachedCoreBall->Server_HitCore(GetActorLocation(), KnockDir, CoreImpactData.CoreKnockbackPower);
+	}
+	else
+	{
+		Execute_ReceiveImpact(CachedCoreBall, CoreImpactData, this);
+	}
 }
 
 void APlayerBase::Use_PrimarySkill() { bAimingPrimary = false; }

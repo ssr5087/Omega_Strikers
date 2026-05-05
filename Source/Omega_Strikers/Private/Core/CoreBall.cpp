@@ -153,6 +153,7 @@ void ACoreBall::OnRep_GoalEvent()
 void ACoreBall::Server_HitCore_Implementation(FVector HitOrigin, FVector HitDirection, float Power)
 {
 	// ─── 서버 측 추가 검증 ───
+	LOG_GT(TEXT("[CoreBall] Server_HitCore — Power:%.0f, Dir:%s"), Power, *HitDirection.ToString());
  
 	// 1. 거리 체크: 히트 원점이 Core로부터 너무 멀면 무시
 	float DistToCore = FVector::Dist2D(HitOrigin, GetActorLocation());
@@ -467,6 +468,7 @@ void ACoreBall::OnSphereOverlap(UPrimitiveComponent* OverlappedComp, AActor* Oth
 bool ACoreBall::ReceiveImpact_Implementation(const FOSImpactData& ImpactData, AActor* InstigatorActor)
 {
 	LOG_GT(TEXT("ReceiveImpact - TeamSide: %s, Direction: (%.0f, %.0f), CoreKB: %.0f, PlayerKB: %.0f, PlayerDamage: %.0f"), *StaticEnum<EOSTeam>()->GetValueAsString(ImpactData.TeamSide), ImpactData.Direction.X, ImpactData.Direction.Y, ImpactData.CoreKnockbackPower, ImpactData.PlayerKnockbackPower, ImpactData.PlayerDamage);
+	LOG_GT(TEXT("ReceiveImpact - HasAuth: %d, Power: %.0f, State: %s"), HasAuthority(), ImpactData.CoreKnockbackPower, *UEnum::GetValueAsString(Rep_CoreState));
 	// ImpactData의 넉백 방향, 충격량 사용
 	// 서버에서만 물리 적용
 	if (!HasAuthority()) return false;

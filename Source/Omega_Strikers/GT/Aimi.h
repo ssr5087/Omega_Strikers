@@ -272,6 +272,7 @@ private:
 	
 	// Tick에서 호출 - 플래그에 따라 조준선 그리기
 	void DrawAimIndicator();
+	void UpdateAimIndicator();
 	
 	void DrawGlitchPopAim();
 	void DrawCyberSwipeAim();
@@ -280,4 +281,18 @@ private:
 	void DrawGroundCircle(const FVector& Center, float Radius, const FColor& Color, int32 Segments = 32, float Thickness = 2.f) const;
 	
 	void DrawArcOnGround(const FVector& Center, const FVector& Forward, float Radius, float HalfAngleDeg, const FColor& Color, int32 Segments = 16, float Thickness = 2.f) const;
+
+	// ════════════════════════════════════════════
+	//  Niagara
+	// ════════════════════════════════════════════
+
+	// 에임 인디케이터
+	UPROPERTY(EditDefaultsOnly, Category = "VFX")
+	TObjectPtr<class UNiagaraSystem> NS_AimIndicator;
+
+	UPROPERTY()
+	TObjectPtr<class UNiagaraComponent> AimIndicatorComp;
+
+	UPROPERTY()
+	TObjectPtr<class UNiagaraComponent> DecalIndicatorComp;
 };

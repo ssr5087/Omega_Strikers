@@ -112,20 +112,15 @@ void AAimiFirewallSentry::FireProjectile()
 			{
 				const FVector2D dir2D = FVector2D(FireDir.X, FireDir.Y).GetSafeNormal();
 
-				// 오너의 TeamSide 가져오기
-				EOSTeam ownerTeam = EOSTeam::None;
-				if (APlayerBase* ownerPlayer = Cast<APlayerBase>(OwnerCharacter))
-				{
-					ownerTeam = ownerPlayer->TeamSide;
-				}
+				APlayerBase* ownerPlayer = Cast<APlayerBase>(GetOwner());
+				if (!ownerPlayer) return;
 
-				FOSImpactData data;
-				data.TeamSide = ownerTeam;
+				FCharacterSkill* skill = ownerPlayer->GetSkillData(TEXT("Aimi_Primary"));
+				if (!skill) return;
+	
+				FOSImpactData data = ownerPlayer->MakeImpactData(*skill);
 				data.Direction = dir2D;
-				data.CoreKnockbackPower = ProjectileCoreKnockback;
-				data.PlayerKnockbackPower = ProjectilePlayerKnockback;
-				data.PlayerDamage = ProjectileDamage;
-				//IOSImpactReceiver::Execute_ReceiveImpact(target, data, OwnerCharacter);
+				
 				// ✅ CoreBall이면 Server RPC 사용
 				if (ACoreBall* CoreBall = Cast<ACoreBall>(target))
 				{
