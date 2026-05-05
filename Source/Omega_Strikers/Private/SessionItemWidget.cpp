@@ -20,39 +20,45 @@ bool USessionItemWidget::Initialize()
 void USessionItemWidget::Setup(int32 InIndex)
 {
 	SessionIndex = InIndex;
+	bIsHostedSessionEntry = false;
 	
 	if (UOSGameInstance* GI = GetGameInstance<UOSGameInstance>())
 	{
 		if (!GI->CachedResults.IsValidIndex(SessionIndex)) return;
 
-		const FOnlineSessionSearchResult& Result = GI->CachedResults[SessionIndex];
-
-		// 🔥 방 이름 가져오기
-		FString RoomName;
-		Result.Session.SessionSettings.Get(FName("ROOM_NAME"), RoomName);
-
-		// 🔥 인원수
-		int32 CurrentPlayers = Result.Session.SessionSettings.NumPublicConnections
-			- Result.Session.NumOpenPublicConnections;
-
-		int32 MaxPlayers = Result.Session.SessionSettings.NumPublicConnections;
-
-		FString DisplayText = FString::Printf(
-			TEXT("%s (%d / %d)"),
-			*RoomName,
-			CurrentPlayers,
-			MaxPlayers
-		);
-
 		if (RoomNameText)
 		{
-			RoomNameText->SetText(FText::FromString(DisplayText));
+			RoomNameText->SetText(FText::FromString(GI->BuildSessionDisplayText(SessionIndex)));
 		}
+	}
+}
+
+void USessionItemWidget::SetupHostedSession()
+{
+	SessionIndex = INDEX_NONE;
+	bIsHostedSessionEntry = true;
+
+	if (UOSGameInstance* GI = GetGameInstance<UOSGameInstance>())
+	{
+		if (RoomNameText)
+		{
+			RoomNameText->SetText(FText::FromString(GI->BuildHostedSessionDisplayText()));
+		}
+	}
+
+	if (JoinButton)
+	{
+		JoinButton->SetIsEnabled(false);
 	}
 }
 
 void USessionItemWidget::OnClicked()
 {
+	if (bIsHostedSessionEntry)
+	{
+		return;
+	}
+
 	if (UOSGameInstance* GI = GetGameInstance<UOSGameInstance>())
 	{
 		GI->JoinSessionByIndex(SessionIndex);

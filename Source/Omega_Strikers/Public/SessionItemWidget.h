@@ -18,6 +18,7 @@ class OMEGA_STRIKERS_API USessionItemWidget : public UUserWidget
 	
 public:
 	void Setup(int32 InIndex);  // ⭐ 이거 있어야 함
+	void SetupHostedSession();
 
 public:
 	virtual bool Initialize() override;
@@ -26,6 +27,7 @@ public:
 	UButton* JoinButton;
 
 	int32 SessionIndex;
+	bool bIsHostedSessionEntry = false;
 
 	UFUNCTION()
 	void OnClicked();

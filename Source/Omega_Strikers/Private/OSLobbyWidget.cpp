@@ -6,16 +6,17 @@
 #include "Components/ScrollBox.h"
 #include "OSGameInstance.h"
 #include "Components/TextBlock.h"
+#include "GameFramework/GameStateBase.h"
+#include "Online/OnlineSessionNames.h"
 
 
 bool UOSLobbyWidget::Initialize()
 {
-    bool Success = Super::Initialize();
+    const bool bSuccess = Super::Initialize();
 
     if (HostButton)
     {
         HostButton->OnClicked.AddDynamic(this, &UOSLobbyWidget::OnClickHost);
-        UE_LOG(LogTemp, Warning, TEXT("HostButton 연결됨"));
     }
 
     if (FindButton)
@@ -23,22 +24,51 @@ bool UOSLobbyWidget::Initialize()
         FindButton->OnClicked.AddDynamic(this, &UOSLobbyWidget::OnClickFind);
     }
 
-    return Success;
+    return bSuccess;
+}
+
+void UOSLobbyWidget::NativeConstruct()
+{
+    Super::NativeConstruct();
+
+    if (UOSGameInstance* GI = GetGameInstance<UOSGameInstance>())
+    {
+        GI->OnSessionListUpdated.AddDynamic(this, &UOSLobbyWidget::RefreshSessionList);
+
+        if (GI->SessionInterface.IsValid() &&
+            GI->SessionInterface->GetNamedSession(NAME_GameSession) != nullptr)
+        {
+            GI->FindMySession();
+        }
+    }
+
+    RefreshSessionList();
+    RefreshCurrentPlayerCount();
+}
+
+void UOSLobbyWidget::NativeDestruct()
+{
+    if (UOSGameInstance* GI = GetGameInstance<UOSGameInstance>())
+    {
+        GI->OnSessionListUpdated.RemoveDynamic(this, &UOSLobbyWidget::RefreshSessionList);
+    }
+
+    Super::NativeDestruct();
+}
+
+void UOSLobbyWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+{
+    Super::NativeTick(MyGeometry, InDeltaTime);
+    RefreshCurrentPlayerCount();
 }
 
 void UOSLobbyWidget::OnClickHost()
 {
-    UE_LOG(LogTemp, Warning, TEXT("Host 클릭됨"));
     UOSGameInstance* GI = GetGameInstance<UOSGameInstance>();
 
     if (GI)
     {
-        UE_LOG(LogTemp, Warning, TEXT("GameInstance 있음"));
         GI->CreateMySession();
-    }
-    else
-    {
-        UE_LOG(LogTemp, Error, TEXT("GameInstance 없음"));
     }
 }
 
@@ -69,6 +99,21 @@ void UOSLobbyWidget::AddSessionItem(int32 Index)
     }
 }
 
+void UOSLobbyWidget::AddHostedSessionItem()
+{
+    if (!SessionList || !SessionItemClass) return;
+
+    UWorld* World = GetWorld();
+    if (!World) return;
+
+    USessionItemWidget* Item = CreateWidget<USessionItemWidget>(World, SessionItemClass);
+    if (Item)
+    {
+        Item->SetupHostedSession();
+        SessionList->AddChild(Item);
+    }
+}
+
 void UOSLobbyWidget::RefreshSessionList()
 {
     if (!SessionList) return;
@@ -77,9 +122,29 @@ void UOSLobbyWidget::RefreshSessionList()
 
     if (UOSGameInstance* GI = GetGameInstance<UOSGameInstance>())
     {
+        if (GI->CachedResults.Num() == 0 && GI->HasHostedSession())
+        {
+            AddHostedSessionItem();
+            return;
+        }
+
         for (int32 i = 0; i < GI->CachedResults.Num(); i++)
         {
             AddSessionItem(i);
         }
     }
+}
+
+void UOSLobbyWidget::RefreshCurrentPlayerCount()
+{
+    if (!CurrentPlayerCountText)
+    {
+        return;
+    }
+
+    const AGameStateBase* GameState = GetWorld() ? GetWorld()->GetGameState() : nullptr;
+    const int32 CurrentPlayers = GameState ? GameState->PlayerArray.Num() : 0;
+
+    CurrentPlayerCountText->SetText(
+        FText::FromString(FString::Printf(TEXT("Current Players: %d"), CurrentPlayers)));
 }

@@ -21,9 +21,8 @@ public:
 	virtual void Init() override;
 
 	// 세션 기능
-	void CreateMySession();
+	void CreateMySession(const FString& RoomName = TEXT(""));
 	void FindMySession();
-	void JoinMySession();
 
 public:
 	IOnlineSessionPtr SessionInterface;
@@ -34,9 +33,20 @@ public:
 
 	// 델리게이트
 	void OnCreateSessionComplete(FName SessionName, bool bSuccess);
+	void OnDestroySessionComplete(FName SessionName, bool bSuccess);
 	void OnFindSessionComplete(bool bSuccess);
 	void OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result);
 	void JoinSessionByIndex(int32 Index);
+	FString BuildSessionDisplayText(int32 Index) const;
+	FString BuildHostedSessionDisplayText() const;
+	bool HasHostedSession() const;
+
+public:
+	void CreateSessionInternal();
+	FString GetLocalPlayerNickname() const;
+
+	bool bPendingCreateSession = false;
+	FString PendingRoomName = TEXT("My Room");
 
 	// UI 연결용
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSessionListUpdated);

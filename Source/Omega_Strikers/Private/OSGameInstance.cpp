@@ -2,8 +2,10 @@
 
 
 #include "OSGameInstance.h"
+#include "Engine/LocalPlayer.h"
 #include "OnlineSubsystem.h"
 #include "OnlineSessionSettings.h"
+#include "Online/OnlineSessionNames.h"
 
 void UOSGameInstance::Init()
 {
@@ -13,29 +15,60 @@ void UOSGameInstance::Init()
 	if (Subsystem)
 	{
 		SessionInterface = Subsystem->GetSessionInterface();
+		
+		if (SessionInterface.IsValid())
+		{
+			// 시작할 때 기존 세션 제거
+			SessionInterface->DestroySession(NAME_GameSession);
+		}
 	}
 }
 
-void UOSGameInstance::CreateMySession()
+void UOSGameInstance::CreateMySession(const FString& RoomName)
+{
+	if (!SessionInterface.IsValid()) return;
+
+	PendingRoomName = RoomName.IsEmpty()
+		? FString::Printf(TEXT("%s's Room"), *GetLocalPlayerNickname())
+		: RoomName;
+
+	if (SessionInterface->GetNamedSession(NAME_GameSession) != nullptr)
+	{
+		bPendingCreateSession = true;
+		SessionInterface->ClearOnDestroySessionCompleteDelegates(this);
+		SessionInterface->OnDestroySessionCompleteDelegates.AddUObject(
+			this, &UOSGameInstance::OnDestroySessionComplete);
+		SessionInterface->DestroySession(NAME_GameSession);
+		return;
+	}
+
+	CreateSessionInternal();
+}
+
+void UOSGameInstance::CreateSessionInternal()
 {
 	if (!SessionInterface.IsValid()) return;
 
 	FOnlineSessionSettings Settings;
-	// Lan 전용게임 설정
 	Settings.bIsLANMatch = true;
-	// 최대 인원
 	Settings.NumPublicConnections = 6;
-	// 세션을 다른 플레이어에게 공개할지 여부, True-> 세션 검색으로 찾을 수 있음
 	Settings.bShouldAdvertise = true;
-	// Presence 기반 매칭 사용 여부 -> Presence : 지금 유저가 어떤 상태인지
-	Settings.bUsesPresence = true;
-	
-	Settings.Set(
-	FName("ROOM_NAME"),
-	FString("내 방"),
-	EOnlineDataAdvertisementType::ViaOnlineServiceAndPing
-);
+	Settings.bUsesPresence = false;
+	Settings.bAllowJoinInProgress = true;
+	Settings.bAllowJoinViaPresence = false;
+	Settings.bAllowJoinViaPresenceFriendsOnly = false;
 
+	Settings.Set(
+		FName("ROOM_NAME"),
+		PendingRoomName,
+		EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
+
+	Settings.Set(
+		FName("HOST_NAME"),
+		GetLocalPlayerNickname(),
+		EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
+
+	SessionInterface->ClearOnCreateSessionCompleteDelegates(this);
 	SessionInterface->OnCreateSessionCompleteDelegates.AddUObject(
 		this, &UOSGameInstance::OnCreateSessionComplete);
 
@@ -51,6 +84,22 @@ void UOSGameInstance::OnCreateSessionComplete(FName SessionName, bool bSuccess)
 		// 서버 시작 + 맵 이동
 		GetWorld()->ServerTravel("/Game/Maps/Lobby?listen");
 	}
+
+	SessionInterface->ClearOnCreateSessionCompleteDelegates(this);
+}
+
+void UOSGameInstance::OnDestroySessionComplete(FName SessionName, bool bSuccess)
+{
+	SessionInterface->ClearOnDestroySessionCompleteDelegates(this);
+
+	if (bSuccess && bPendingCreateSession)
+	{
+		bPendingCreateSession = false;
+		CreateSessionInternal();
+		return;
+	}
+
+	bPendingCreateSession = false;
 }
 
 void UOSGameInstance::FindMySession()
@@ -58,9 +107,10 @@ void UOSGameInstance::FindMySession()
 	if (!SessionInterface.IsValid()) return;
 
 	SessionSearch = MakeShareable(new FOnlineSessionSearch());
-	// Lan 방에서만 찾겠다
 	SessionSearch->bIsLanQuery = true;
+	SessionSearch->MaxSearchResults = 50;
 
+	SessionInterface->ClearOnFindSessionsCompleteDelegates(this);
 	SessionInterface->OnFindSessionsCompleteDelegates.AddUObject(
 		this, &UOSGameInstance::OnFindSessionComplete);
 
@@ -69,20 +119,13 @@ void UOSGameInstance::FindMySession()
 
 void UOSGameInstance::OnFindSessionComplete(bool bSuccess)
 {
-    if (!bSuccess || SessionSearch->SearchResults.Num() == 0) return;
+	CachedResults.Reset();
 
-    SessionInterface->OnJoinSessionCompleteDelegates.AddUObject(
-        this, &UOSGameInstance::OnJoinSessionComplete);
+	if (bSuccess && SessionSearch.IsValid())
+	{
+		CachedResults = SessionSearch->SearchResults;
+	}
 
-    SessionInterface->JoinSession(
-        0,
-        NAME_GameSession,
-        SessionSearch->SearchResults[0]
-    );
-	
-	CachedResults = SessionSearch->SearchResults;
-
-	// UI에 알려주기 (중요)
 	OnSessionListUpdated.Broadcast();
 }
 
@@ -90,6 +133,8 @@ void UOSGameInstance::OnJoinSessionComplete(
 	FName SessionName,
 	EOnJoinSessionCompleteResult::Type Result)
 {
+	SessionInterface->ClearOnJoinSessionCompleteDelegates(this);
+
 	FString Address;
 
 	if (SessionInterface->GetResolvedConnectString(SessionName, Address))
@@ -107,6 +152,7 @@ void UOSGameInstance::JoinSessionByIndex(int32 Index)
 	if (!SessionInterface.IsValid()) return;
 	if (!CachedResults.IsValidIndex(Index)) return;
 
+	SessionInterface->ClearOnJoinSessionCompleteDelegates(this);
 	SessionInterface->OnJoinSessionCompleteDelegates.AddUObject(
 		this, &UOSGameInstance::OnJoinSessionComplete);
 
@@ -115,4 +161,70 @@ void UOSGameInstance::JoinSessionByIndex(int32 Index)
 		NAME_GameSession,
 		CachedResults[Index]
 	);
+}
+
+FString UOSGameInstance::BuildSessionDisplayText(int32 Index) const
+{
+	if (!CachedResults.IsValidIndex(Index))
+	{
+		return TEXT("Invalid Session");
+	}
+
+	const FOnlineSessionSearchResult& Result = CachedResults[Index];
+
+	FString RoomName = TEXT("Room");
+	Result.Session.SessionSettings.Get(FName("ROOM_NAME"), RoomName);
+
+	FString HostName = TEXT("Host");
+	Result.Session.SessionSettings.Get(FName("HOST_NAME"), HostName);
+
+	const int32 MaxPlayers = Result.Session.SessionSettings.NumPublicConnections;
+	const int32 CurrentPlayers = MaxPlayers - Result.Session.NumOpenPublicConnections;
+
+	return FString::Printf(TEXT("%s [%d/%d] - %s"), *HostName, CurrentPlayers, MaxPlayers, *RoomName);
+}
+
+FString UOSGameInstance::BuildHostedSessionDisplayText() const
+{
+	if (!SessionInterface.IsValid())
+	{
+		return TEXT("Hosted Session");
+	}
+
+	const FNamedOnlineSession* NamedSession = SessionInterface->GetNamedSession(NAME_GameSession);
+	if (NamedSession == nullptr)
+	{
+		return TEXT("Hosted Session");
+	}
+
+	FString RoomName = TEXT("Room");
+	NamedSession->SessionSettings.Get(FName("ROOM_NAME"), RoomName);
+
+	FString HostName = TEXT("Host");
+	NamedSession->SessionSettings.Get(FName("HOST_NAME"), HostName);
+
+	const int32 MaxPlayers = NamedSession->SessionSettings.NumPublicConnections;
+	const int32 CurrentPlayers = MaxPlayers - NamedSession->NumOpenPublicConnections;
+
+	return FString::Printf(TEXT("%s [%d/%d] - %s"), *HostName, CurrentPlayers, MaxPlayers, *RoomName);
+}
+
+bool UOSGameInstance::HasHostedSession() const
+{
+	return SessionInterface.IsValid() &&
+		SessionInterface->GetNamedSession(NAME_GameSession) != nullptr;
+}
+
+FString UOSGameInstance::GetLocalPlayerNickname() const
+{
+	if (const ULocalPlayer* LocalPlayer = GetFirstGamePlayer())
+	{
+		const FString Nickname = LocalPlayer->GetNickname();
+		if (!Nickname.IsEmpty())
+		{
+			return Nickname;
+		}
+	}
+
+	return TEXT("Host");
 }
