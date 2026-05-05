@@ -22,7 +22,6 @@ void UZentaroAnimInstance::NativeUpdateAnimation(float DeltaTime)
  
 	// ── 로코모션 ──────────────────────────────────────
 	Speed     = OwnerCharacter->GetVelocity().Size2D();
-	bIsInAir  = MoveComp ? MoveComp->IsFalling() : false;
 	bIsDashing = OwnerCharacter->bIsDashing;
  
 	// ── 스킬 상태 ─────────────────────────────────────
@@ -32,35 +31,57 @@ void UZentaroAnimInstance::NativeUpdateAnimation(float DeltaTime)
 	bIsOniRage         = OwnerCharacter->bIsOniRage;
 	bIsShadowStepping  = OwnerCharacter->bIsIawaseTeleporting;
 }
-
+// ──────────────────────────────────────────────────────
+// 몽타주 재생 헬퍼
+// ──────────────────────────────────────────────────────
+ 
 void UZentaroAnimInstance::PlayStrike(bool bCharged)
 {
+	UAnimMontage* Target = bCharged ? StrikeChargedMontage : StrikeMontage;
+	if (Target && !Montage_IsPlaying(Target))
+		Montage_Play(Target);
 }
-
+ 
 void UZentaroAnimInstance::PlaySansanPhase1()
 {
+	if (DoShatteredPhase1Montage)
+		Montage_Play(DoShatteredPhase1Montage);
 }
-
+ 
 void UZentaroAnimInstance::PlaySansanPhase2()
 {
+	if (DoShatteredPhase2Montage)
+		Montage_Play(DoShatteredPhase2Montage);
 }
-
-void UZentaroAnimInstance::PlayShadowStep()
+ 
+void UZentaroAnimInstance::PlayIawase()
 {
+	if (IawaseMontage)
+		Montage_Play(IawaseMontage);
 }
-
+ 
 void UZentaroAnimInstance::PlayOniRageStart()
 {
+	if (OniRageStartMontage)
+		Montage_Play(OniRageStartMontage);
 }
-
+ 
 void UZentaroAnimInstance::PlayOniRageHit()
 {
+	if (OniRageHitMontage)
+		Montage_Play(OniRageHitMontage);
 }
-
+ 
 void UZentaroAnimInstance::PlayOniRageFinish()
 {
+	if (OniRageFinishMontage)
+		Montage_Play(OniRageFinishMontage);
 }
-
+ 
 void UZentaroAnimInstance::PlayFlip(bool bExplosion)
 {
+	UAnimMontage* Target = bExplosion ? FlipExplosionMontage : FlipMontage;
+	if (Target)
+		Montage_Play(Target);
 }
+ 

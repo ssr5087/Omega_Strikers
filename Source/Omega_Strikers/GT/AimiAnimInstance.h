@@ -26,10 +26,6 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category="Locomotion")
 	float Speed = 0.f;
 
-	// 공중에 떠있는지 체크
-	UPROPERTY(BlueprintReadOnly, Category="Locomotion")
-	bool bIsInAir = false;
-
 	// 대시 중인지 체크
 	UPROPERTY(BlueprintReadOnly, Category="Locomotion")
 	bool bIsDashing = false;

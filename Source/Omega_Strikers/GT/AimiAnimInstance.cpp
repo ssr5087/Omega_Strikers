@@ -29,7 +29,6 @@ void UAimiAnimInstance::NativeUpdateAnimation(float DeltaTime)
 
     // 로코모션
     Speed = OwnerCharacter->GetVelocity().Size2D();
-    bIsInAir = moveComp ? moveComp->IsFalling() : false;
 
     // 대시: 아이미 캐릭터에서 bIsDashing 플래그 노출 필요
     bIsDashing = OwnerCharacter->bIsDashing;

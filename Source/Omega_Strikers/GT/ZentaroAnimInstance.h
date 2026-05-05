@@ -26,9 +26,6 @@ public:
 	float Speed = 0.f;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Locomotion")
-	bool bIsInAir = false;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Locomotion")
 	bool bIsDashing = false;
 
 	// ─────────────────────────────────────────────
@@ -65,15 +62,15 @@ public:
  
 	// Q 산산 — Phase1 즉발 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Montage")
-	TObjectPtr<UAnimMontage> SansanPhase1Montage;
+	TObjectPtr<UAnimMontage> DoShatteredPhase1Montage;
  
 	// Q 산산 — Phase2 (0.2초 딜레이 후)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Montage")
-	TObjectPtr<UAnimMontage> SansanPhase2Montage;
+	TObjectPtr<UAnimMontage> DoShatteredPhase2Montage;
  
 	// E 섀도우 스텝 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Montage")
-	TObjectPtr<UAnimMontage> ShadowStepMontage;
+	TObjectPtr<UAnimMontage> IawaseMontage;
  
 	// R 오니의 분노 — 시작
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Montage")
@@ -109,7 +106,7 @@ public:
 	void PlaySansanPhase2();
  
 	UFUNCTION(BlueprintCallable, Category = "Zentaro|Anim")
-	void PlayShadowStep();
+	void PlayIawase();
  
 	UFUNCTION(BlueprintCallable, Category = "Zentaro|Anim")
 	void PlayOniRageStart();
