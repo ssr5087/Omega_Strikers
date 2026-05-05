@@ -156,6 +156,17 @@ public:
 	// 애니메이션 transition
 	bool bIsProcessingSpecial = false;
 	
+	// 입력 Complete 시점의 커서 위치 저장
+	FVector SpecialLoc;
+	
 	// Primary Rocket 스폰
 	void SpawnSpecialRocket();
+	
+	// 애니메이션 종료 후 다시 이동 방향을 바라보게 설정
+	void End_SpecialSkill();
+	
+	// =========== Networking Function ===========
+	
+	// 변수 등록
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 };

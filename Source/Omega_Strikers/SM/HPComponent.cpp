@@ -3,6 +3,8 @@
 
 #include "HPComponent.h"
 
+#include "Net/UnrealNetwork.h"
+
 
 // Sets default values for this component's properties
 UHPComponent::UHPComponent()
@@ -11,6 +13,8 @@ UHPComponent::UHPComponent()
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
 
+	// 동기화 가능 여부 설정
+	SetIsReplicatedByDefault(true);
 	// ...
 }
 
@@ -34,8 +38,17 @@ void UHPComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorCom
 	// ...
 }
 
+bool UHPComponent::IsServer() const
+{
+	// Owner가 존재하고 그 Owner가 서버면 true
+	return GetOwner() && GetOwner()->HasAuthority();
+}
+
 void UHPComponent::InitializeHP()
 {
+	// 서버에서만 실행
+	if (!IsServer()) {return;}
+	
 	UE_LOG(LogTemp, Warning, TEXT("InitializeHP: MaxHP = %.1f"), MaxHP);
 
 	CurHP = MaxHP;
@@ -43,9 +56,12 @@ void UHPComponent::InitializeHP()
 
 void UHPComponent::UpdateMaxHP(float NewMax)
 {
+	// 서버에서만 실행
+	if (!IsServer()) {return;}
+	
 	// 추후 레벨업을 별도 컴포넌트에서 관리하게 된다면, 캐릭터가 그 값을 전달받고 맥스 값만 HP컴포넌트에게 전달
 	// HP컴포넌트는 이 함수로 업데이트만 하면 됨
-	//MaxHP = NewMax;
+	// MaxHP = NewMax;
 	// 레벨 업 시에 현재 체력은 갱신 안 되니까 dotheal함수 타이머 호출 추가할 필요 있음
 	
 	// 수정방향
@@ -59,6 +75,9 @@ void UHPComponent::UpdateMaxHP(float NewMax)
 
 void UHPComponent::ApplyDamage(float DamageAmount)
 {
+	// 서버에서만 실행
+	if (!IsServer()) {return;}
+	
 	// 힐이 진행 중이었다면 타이머 멈추기
 	GetWorld()->GetTimerManager().ClearTimer(HealTimer);
 	
@@ -82,6 +101,9 @@ void UHPComponent::ApplyDamage(float DamageAmount)
 
 void UHPComponent::DotHeal()
 {
+	// 서버에서만 실행
+	if (!IsServer()) {return;}
+	
 	// 힐 타이머가 돌아가는 동안은 0.2초마다 최대 체력의 1% 만큼씩 회복됨
 	CurHP = FMath::Clamp(CurHP + MaxHP * 0.01f, 0.0f, MaxHP);
 	
@@ -102,6 +124,9 @@ void UHPComponent::DotHeal()
 
 void UHPComponent::ApplyHeal(float HealAmount)
 {
+	// 서버에서만 실행
+	if (!IsServer()) {return;}
+	
 	// 얘도 힐 적용 후 clamp
 	CurHP = FMath::Clamp(CurHP + HealAmount, 0.0f, MaxHP);
 	
@@ -112,4 +137,13 @@ void UHPComponent::ApplyHeal(float HealAmount)
 		bIsStaggered = false;
 		OnHPBecomePositive.ExecuteIfBound();
 	}
+}
+
+void UHPComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	
+	DOREPLIFETIME(UHPComponent, MaxHP);
+	DOREPLIFETIME(UHPComponent, CurHP);
+	DOREPLIFETIME(UHPComponent, bIsStaggered);
 }

@@ -36,3 +36,13 @@ void ULuna_AnimInst::AnimNotify_PrimarySpawnEnd()
 {
 	Luna->End_PrimarySkill();
 }
+
+void ULuna_AnimInst::AnimNotify_SpecialSpawn()
+{
+	Luna->SpawnSpecialRocket();
+}
+
+void ULuna_AnimInst::AnimNotify_SpecialSpawnEnd()
+{
+	Luna->End_SpecialSkill();
+}
