@@ -7,12 +7,12 @@
 #include "InputAction.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
-#include "OSTopDownController.h"
 #include "Components/CapsuleComponent.h"
 #include "Core/CoreBall.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Net/UnrealNetwork.h"
 #include "Omega_Strikers/Omega_Strikers.h"
 #include "Omega_Strikers/SM/HPComponent.h"
 #include "Omega_Strikers/SM/OSPlayerController.h"
@@ -24,6 +24,10 @@ APlayerBase::APlayerBase()
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
+	// 동기화 및 움직임 동기화 설정
+	bReplicates = true;
+	SetReplicateMovement(true);
+	
 	// ========= Component =========
 	
 	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
@@ -93,8 +97,10 @@ void APlayerBase::BeginPlay()
 		ApplyStat(*Stat);
 	}
 	
-	
-	myPC = Cast<AOSTopDownController>(GetController());
+	if (IsLocallyControlled())
+	{
+		myPC = Cast<AOSPlayerController>(GetController());
+	}
 	
 	HPComp->InitializeHP();
 	HPComp->OnHPBecomeNegative.BindUObject(this, &APlayerBase::KnockbackIncrease);
@@ -119,28 +125,32 @@ void APlayerBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	
-	
-	// 마우스 커서 위치 기반 조준 방향 가져오기 (UI 및 공격에 사용)
-	
-	// 컨트롤러 캐스팅 실패 시
-	if (!myPC) {myPC = Cast<AOSPlayerController>(GetController());}
-	if (!myPC) {return;}
-	
-	// 마우스 위치 변환 성공 여부 저장
-	bool bGetMousePointSuccess = myPC->GetMousePointOnArenaPlane(MouseCursorLoc);
-	if (!bGetMousePointSuccess) {return;}
-	
-	// 벡터의 크기가 너무 작아 정규화가 실패한다면, 이전 프레임의 방향 벡터를 유지
-	FVector TempCursorDir = MouseCursorLoc - GetActorLocation();
-	FVector2D NewCursorDir = FVector2D(TempCursorDir.X, TempCursorDir.Y);
-	if (!NewCursorDir.IsNearlyZero())
+	// 각 로컬에서 조종 중인 캐릭터에게만 커서 값 가져오기
+	// 서버도 자신이 조종하는 캐릭터의 마우스는 갖고 와야 함
+	if (IsLocallyControlled())
 	{
-		// 정규화가 충분히 가능하다면 갱신
-		NewCursorDir.Normalize();
-		CursorDir = NewCursorDir;
-	}
+		// 마우스 커서 위치 기반 조준 방향 가져오기 (UI 및 공격에 사용)
 	
-	GEngine->AddOnScreenDebugMessage(2, DeltaTime, FColor::Cyan, FString::Printf(TEXT("조준 방향 : (%.2f, %.2f)"), CursorDir.X, CursorDir.Y));
+		// 컨트롤러 캐스팅 실패 시
+		if (!myPC) {myPC = Cast<AOSPlayerController>(GetController());}
+		if (!myPC) {return;}
+	
+		// 마우스 위치 변환 성공 여부 저장
+		bool bGetMousePointSuccess = myPC->GetMousePointOnArenaPlane(MouseCursorLoc);
+		if (!bGetMousePointSuccess) {return;}
+	
+		// 벡터의 크기가 너무 작아 정규화가 실패한다면, 이전 프레임의 방향 벡터를 유지
+		FVector TempCursorDir = MouseCursorLoc - GetActorLocation();
+		FVector2D NewCursorDir = FVector2D(TempCursorDir.X, TempCursorDir.Y);
+		if (!NewCursorDir.IsNearlyZero())
+		{
+			// 정규화가 충분히 가능하다면 갱신
+			NewCursorDir.Normalize();
+			CursorDir = NewCursorDir;
+		}
+		
+		//GEngine->AddOnScreenDebugMessage(2, DeltaTime, FColor::Cyan, FString::Printf(TEXT("조준 방향 : (%.2f, %.2f)"), CursorDir.X, CursorDir.Y));
+	}
 }
 
 // Called to bind functionality to input
@@ -184,6 +194,12 @@ void APlayerBase::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 
 void APlayerBase::PlayerMove(const FInputActionValue& InputActionValue)
 {
+	// 클라에서만 실행
+	if (!IsLocallyControlled())
+	{
+		return;
+	}
+	
 	// 키보드 입력 값 정규화 및 속도 곱 전처리
 	FVector2D value = InputActionValue.Get<FVector2D>();
 	value.Normalize();
@@ -225,58 +241,10 @@ void APlayerBase::Use_CoreHit()
 {
 	bAimingCoreHit = false;
 	
-	if (bCoreHitCoolDown) {return;}
-	bCoreHitCoolDown = true;
+	// 클라에서만 실행
+	if (!IsLocallyControlled()) {return;}
 	
-	// 디버깅용 임시 코드
-	// 임팩트 데이터
-	FOSImpactData CoreImpactData;
-	CoreImpactData.Direction = CursorDir;
-	CoreImpactData.PlayerDamage = 0.f;
-	CoreImpactData.PlayerKnockbackPower = 100.f;
-	CoreImpactData.CoreKnockbackPower = 1230 + Power * 1.25f;
-	
-	// 코어 찾기
-	/*AActor* Core = UGameplayStatics::GetActorOfClass(GetWorld(), ACoreBall::StaticClass());
-	if (!Core) {return;}*/
-	if ( !CachedCoreBall )
-	{
-		AActor* core = UGameplayStatics::GetActorOfClass(GetWorld(), ACoreBall::StaticClass());
-		CachedCoreBall = Cast<ACoreBall>(core);
-
-		// 그래도 없으면 리턴
-		if ( !CachedCoreBall )
-		{
-			LOG_GT_E(TEXT("CoreBall을 찾지 못했다!")) return;
-		}
-	}
-	
-	// 애니메이션 실행, 쿨타임 타이머 돌리기
-	FTimerHandle CoreHitTimer;
-	GetWorldTimerManager().SetTimer(
-		CoreHitTimer,
-		[this]()->void
-		{
-			bCoreHitCoolDown = false;
-		},
-		CoreHitCool,
-		false
-		);
-	
-	// 거리가 멀면 못 차요
-	float CoreDist = FVector::Distance(CachedCoreBall->GetActorLocation(), GetActorLocation());
-	if (CoreDist > 700.f) {return;}
-
-	// ✅ CoreBall은 Server RPC로 처리
-	if ( CachedCoreBall )
-	{
-		FVector KnockDir = FVector(CursorDir.X, CursorDir.Y, 0.f).GetSafeNormal();
-		CachedCoreBall->Server_HitCore(GetActorLocation(), KnockDir, CoreImpactData.CoreKnockbackPower);
-	}
-	else
-	{
-		Execute_ReceiveImpact(CachedCoreBall, CoreImpactData, this);
-	}
+	ServerRPC_CoreHit(CursorDir);
 }
 
 void APlayerBase::Use_PrimarySkill() { bAimingPrimary = false; }
@@ -287,8 +255,20 @@ void APlayerBase::Use_SpecialSkill() { bAimingSpecial = false; }
 
 void APlayerBase::Use_Flip() {}
 
+void APlayerBase::ApllyTeamSide(EOSTeam team)
+{
+	if (HasAuthority())
+	{
+		// 서버에서만 팀 지정, 클라에서 동기화
+		TeamSide = team;
+	}
+}
+
 bool APlayerBase::ReceiveImpact_Implementation(const FOSImpactData& ImpactData, AActor* InstigatorActor)
 {
+	// 넉백, 체력 상태는 서버에서만 관리
+	if (!HasAuthority()) {return false;}
+	
 	// 1. 팀 사이드 체크 (공격자의 팀 사이드가 내 팀 사이드와 다를 경우에만 적용)
 	if (ImpactData.TeamSide == TeamSide)
 	{
@@ -313,6 +293,9 @@ bool APlayerBase::ReceiveImpact_Implementation(const FOSImpactData& ImpactData, 
 
 void APlayerBase::ApplyKnockback(FVector2D KnockbackDir, float KnockbackPow)
 {
+	// 넉백, 체력 상태는 서버에서만 관리
+	if (!HasAuthority()) {return;}
+	
 	// 2차원 벡터로 받아서 z성분이 0인 3차원 벡터로 변환(Launch 함수에 넣기 위함)
 	FVector velocity = FVector(KnockbackDir.X, KnockbackDir.Y, 0.0f);
 	LaunchCharacter(velocity * KnockbackPow * KnockbackRatio, true, false);
@@ -323,12 +306,18 @@ void APlayerBase::ApplyKnockback(FVector2D KnockbackDir, float KnockbackPow)
 
 void APlayerBase::KnockbackIncrease()
 {
+	// 서버에서만 실행
+	if (!HasAuthority()) {return;}
+	
 	// Stagger 상태에서는 넉백 거리가 3.5454배 증가, 간단하게 3.5로 맞춤
 	KnockbackRatio = 3.5f;
 }
 
 void APlayerBase::KnockbackDecrease()
 {
+	// 서버에서만 실행
+	if (!HasAuthority()) {return;}
+	
 	// Stagger 원상복구. 추후 넉백 계수에 관한 장비 데이터가 존재할 경우 수정할 필요성 있음.
 	KnockbackRatio = 1.f;
 }
@@ -390,4 +379,71 @@ FOSImpactData APlayerBase:: MakeImpactData(const FCharacterSkill& Skill)
 	Data.CoreKnockbackPower = Skill.CoreKB_Flat + (CurrentStat.Power * Skill.CoreKB_Scale);
 	
 	return Data;
+}
+
+void APlayerBase::ServerRPC_CoreHit_Implementation(FVector2D HitDir)
+{
+	// 서버에서 쿨타임 체크, 사용 가능할 때만 사용
+	if (bCoreHitCoolDown) {return;}
+	
+	// 데이터 셋 불러오기
+	FCharacterSkill* Skill = GetSkillData(FName(TEXT("Aimi_Strike")));
+	
+	// 데이터 셋 로드 실패 시 리턴
+	if (!Skill) {return;}
+			
+	// ImpactData를 데이터 셋으로부터 계산하여 설정
+	// 단, 방향 값은 서버의 마우스 커서가 아닌 클라이언트의 마우스 커서로 계산
+	FOSImpactData CoreImpactData;
+	CoreImpactData = MakeImpactData(*Skill);
+	CoreImpactData.Direction = HitDir;
+	
+	// 코어 찾기
+	if ( !CachedCoreBall )
+	{
+		AActor* core = UGameplayStatics::GetActorOfClass(GetWorld(), ACoreBall::StaticClass());
+		CachedCoreBall = Cast<ACoreBall>(core);
+
+		// 그래도 없으면 리턴
+		if ( !CachedCoreBall )
+		{
+			LOG_GT_E(TEXT("CoreBall을 찾지 못했다!")) return;
+		}
+	}
+	
+	// 애니메이션 실행, 쿨타임 타이머 돌리기
+	bCoreHitCoolDown = true;
+	FTimerHandle CoreHitTimer;
+	GetWorldTimerManager().SetTimer(
+		CoreHitTimer,
+		[this]()->void
+		{
+			bCoreHitCoolDown = false;
+		},
+		CoreHitCool,
+		false
+		);
+	
+	// 거리가 멀면 못 차요
+	float CoreDist = FVector::Distance(CachedCoreBall->GetActorLocation(), GetActorLocation());
+	if (CoreDist > 700.f) {return;}
+
+	// ✅ CoreBall은 Server RPC로 처리
+	if ( CachedCoreBall )
+	{
+		FVector KnockDir = FVector(HitDir.X, HitDir.Y, 0.f).GetSafeNormal();
+		CachedCoreBall->Server_HitCore(GetActorLocation(), KnockDir, CoreImpactData.CoreKnockbackPower);
+	}
+	else
+	{
+		Execute_ReceiveImpact(CachedCoreBall, CoreImpactData, this);
+	}
+}
+
+void APlayerBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	
+	DOREPLIFETIME(APlayerBase, TeamSide);
+	DOREPLIFETIME(APlayerBase, KnockbackRatio);
 }

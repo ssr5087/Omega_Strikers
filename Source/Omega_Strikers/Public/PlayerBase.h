@@ -89,7 +89,7 @@ public:
 	
 	
 	// ==================== Stat ==================== (추후 구조체로 관리하거나, csv 관리 시스템 들어오면 수정 가능)
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stat|Base")
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Stat|Base")
 	EOSTeam TeamSide = EOSTeam::None;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stat|Base")
@@ -101,7 +101,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stat|Base")
 	float CoolDownRate = 0;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stat|Knockback")
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Stat|Knockback")
 	float KnockbackRatio = 1;
 	
 	bool bCoreHitCoolDown = false;
@@ -130,6 +130,8 @@ public:
 	
 	
 	// ======= Other Processing Function =======
+	// 팀 사이드 지정 함수(세션에서 값 가져와서 바로 지정)
+	void ApllyTeamSide(EOSTeam team);
 	
 	// Impact Data 처리 함수(인터페이스 함수)
 	virtual bool ReceiveImpact_Implementation(const FOSImpactData& ImpactData, AActor* InstigatorActor) override;
@@ -176,5 +178,19 @@ public:
 	FCharacterSkill* GetSkillData(FName SkillName);
 	float CalculateDamage(const FCharacterSkill& SkillData);
 	FOSImpactData MakeImpactData(const FCharacterSkill& Skill);
+	
+	
+	// =========== Networking Function ===========
+	
+	// 변수 등록
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	
+	// ----------------- CoreHit -----------------
+	
+	UFUNCTION(Server, Reliable)
+	void ServerRPC_CoreHit(FVector2D HitDir);
+	
+	// EXP Component
+	
 };
 

@@ -26,7 +26,7 @@ public:
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
 	                           FActorComponentTickFunction* ThisTickFunction) override;
-	
+
 	// ============== Delegate ==============
 	
 	FHPBecomeNegative OnHPBecomeNegative;
@@ -35,18 +35,21 @@ public:
 	
 	// ============== Variable ==============
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = HPComponent)
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category = HPComponent)
 	float MaxHP = 1125.f;
-	UPROPERTY(BlueprintReadOnly, Category = HPComponent)
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = HPComponent)
 	float CurHP;
 	
-	UPROPERTY(BlueprintReadOnly, Category = HPComponent)
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = HPComponent)
 	bool bIsStaggered = false;
 	
 	FTimerHandle HealTimer;
 	
 	
 	// ============== Function ==============
+	// 님 서버임 클라임?
+	UFUNCTION(BlueprintCallable, Category = HPComponent)
+	bool IsServer() const;
 	
 	// 캐릭터 현재 체력을 최대 체력으로 초기화
 	UFUNCTION(BlueprintCallable, Category = HPComponent)
@@ -67,4 +70,10 @@ public:
 	// 캐릭터 오브 획득 또는 팀원 힐 스킬 받았을 때의 힐 적용
 	UFUNCTION(BlueprintCallable, Category = HPComponent)
 	void ApplyHeal(float HealAmount);
+	
+	
+	// ============== Networking ==============
+	
+	// 변수 등록
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 };

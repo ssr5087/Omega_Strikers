@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "AimiAnimInstance.h"
 #include "PlayerBase.h"
 #include "Omega_Strikers/SSR/CharacterStat.h"
 
@@ -36,13 +37,29 @@ class OMEGA_STRIKERS_API AAimi : public APlayerBase
 public:
 	AAimi();
 
+	// 대시 체크
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	bool bIsDashing = false;
+
+	// 글리치팝 오브 날리는 중인지 체크
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	bool bIsAimingOrb = false;
+
+	// Sentry 설치중인지 체크
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	bool bIsPlacingSentry = false;
+
+	// 서지 중인지 체크
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	bool bIsSurging = false;
 protected:
 	virtual void BeginPlay() override;
 
 public:
 	virtual void Tick(float DeltaTime) override;
+	UAimiAnimInstance* GetAimiAnim() const;
 
-// public:
+	// public:
 // 	// DataTable
 // 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stat")
 // 	UDataTable* CharacterStatTable;
