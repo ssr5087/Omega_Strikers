@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "AimiAnimInstance.h"
 #include "PlayerBase.h"
 #include "Omega_Strikers/SSR/CharacterStat.h"
 
@@ -56,8 +57,9 @@ protected:
 
 public:
 	virtual void Tick(float DeltaTime) override;
+	UAimiAnimInstance* GetAimiAnim() const;
 
-// public:
+	// public:
 // 	// DataTable
 // 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stat")
 // 	UDataTable* CharacterStatTable;

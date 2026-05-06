@@ -26,7 +26,7 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category="Locomotion")
 	float Speed = 0.f;
 
-	// 대시 중인지 체크
+	// 대시 중인지 체크 (Flip / CyberSwipe)
 	UPROPERTY(BlueprintReadOnly, Category="Locomotion")
 	bool bIsDashing = false;
 
@@ -38,11 +38,11 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category="Skill")
 	bool bIsAimingOrb = false;
 
-	// 백도어 포탑 설치 중
+	// 센트리 설치 중
 	UPROPERTY(BlueprintReadOnly, Category="Skill")
 	bool bIsPlacingSentry = false;
 
-	// 사이퍼 서지 발동 중
+	// (미사용) 사이퍼 서지 발동 중
 	UPROPERTY(BlueprintReadOnly, Category="Skill")
 	bool bIsSurging = false;
 
@@ -60,11 +60,11 @@ public:
 
 	// 백도어 포탑 배치 몽타주
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Montage")
-	TObjectPtr<UAnimMontage> BackdoorMontage;
+	TObjectPtr<UAnimMontage> CyberSwipeMontage;
 
 	// 사이퍼 서지 몽타주
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Montage")
-	TObjectPtr<UAnimMontage> CipherSurgeMontage;
+	TObjectPtr<UAnimMontage> SentryMontage;
 
 	// Flip(대시) 몽타주
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Montage")
@@ -81,10 +81,10 @@ public:
 	void PlayGlitchOrb();
 
 	UFUNCTION(BlueprintCallable, Category="Aimi|Anim")
-	void PlayBackdoor();
+	void PlayCyberSwipe();
 
 	UFUNCTION(BlueprintCallable, Category="Aimi|Anim")
-	void PlayCipherSurge();
+	void PlayPlaceSentry();
 
 	UFUNCTION(BlueprintCallable, Category="Aimi|Anim")
 	void PlayFlip();

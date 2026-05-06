@@ -17,6 +17,7 @@
 #include "Omega_Strikers/Omega_Strikers.h"
 #include "Omega_Strikers/SM/HPComponent.h"
 #include "Omega_Strikers/SSR/CharacterSkill.h"
+#include "AimiAnimInstance.h"
 
 AAimi::AAimi()
 {
@@ -96,6 +97,15 @@ void AAimi::Tick(float DeltaTime)
 	DrawAimIndicator();
 }
 
+// ════════════════════════════════════════════
+//  2. 헬퍼 람다 — 파일 상단 또는 anonymous namespace
+//     AnimInstance 캐스팅을 매번 쓰기 번거로우니 인라인 함수로 뺌
+// ════════════════════════════════════════════
+UAimiAnimInstance* AAimi::GetAimiAnim() const
+{
+	return Cast<UAimiAnimInstance>(GetMesh()->GetAnimInstance());
+}
+
 // ════════════════════════════════════════════════════════════
 //  쿨다운
 // ════════════════════════════════════════════════════════════
@@ -129,6 +139,9 @@ void AAimi::Ready_CoreHit()
 void AAimi::Use_CoreHit()
 {
 	Super::Use_CoreHit();
+	
+	// 몽타주 재생
+	if (UAimiAnimInstance* anim = GetAimiAnim()) anim->PlayStrike();
 }
 
 // PlayerBase에서 이미 평타 구현 되어있어서 안쓸 듯...
@@ -215,6 +228,9 @@ void AAimi::FireGlitchOrb()
 	{
 		ActiveOrb->Launch(this, aimDir);
 		LOG_GT(TEXT("Glitch.Pop - Orb launched"));
+		
+		// 몽타주 재생
+		if (UAimiAnimInstance* anim = GetAimiAnim()) anim->PlayGlitchOrb();
 	}
 }
 
@@ -276,10 +292,15 @@ void AAimi::DoCyberSwipe()
 
 	FTimerHandle timerHandle;
 	GetWorldTimerManager().SetTimer(timerHandle, this, &AAimi::OnCyberSwipeArrived, 0.05f, false);
+	
+	// 몽타주 재생
+	if (UAimiAnimInstance* anim = GetAimiAnim()) anim->PlayCyberSwipe();
 }
 
 void AAimi::OnCyberSwipeArrived()
 {
+	bIsDashing = false;
+	
 	const FVector origin = GetActorLocation();
 	const FVector forward = GetActorForwardVector();
 	const FVector2D dir2D = FVector2D(forward.X, forward.Y).GetSafeNormal();
@@ -292,7 +313,6 @@ void AAimi::OnCyberSwipeArrived()
 	PerformSlash(origin, forward, SwipeRange, SwipeHalfAngle, data);
 	
 	LOG_GT(TEXT("Cyber Swipe - Tail slash!"));
-	bIsDashing = false;
 }
 
 // ════════════════════════════════════════════════════════════
@@ -343,6 +363,9 @@ void AAimi::PlaceSentry()
 		sentry->Initialize(this, forward);
 		ActiveSentries.Add(sentry);
 		LOG_GT(TEXT("Firewall Sentry placed"));
+		
+		// 몽타주 재생
+		if (UAimiAnimInstance* anim = GetAimiAnim()) anim->PlayPlaceSentry();
 	}
 }
 
@@ -361,6 +384,8 @@ void AAimi::Use_Flip()
 
 void AAimi::DoDodge()
 {
+	bIsDashing = true;
+	
 	FVector dashDir = GetCharacterMovement()->GetLastInputVector();
 	if (dashDir.IsNearlyZero()) dashDir = GetActorForwardVector();
 	dashDir.Z = 0.f;
@@ -368,6 +393,16 @@ void AAimi::DoDodge()
 
 	LaunchCharacter(dashDir * DodgeDashForce, true, false);
 	LOG_GT(TEXT("Dodge done"));
+
+	// 대시 끝나면 false (0.3f는 대시 지속 시간에 맞게 조절)
+	FTimerHandle timer;
+	GetWorldTimerManager().SetTimer(timer, [this]()
+	{
+		bIsDashing = false;
+	}, 0.3f, false);
+	
+	// 몽타주 재생
+	if (UAimiAnimInstance* anim = GetAimiAnim()) anim->PlayFlip();
 }
 
 void AAimi::DoEnergyBurst()
@@ -386,6 +421,9 @@ void AAimi::DoEnergyBurst()
 	
 	PerformSlash(origin, forward, EnergyBurstRange, 180.f, data);
 	LOG_GT(TEXT("ENERGY BURST! 360°"));
+	
+	// 몽타주 재생
+	if (UAimiAnimInstance* anim = GetAimiAnim()) anim->PlayFlip();
 }
 
 // ════════════════════════════════════════════════════════════

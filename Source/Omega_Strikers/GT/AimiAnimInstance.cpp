@@ -56,16 +56,16 @@ void UAimiAnimInstance::PlayGlitchOrb()
         Montage_Play(GlitchOrbMontage);
 }
 
-void UAimiAnimInstance::PlayBackdoor()
+void UAimiAnimInstance::PlayCyberSwipe()
 {
-    if (BackdoorMontage && !Montage_IsPlaying(BackdoorMontage))
-        Montage_Play(BackdoorMontage);
+    if (CyberSwipeMontage && !Montage_IsPlaying(CyberSwipeMontage))
+        Montage_Play(CyberSwipeMontage);
 }
 
-void UAimiAnimInstance::PlayCipherSurge()
+void UAimiAnimInstance::PlayPlaceSentry()
 {
-    if (CipherSurgeMontage && !Montage_IsPlaying(CipherSurgeMontage))
-        Montage_Play(CipherSurgeMontage);
+    if (SentryMontage && !Montage_IsPlaying(SentryMontage))
+        Montage_Play(SentryMontage);
 }
 
 void UAimiAnimInstance::PlayFlip()
