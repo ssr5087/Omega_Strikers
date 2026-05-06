@@ -146,6 +146,9 @@ public:
 	// 충돌 시 정지 상태로 변환할 함수
 	UFUNCTION()
 	void OnDashOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+	
+	UFUNCTION()
+	void OnDashHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 
 	// ----------------- Special -----------------
 	
@@ -169,4 +172,27 @@ public:
 	
 	// 변수 등록
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	// ----------------- Primary -----------------
+	
+	
+	// ---------------- Secondary ----------------
+	
+	// 스킬 사용 입력(LShift 뗐을 때) 시 서버 RPC
+	UFUNCTION(Server, Reliable)
+	void ServerRPC_StartSecondarySkill(FVector2D StartDir);
+	
+	// 방향 전환 서버 RPC, 방향은 계속 보간되니 Unreliable로 해도 됨
+	UFUNCTION(Server, Unreliable)
+	void ServerRPC_UpdateSecondaryDirection(FVector2D AimDir);
+	
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRPC_RejectSecondarySkill();
+	
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRPC_EndSecondarySkill();
+	
+	
+	// ----------------- Special -----------------	
+
 };
