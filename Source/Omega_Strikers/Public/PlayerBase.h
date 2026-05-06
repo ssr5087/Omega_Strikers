@@ -189,5 +189,8 @@ public:
 	
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_CoreHit(FVector2D HitDir);
+	
+	// EXP Component
+	
 };
 
