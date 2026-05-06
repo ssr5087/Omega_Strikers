@@ -20,12 +20,15 @@ ALuna::ALuna()
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 	
+	SetNetUpdateFrequency(100.f);
+	SetMinNetUpdateFrequency(60.f);
 	
 	// ================= Component =================
 	
 	// 캡슐 컴포넌트 크기 조정
 	GetCapsuleComponent()->SetCapsuleHalfHeight(165.0f);
 	GetCapsuleComponent()->SetCapsuleRadius(102.0f);
+	GetCapsuleComponent()->OnComponentHit.AddDynamic(this, &ALuna::OnDashHit);
 	
 	// 스켈레탈 메시 설정
 	ConstructorHelpers::FObjectFinder<USkeletalMesh>TempSKM(TEXT("/Script/Engine.SkeletalMesh'/Game/Resource/Luna/Animations/SK_ChaoticRocketeer_Default/SkeletalMeshes/SK_ChaoticRocketeer_Default.SK_ChaoticRocketeer_Default'"));
@@ -74,20 +77,8 @@ void ALuna::PlayerMove(const struct FInputActionValue& InputActionValue)
 	{
 		// 키보드 입력 값 정규화 및 속도 곱 전처리
 		FVector2D AimDir = InputActionValue.Get<FVector2D>();
-		NewDir = FVector(AimDir.X, AimDir.Y, 0.0f);
-		
-		// 입력되고 있을 때만 방향 전환 보간 가능
-		if (AimDir.IsNearlyZero())
-		{
-			// 애초에 보간이 진행되지 않게 off
-			bIsChangingDirection = false;
-			// 보간 타이머가 돌고 있어도 목표 방향과 현재 방향을 일치시키면 멈춤
-			NewDir = CurDir;
-			return;
-		}
-		
-		// 방향 전환 입력했으니 반영되도록 설정
-		bIsChangingDirection = true;
+
+		ServerRPC_UpdateSecondaryDirection(AimDir);
 		
 		return;
 	}
@@ -190,61 +181,57 @@ void ALuna::Ready_SecondarySkill()
 
 void ALuna::Use_SecondarySkill()
 {
-	// [Secondary] 직접 타고 이동 - 맨 처음 충돌 객체 저장 - 멈춤 - 저장된 객체에 값 전달
-	if (bSecondarySkillCoolDown) {return;}
+	// 클라에서만 처리
+	if (!IsLocallyControlled()) {return;}
 	
-	// 즉각적으로 이동을 멈추고, 속도를 0으로 만들고, 이미 입력된 속도 벡터 값을 소모해버린 후 최대 속력 변경
-	GetCharacterMovement()->StopMovementImmediately();
-	GetCharacterMovement()->Velocity = FVector::ZeroVector;
-	GetCharacterMovement()->ConsumeInputVector();
-	GetCharacterMovement()->MaxWalkSpeed = 10000.f;
-	
-	// 최초 이동 방향
-	CurDir = FVector(CursorDir.X, CursorDir.Y, 0.0f);
-	
-	// 데이터 셋 불러오기
-	FCharacterSkill* Skill = GetSkillData(FName(TEXT("Luna_Secondary")));
-	
-	// 데이터 셋 로드 실패 시 리턴
-	if (!Skill) {return;}
-			
-	// ImpactData를 데이터 셋으로부터 계산하여 설정
-	SecondaryImpactData = MakeImpactData(*Skill);
-	SecondaryImpactData.Direction = FVector2D(CurDir.X, CurDir.Y);
-	
-	// 업데이트 함수 타이머 호출
-	GetWorldTimerManager().SetTimer(MoveTimer, this, &ALuna::Update_SecondaryMove, 0.1f, true);
-	
-	// 애니메이션 실행 transition 세팅
+	// 로컬 입력 분기 및 애니메이션 실행용으로 즉시 켜준다
 	bIsProcessingSecondary = true;
+
+	// 로컬에서도 최초 방향은 세팅해둔다
+	CurDir = FVector(CursorDir.X, CursorDir.Y, 0.0f);
+	CurDir.Normalize();
+
+	NewDir = CurDir;
+	bIsChangingDirection = false;
 	
-	// 쿨타임 관리
-	bSecondarySkillCoolDown = true;
-	FTimerHandle SecondarySkillTimer;
-	GetWorld()->GetTimerManager().SetTimer(SecondarySkillTimer, [this]()->void {bSecondarySkillCoolDown = false;}, SecondarySkillCool, false);
+	ServerRPC_StartSecondarySkill(CursorDir);
 }
 
 void ALuna::Update_SecondaryMove()
 {
-	// xy축 설정 기반 순간 이동량 추가 - MaxWalkSpeed 사용을 위한 로직
-	FVector Forward = UKismetMathLibrary::GetForwardVector(FRotator(0.0f, GetControlRotation().Yaw, 0.0f));
-	FVector Right = UKismetMathLibrary::GetRightVector(FRotator(0.0f, GetControlRotation().Yaw, GetControlRotation().Roll));
-	AddMovementInput(Forward, CurDir.X);
-	AddMovementInput(Right, CurDir.Y);
+	// 서버에서만 처리(서버 RPC에서 타이머 호출 중임)
+	if (!HasAuthority()) {return;}
 	
-	// 방향 전환 입력 들어오고 있을 때만 
-	if (!bIsChangingDirection) {return;}
+	// 방향 전환 입력이 없으면 Velocity를 건드리지 않는다
+	if (!bIsChangingDirection) { return; }
+	
 	// 보간 실행
-	CurDir = FMath::VInterpTo(CurDir, NewDir, 0.1, 3);
+	CurDir = FMath::VInterpTo(CurDir, NewDir, 0.01f, 8);
 	CurDir.Normalize();
 	
 	// 방향 입력 종료 시 방향 전환 종료
 	bIsChangingDirection = false;
 	NewDir = CurDir;
+	
+	
+	// 방향 지정
+	FVector MoveDir = CurDir;
+	MoveDir.Z = 0.0f;
+	MoveDir.Normalize();
+	
+	// 위치를 직접 바꾸지 않고 CharacterMovement 속도를 설정
+	GetCharacterMovement()->Velocity = MoveDir * 10000;
 }
 
 void ALuna::OnDashOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
+	// 서버에서만 충돌 처리
+	if (!HasAuthority()) {return;}
+	
+	UE_LOG(LogTemp, Warning, TEXT("Dash Overlap / OtherActor: %s / OtherComp: %s"),
+		OtherActor ? *OtherActor->GetName() : TEXT("NULL"),
+		OtherComp ? *OtherComp->GetName() : TEXT("NULL"));
+	
 	// 보조 스킬 처리 중일 때만 활성화
 	if (!bIsProcessingSecondary) {return;}
 	
@@ -258,7 +245,7 @@ void ALuna::OnDashOverlap(UPrimitiveComponent* OverlappedComponent, AActor* Othe
 	if (OtherActor)
 	{
 		// 벽과 충돌했다면 초기화
-		if (OtherActor->GetName().Contains("Arena"))
+		if (OtherActor->GetName().Contains("Arena") || OtherComp->GetName().Contains("Wall"))
 		{
 			bIsSuccess = true;
 		}
@@ -267,8 +254,10 @@ void ALuna::OnDashOverlap(UPrimitiveComponent* OverlappedComponent, AActor* Othe
 		// 충돌 대상이 인터페이스 함수 구현했다면
 		if (!bIsSuccess && OtherActor->Implements<UOSImpactReceiver>())
 		{
+			// 현재 진행 방향으로 넉백
+			SecondaryImpactData.Direction = FVector2D(CurDir.X, CurDir.Y).GetSafeNormal();
 			// 그 대상에 대해 인터페이스 함수를 실행해라
-			bIsSuccess = IOSImpactReceiver::Execute_ReceiveImpact(OtherActor, SecondaryImpactData, this);
+			bIsSuccess = Execute_ReceiveImpact(OtherActor, SecondaryImpactData, this);
 		}
 		
 		// 성공하면 초기화
@@ -276,11 +265,52 @@ void ALuna::OnDashOverlap(UPrimitiveComponent* OverlappedComponent, AActor* Othe
 		{
 			// 타이머, 이동 속도, 애니메이션 transition, 보간 목적 방향 초기화
 			GetWorldTimerManager().ClearTimer(MoveTimer);
+
+			GetCharacterMovement()->StopMovementImmediately();
+			GetCharacterMovement()->Velocity = FVector::ZeroVector;
+			GetCharacterMovement()->ConsumeInputVector();
 			GetCharacterMovement()->MaxWalkSpeed = 1000.f;
+			GetCharacterMovement()->BrakingFrictionFactor = 2.0f;
+			GetCharacterMovement()->BrakingDecelerationWalking = 2048.0f;
+
 			bIsProcessingSecondary = false;
+			bIsChangingDirection = false;
+			CurDir = FVector::ZeroVector;
 			NewDir = FVector::ZeroVector;
+			
+			MulticastRPC_EndSecondarySkill();
 		}
 	}
+}
+
+void ALuna::OnDashHit(UPrimitiveComponent* HitComponent, AActor* OtherActor,
+	UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
+{
+	// 서버에서만 충돌 처리
+	if (!HasAuthority()) {return;}
+	
+	// 보조 스킬 처리 중일 때만 활성화
+	if (!bIsProcessingSecondary) {return;}
+	
+	// 자기 자신 충돌 무시
+	if (OtherActor == this) {return;}
+	
+	// 타이머, 이동 속도, 애니메이션 transition, 보간 목적 방향 초기화
+	GetWorldTimerManager().ClearTimer(MoveTimer);
+
+	GetCharacterMovement()->StopMovementImmediately();
+	GetCharacterMovement()->Velocity = FVector::ZeroVector;
+	GetCharacterMovement()->ConsumeInputVector();
+	GetCharacterMovement()->MaxWalkSpeed = 1000.f;
+	GetCharacterMovement()->BrakingFrictionFactor = 2.0f;
+	GetCharacterMovement()->BrakingDecelerationWalking = 2048.0f;
+
+	bIsProcessingSecondary = false;
+	bIsChangingDirection = false;
+	CurDir = FVector::ZeroVector;
+	NewDir = FVector::ZeroVector;
+			
+	MulticastRPC_EndSecondarySkill();
 }
 
 // ==================================================================
@@ -369,3 +399,91 @@ void ALuna::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimePro
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 }
 
+// ----------------- Primary -----------------
+
+
+
+// ---------------- Secondary ----------------
+
+void ALuna::ServerRPC_StartSecondarySkill_Implementation(FVector2D StartDir)
+{
+	// [Secondary] 직접 타고 이동 - 맨 처음 충돌 객체 저장 - 멈춤 - 저장된 객체에 값 전달
+	if (bSecondarySkillCoolDown) {return;}
+	
+	// 즉각적으로 이동을 멈추고, 속도를 0으로 만들고, 이미 입력된 속도 벡터 값을 소모해버린 후 최대 속력 변경
+	GetCharacterMovement()->StopMovementImmediately();
+	GetCharacterMovement()->Velocity = FVector::ZeroVector;
+	GetCharacterMovement()->ConsumeInputVector();
+	GetCharacterMovement()->MaxWalkSpeed = 10000.f;
+	
+	// 최초 이동 방향
+	CurDir = FVector(StartDir.X, StartDir.Y, 0.0f);
+	CurDir.Normalize();
+
+	const float DashSpeed = 10000.f;
+	GetCharacterMovement()->Velocity = CurDir * DashSpeed;
+	
+	// 마찰 줄이고 이동 계속 유지하게 하기
+	GetCharacterMovement()->BrakingFrictionFactor = 0.0f;
+	GetCharacterMovement()->BrakingDecelerationWalking = 0.0f;
+	
+	// 데이터 셋 불러오기
+	FCharacterSkill* Skill = GetSkillData(FName(TEXT("Luna_Secondary")));
+	
+	// 데이터 셋 로드 실패 시 리턴
+	if (!Skill) {return;}
+			
+	// ImpactData를 데이터 셋으로부터 계산하여 설정
+	SecondaryImpactData = MakeImpactData(*Skill);
+	
+	// 업데이트 함수 타이머 호출
+	GetWorldTimerManager().SetTimer(MoveTimer, this, &ALuna::Update_SecondaryMove, 0.01f, true);
+	
+	// 애니메이션 실행 transition 세팅
+	bIsProcessingSecondary = true;
+	
+	// 쿨타임 관리
+	bSecondarySkillCoolDown = true;
+	FTimerHandle SecondarySkillTimer;
+	GetWorld()->GetTimerManager().SetTimer(SecondarySkillTimer, [this]()->void {bSecondarySkillCoolDown = false;}, SecondarySkillCool, false);
+
+}
+
+void ALuna::ServerRPC_UpdateSecondaryDirection_Implementation(FVector2D AimDir)
+{
+	// 혹시 세컨더리 실행 중이 맞는지 한 번 더 확인
+	if (!bIsProcessingSecondary) {return;}
+	
+	// 방향을 3D 벡터로 변환
+	NewDir = FVector(AimDir.X, AimDir.Y, 0.0f);
+	
+	// 입력되고 있을 때만 방향 전환 보간 가능
+	if (AimDir.IsNearlyZero())
+	{
+		// 애초에 보간이 진행되지 않게 off
+		bIsChangingDirection = false;
+		// 보간 타이머가 돌고 있어도 목표 방향과 현재 방향을 일치시키면 멈춤
+		NewDir = CurDir;
+		return;
+	}
+		
+	// 방향 전환 입력했으니 반영되도록 설정
+	bIsChangingDirection = true;
+}
+
+void ALuna::MulticastRPC_EndSecondarySkill_Implementation()
+{
+	GetCharacterMovement()->StopMovementImmediately();
+	GetCharacterMovement()->Velocity = FVector::ZeroVector;
+	GetCharacterMovement()->ConsumeInputVector();
+	GetCharacterMovement()->MaxWalkSpeed = 1000.f;
+	GetCharacterMovement()->BrakingFrictionFactor = 2.0f;
+	GetCharacterMovement()->BrakingDecelerationWalking = 2048.0f;
+
+	bIsProcessingSecondary = false;
+	bIsChangingDirection = false;
+	CurDir = FVector::ZeroVector;
+	NewDir = FVector::ZeroVector;
+}
+
+// ----------------- Special -----------------	
