@@ -15,6 +15,13 @@ void UOSCharSelectWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 	
+	// UI 전용 입력 모드로 전환 - 마우스는 위젯에서만 동작
+	if (APlayerController* pc = GetOwningPlayer())
+	{
+		pc->SetInputMode(FInputModeUIOnly().SetWidgetToFocus(TakeWidget()));
+		pc->SetShowMouseCursor(true);
+	}
+	
 	if (SelectButton)
 	{
 		SelectButton->OnClicked.AddDynamic(this, &UOSCharSelectWidget::OnSelectClicked);
@@ -59,32 +66,43 @@ void UOSCharSelectWidget::ExtractUniqueCharacters(TArray<FName>& OutNames, TMap<
 // ═══════════════════════════════════════════
 //  ★ 이름 규칙으로 텍스처 자동 로드
 //
-//  TextureBasePath = "/Game/UI/Characters"
 //  ★ TMap 매핑으로 텍스처 로드
 //
-//  CharToTextureName에서 내부명을 찾아서 경로 조립
-//  Aimi → MagicalPlaymaker
-//  → /Game/Resource/UI/Art/Characters/CloseUp/T_UI_Portrait_CloseUp_MagicalPlaymaker
+//  Suffix="Portrait"  → CloseUp 폴더  → T_UI_Portrait_CloseUp_{내부명}
+//  Suffix="FullBody"  → Full 폴더     → T_UI_Portrait_Full_{내부명}
 // ═══════════════════════════════════════════
 UTexture2D* UOSCharSelectWidget::LoadCharIconTexture(FName CharacterID, const FString& Suffix)
 {
-	// 매핑 테이블에서 내부명 찾기
 	const FName* internalName = CharToTextureName.Find(CharacterID);
 	if (internalName == nullptr)
 	{
-		LOG_GT_W(TEXT("매핑 없음 -> %s (Details에서 CharToTextureName 세팅 필요)"), *CharacterID.ToString());
+		LOG_GT_W(TEXT("CharSelect: 매핑 없음 → %s"), *CharacterID.ToString());
 		return nullptr;
 	}
-	
-	// 경로 조립: {BasePath}/T_UI_Portrait_CloseUp_{InternalName}
-	const FString fileName = FString::Printf(TEXT("T_UI_Portrait_CloseUp_%s"), *internalName->ToString());
-	const FString FullPath = FString::Printf(TEXT("%s/%s.%s"), *TextureBasePath, *fileName, *fileName);
  
-	UTexture2D* tex = LoadObject<UTexture2D>(nullptr, *FullPath);
+	// Suffix에 따라 폴더와 파일명 패턴 결정
+	FString basePath;
+	FString prefix;
+ 
+	if (Suffix == TEXT("Portrait"))
+	{
+		basePath = CloseUpPath;
+		prefix = TEXT("T_UI_Portrait_CloseUp");
+	}
+	else
+	{
+		basePath = FullPath;
+		prefix = TEXT("T_UI_FullCharacter");
+	}
+ 
+	const FString fileName = FString::Printf(TEXT("%s_%s"), *prefix, *internalName->ToString());
+	const FString assetPath = FString::Printf(TEXT("%s/%s.%s"), *basePath, *fileName, *fileName);
+ 
+	UTexture2D* tex = LoadObject<UTexture2D>(nullptr, *assetPath);
  
 	if (tex == nullptr)
 	{
-		LOG_GT_W(TEXT("CharSelect: 텍스처 없음 → %s"), *FullPath);
+		LOG_GT_W(TEXT("CharSelect: 텍스처 없음 → %s"), *assetPath);
 	}
  
 	return tex;
@@ -160,8 +178,6 @@ void UOSCharSelectWidget::UpdatePreview(FName CharacterID)
 		
 		if (StatSpeedText) StatSpeedText->SetText(FText::FromString(FString::Printf(TEXT("속도 %.0f"), stat->Speed)));
 	}
-	
-	// TODO: 전신 sprite 준비되면 PreviewImage 갱신
 }
 
 void UOSCharSelectWidget::ClearSelections()
@@ -199,7 +215,7 @@ void UOSCharSelectWidget::OnSelectClicked()
 	if (SelectedID.IsNone()) return;
 	
 	OnConfirmed.Broadcast(SelectedID);
-	RemoveFromParent();
+	//RemoveFromParent();
 }
 
 void UOSCharSelectWidget::OnBackClicked()

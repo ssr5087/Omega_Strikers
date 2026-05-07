@@ -16,6 +16,7 @@ class UUniformGridPanel;
 class UScrollBox;
 class UTextBlock;
 class UImage;
+class AOSCharSelectGameState;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCharacterConfirmed, FName, CharacterID);
 
@@ -33,9 +34,20 @@ public:
 	
 protected:
 	virtual void NativeConstruct() override;
+	virtual void NativeDestruct() override;
 	
 private:
 	// --- Bind Widget ---
+	// 확정 버튼
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UButton> ConfirmButton;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UTextBlock> ConfirmButtonText;
+
+	// 취소 버튼 (확정 해제)
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UButton> CancelButton;
 	
 	UPROPERTY(meta = (BindWidget))
 	UImage* PreviewImage;
@@ -64,6 +76,10 @@ private:
 	UPROPERTY(meta = (BindWidget))
 	UButton* BackButton;
 	
+	// 상태 표시
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> StatusText;
+	
 	// --- 설정 (WBP Details) ---
 	UPROPERTY(EditDefaultsOnly, Category="CharSelect")
 	TSubclassOf<UOSCharCardWidget> CardWidgetClass;
@@ -73,7 +89,7 @@ private:
 	UDataTable* CharacterStatTable;
 	
 	UPROPERTY(EditDefaultsOnly, Category="CharSelect")
-	int32 Columns = 5;
+	int32 Columns = 3;
 	
 	// ★ 텍스처 매핑
 	// 캐릭터 ID(Aimi 등) → 텍스처 내부명(MagicalPlaymaker 등)
@@ -81,11 +97,22 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "CharSelect|Texture")
 	TMap<FName, FName> CharToTextureName;
  
-	// CloseUp 텍스처 폴더 경로
+	// 초상화(카드용) 경로: T_UI_Portrait_CloseUp_{내부명}
 	UPROPERTY(EditDefaultsOnly, Category = "CharSelect|Texture")
-	FString TextureBasePath = TEXT("/Game/Resource/UI/Art/Characters/CloseUp");
+	FString CloseUpPath = TEXT("/Game/Resource/UI/Art/Characters/CloseUp");
+ 
+	// 전신(프리뷰용) 경로: T_UI_Portrait_Full_{내부명}
+	UPROPERTY(EditDefaultsOnly, Category = "CharSelect|Texture")
+	FString FullPath = TEXT("/Game/Resource/UI/Art/Characters/Full");
 	
 	// --- 내부 ---
+	FName CurrentSelection = NAME_None;
+
+	UPROPERTY()
+	TArray<TObjectPtr<UOSCharCardWidget>> CardWidgets;
+
+	UPROPERTY()
+	TObjectPtr<AOSCharSelectGameState> CachedGameState;
 	
 	// CharacterStat에서 고유 캐릭터 이름 + Lv.1 스탯 추출
 	void ExtractUniqueCharacters(TArray<FName>& OutNames, TMap<FName, FCharacterStat>& OutStats);
@@ -94,6 +121,16 @@ private:
 	void BuildGrid();
 	void UpdatePreview(FName CharacterID);
 	void ClearSelections();
+	
+	// 네트워크 콜백
+	UFUNCTION()
+	void OnCharSelectListUpdated();
+
+	void RefreshCardStates();
+
+	UFUNCTION()
+	void OnMySelectRejected(FName CharacterID, const FString& Reason);
+
 	
 	UFUNCTION()
 	void OnCardClicked(FName CharacterID);
