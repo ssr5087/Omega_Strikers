@@ -5,6 +5,8 @@
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
 #include "Omega_Strikers/SM/OSPlayerController.h"
+#include "Omega_Strikers/SSR/EXPOrb.h"
+#include "Omega_Strikers/SSR/SpawnEXPOrb.h"
 #include "OSTopDownController.generated.h"
 
 /**
@@ -28,4 +30,7 @@ private:
 	UPROPERTY()
 	int32 CameraBindRetryCount = 0; // 재시도 횟수 제한용
 	static constexpr int32 MaxRetryCount = 10;
+	
+	
+
 };
