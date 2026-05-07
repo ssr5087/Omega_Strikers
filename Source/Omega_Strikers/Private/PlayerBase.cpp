@@ -17,6 +17,7 @@
 #include "Omega_Strikers/SM/HPComponent.h"
 #include "Omega_Strikers/SM/OSPlayerController.h"
 #include "Omega_Strikers/SSR/CharacterSkill.h"
+#include "Omega_Strikers/SSR/EXPComponent.h"
 
 // Sets default values
 APlayerBase::APlayerBase()
@@ -82,6 +83,9 @@ APlayerBase::APlayerBase()
 	// 데이터 셋
 	CharacterName = "Default";
 	Level = 1;
+	
+	// EXP 생성자
+	EXPComp = CreateDefaultSubobject<UEXPComponent>("EXPComp");
 }
 
 // Called when the game starts or when spawned
@@ -108,6 +112,11 @@ void APlayerBase::BeginPlay()
 	
 	// 임시 팀사이드
 	TeamSide = EOSTeam::Blue;
+	
+	if (EXPComp)
+	{
+		EXPComp->OnLevelUp.AddDynamic(this, &APlayerBase::HandleLevelUp);
+	}
 }
 
 // ════════════════════════════════════════════════════════════
@@ -322,6 +331,11 @@ void APlayerBase::KnockbackDecrease()
 	KnockbackRatio = 1.f;
 }
 
+void APlayerBase::OnRep_Level()
+{
+	HandleLevelUp(Level);
+}
+
 FCharacterStat* APlayerBase::GetStatByLevel(int32 InLevel)
 {
 	if (!StatTable) return nullptr;
@@ -446,4 +460,23 @@ void APlayerBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 	
 	DOREPLIFETIME(APlayerBase, TeamSide);
 	DOREPLIFETIME(APlayerBase, KnockbackRatio);
+	
+	// EXP
+	DOREPLIFETIME(APlayerBase, Level);
+}
+
+// EXPComp 레벨업 관리
+void APlayerBase::HandleLevelUp(int32 NewLevel)
+{
+	LOG_SR_W(TEXT("Player LevelIp : %d"), NewLevel);
+	
+	FCharacterStat* Stat = GetStatByLevel(NewLevel);
+	
+	if (Stat)
+	{
+		ApplyStat(*Stat);
+	}
+	
+	// 여기서 이펙트
+	// PlayLevelupEffect();
 }

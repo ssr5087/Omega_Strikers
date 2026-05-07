@@ -5,146 +5,108 @@
 #include "Components/Button.h"
 #include "Components/ScrollBox.h"
 #include "OSGameInstance.h"
+#include "Components/EditableText.h"
+#include "Components/Slider.h"
 #include "Components/TextBlock.h"
-#include "GameFramework/GameStateBase.h"
-#include "Online/OnlineSessionNames.h"
+#include "Components/WidgetSwitcher.h"
 
 
-bool UOSLobbyWidget::Initialize()
+void UOSLobbyWidget::SwitchCreatePanel()
 {
-    const bool bSuccess = Super::Initialize();
+	//Widget 활성화
+	WidgetSwitcher->SetActiveWidgetIndex(1);
+}
 
-    if (HostButton)
-    {
-        HostButton->OnClicked.AddDynamic(this, &UOSLobbyWidget::OnClickHost);
-    }
+void UOSLobbyWidget::SwitchFindPanel()
+{
+	//Widget 활성화
+	WidgetSwitcher->SetActiveWidgetIndex(2);
+	// find 안누르고 처음에 find 찾고 시작한다.
+	OnClickedFindSession();
+}
 
-    if (FindButton)
-    {
-        FindButton->OnClicked.AddDynamic(this, &UOSLobbyWidget::OnClickFind);
-    }
+void UOSLobbyWidget::OnClickedFindSession()
+{
+	Scroll_RoomList->ClearChildren();
+	
+	if (gi != nullptr)
+	{
+		gi->FindOtherSession();
+	}
+}
 
-    return bSuccess;
+void UOSLobbyWidget::OnClickedGameToStart()
+{
+	if (gi)
+	{
+		gi->GameToStart();
+	}
+}
+
+void UOSLobbyWidget::BackToMain()
+{
+	//Widget 활성화
+	WidgetSwitcher->SetActiveWidgetIndex(0);
+}
+
+void UOSLobbyWidget::OnChangeButtonEnable(bool bIsSearching)
+{
+	// 검색버튼 비활성화
+	btn_find->SetIsEnabled(!bIsSearching);
+
+	if (bIsSearching)
+	{
+		// 검색중 보이도록 처리
+		txt_findingMsg->SetVisibility(ESlateVisibility::Visible);
+	}
+	else
+	{
+		// 검색 끝나면 사라지도록 처리
+		txt_findingMsg->SetVisibility(ESlateVisibility::Hidden);
+	}
+}
+
+void UOSLobbyWidget::AddSlotWidget(const struct FSessionInfo& SessionInfo)
+{
+	auto slot = CreateWidget<USessionItemWidget>(this, sessionInfoWidget);
+	slot->Set(SessionInfo);
+	
+	Scroll_RoomList->AddChild(slot);
 }
 
 void UOSLobbyWidget::NativeConstruct()
 {
-    Super::NativeConstruct();
-
-    if (UOSGameInstance* GI = GetGameInstance<UOSGameInstance>())
-    {
-        GI->OnSessionListUpdated.AddDynamic(this, &UOSLobbyWidget::RefreshSessionList);
-
-        if (GI->SessionInterface.IsValid() &&
-            GI->SessionInterface->GetNamedSession(NAME_GameSession) != nullptr)
-        {
-            GI->FindMySession();
-        }
-    }
-
-    RefreshSessionList();
-    RefreshCurrentPlayerCount();
+	Super::NativeConstruct();
+	
+	gi = Cast<UOSGameInstance>(GetWorld()->GetGameInstance());
+	gi->onSearchCompleted.AddDynamic(this, &UOSLobbyWidget::AddSlotWidget);
+	gi->onSearchState.AddDynamic(this, &UOSLobbyWidget::OnChangeButtonEnable);
+	
+	btn_createRoom->OnClicked.AddDynamic(this, &UOSLobbyWidget::CreateRoom);
+	slider_playerCount->OnValueChanged.AddDynamic(this, &UOSLobbyWidget::OnValueChanged);
+	
+	btn_createSession->OnClicked.AddDynamic(this, &UOSLobbyWidget::SwitchCreatePanel);
+	btn_findSession->OnClicked.AddDynamic(this, &UOSLobbyWidget::SwitchFindPanel);
+	
+	btn_createSessionBack->OnClicked.AddDynamic(this, &UOSLobbyWidget::BackToMain);
+	btn_findSessionBack->OnClicked.AddDynamic(this, &UOSLobbyWidget::BackToMain);
+	btn_find->OnClicked.AddDynamic(this, &UOSLobbyWidget::OnClickedFindSession);
+	
+	btn_gameToStart->OnClicked.AddDynamic(this, &UOSLobbyWidget::OnClickedGameToStart);
+	
 }
 
-void UOSLobbyWidget::NativeDestruct()
+void UOSLobbyWidget::CreateRoom()
 {
-    if (UOSGameInstance* GI = GetGameInstance<UOSGameInstance>())
-    {
-        GI->OnSessionListUpdated.RemoveDynamic(this, &UOSLobbyWidget::RefreshSessionList);
-    }
-
-    Super::NativeDestruct();
+	if (gi && edit_roomName->GetText().IsEmpty() == false)
+	{
+		FString roomName = edit_roomName->GetText().ToString();
+		int32 playerCount = slider_playerCount->GetValue();
+		gi->CreateSession(roomName, playerCount);
+	}
 }
 
-void UOSLobbyWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+void UOSLobbyWidget::OnValueChanged(float Value)
 {
-    Super::NativeTick(MyGeometry, InDeltaTime);
-    RefreshCurrentPlayerCount();
-}
-
-void UOSLobbyWidget::OnClickHost()
-{
-    UOSGameInstance* GI = GetGameInstance<UOSGameInstance>();
-
-    if (GI)
-    {
-        GI->CreateMySession();
-    }
-}
-
-void UOSLobbyWidget::OnClickFind()
-{
-    if (UOSGameInstance* GI = GetGameInstance<UOSGameInstance>())
-    {
-        GI->FindMySession();
-    }
-}
-
-void UOSLobbyWidget::AddSessionItem(int32 Index)
-{
-    if (!SessionList || !SessionItemClass) return;
-
-    UWorld* World = GetWorld();
-    if (!World) return;
-
-    USessionItemWidget* Item = CreateWidget<USessionItemWidget>(
-        World,
-        SessionItemClass
-    );
-
-    if (Item)
-    {
-        Item->Setup(Index);           // ⭐ 인덱스 전달
-        SessionList->AddChild(Item);  // ⭐ ScrollBox에 추가
-    }
-}
-
-void UOSLobbyWidget::AddHostedSessionItem()
-{
-    if (!SessionList || !SessionItemClass) return;
-
-    UWorld* World = GetWorld();
-    if (!World) return;
-
-    USessionItemWidget* Item = CreateWidget<USessionItemWidget>(World, SessionItemClass);
-    if (Item)
-    {
-        Item->SetupHostedSession();
-        SessionList->AddChild(Item);
-    }
-}
-
-void UOSLobbyWidget::RefreshSessionList()
-{
-    if (!SessionList) return;
-
-    SessionList->ClearChildren();
-
-    if (UOSGameInstance* GI = GetGameInstance<UOSGameInstance>())
-    {
-        if (GI->CachedResults.Num() == 0 && GI->HasHostedSession())
-        {
-            AddHostedSessionItem();
-            return;
-        }
-
-        for (int32 i = 0; i < GI->CachedResults.Num(); i++)
-        {
-            AddSessionItem(i);
-        }
-    }
-}
-
-void UOSLobbyWidget::RefreshCurrentPlayerCount()
-{
-    if (!CurrentPlayerCountText)
-    {
-        return;
-    }
-
-    const AGameStateBase* GameState = GetWorld() ? GetWorld()->GetGameState() : nullptr;
-    const int32 CurrentPlayers = GameState ? GameState->PlayerArray.Num() : 0;
-
-    CurrentPlayerCountText->SetText(
-        FText::FromString(FString::Printf(TEXT("Current Players: %d"), CurrentPlayers)));
+	txt_playerCount->SetText(FText::AsNumber(Value));
 }

@@ -7,6 +7,9 @@
 #include "EXPComponent.generated.h"
 
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnLevelUp, int32, NewLevel);
+
+
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class OMEGA_STRIKERS_API UEXPComponent : public UActorComponent
 {
@@ -45,11 +48,12 @@ public:
 	UPROPERTY(EditAnywhere)
 	int32 MaxEXP = 100;
 	
+	// UI 용
 	UFUNCTION()
 	void OnRep_CurrentEXP();
 	
 	// Delegate
 	
-	// UPROPERTY(BlueprintAssignable)
-	//  FOnLevelUp OnLevelUp;
+	UPROPERTY(BlueprintAssignable)
+	FOnLevelUp OnLevelUp;
 };
