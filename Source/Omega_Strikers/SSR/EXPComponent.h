@@ -56,4 +56,7 @@ public:
 	
 	UPROPERTY(BlueprintAssignable)
 	FOnLevelUp OnLevelUp;
+
+private:
+	void AddEXPInternal(int32 Amount);
 };

@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
 #include "Omega_Strikers/SSR/EXPOrb.h"
-#include "Omega_Strikers/SSR/SpawnEXPOrb.h"
+#include "Omega_Strikers/SSR/EXPSpawnPoint.h"
 #include "OSGameMode.generated.h"
 
 // 매치 진행 단계
@@ -103,6 +103,7 @@ public:
 	class ACoreArena* ArenaRef = nullptr;
 	
 protected:
+	
 	virtual void BeginPlay() override;
 	
 	UPROPERTY()
@@ -124,8 +125,16 @@ public:
 	TSubclassOf<AEXPOrb> EXPOrbClass;
 	
 	UPROPERTY()
-	TArray<ASpawnEXPOrb*> SpawnEXPOrbPoints;
+	TArray<AEXPSpawnPoint*> SpawnPoints;
+
+	FTimerHandle SpawnTimer;
+
+	UFUNCTION(BlueprintCallable, Category="EXP")
+	void SpawnEXPOrbs();
 	
-	FTimerHandle SpawnEXPOrbTimer;
+	UFUNCTION(BlueprintCallable, Category="EXP")
+	void SpawnAllEXPOrbs();
 	
+	UFUNCTION()
+	void OnOrbDestroyed(AActor* DestroyedActor);
 };

@@ -39,22 +39,46 @@ void UEXPComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorCo
 
 void UEXPComponent::Server_AddEXP_Implementation(int32 Amount)
 {
-	AddEXP(Amount);
+	AddEXPInternal(Amount);
 }
 
 void UEXPComponent::AddEXP(int32 Amount)
 {
-	if (!GetOwner()->HasAuthority())
+	if (Amount <= 0)
+	{
 		return;
-	
+	}
+
+	if (!GetOwner())
+	{
+		return;
+	}
+
+	if (!GetOwner()->HasAuthority())
+	{
+		Server_AddEXP(Amount);
+		return;
+	}
+
+	AddEXPInternal(Amount);
+}
+
+void UEXPComponent::AddEXPInternal(int32 Amount)
+{
+	if (!GetOwner() || !GetOwner()->HasAuthority() || Amount <= 0)
+	{
+		return;
+	}
+
 	CurrentEXP += Amount;
 	
 	APlayerBase* Player = Cast<APlayerBase>(GetOwner());
 	if (!Player)
 		return;
 	
-	if (CurrentEXP >= MaxEXP)
+	while (CurrentEXP >= MaxEXP)
 	{
+		CurrentEXP -= MaxEXP;
 		LevelUP();
 	}
 }

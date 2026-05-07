@@ -18,6 +18,7 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaSeconds) override;
 
 public:
 	// 충돌
@@ -31,6 +32,8 @@ public:
 	// 지급 경험치
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int32 EXPAmount = 50;
+
+	void SetSpawnPoint(class AEXPSpawnPoint* InSpawnPoint);
 	
 	// 오버랩 함수
 	UFUNCTION()
@@ -42,5 +45,13 @@ public:
 	bool bFromSweep,
 	const FHitResult& SweepResult
 	);
+
+protected:
+	void ConfigureCollision();
+	void TryCollect(class APlayerBase* Player);
+	void PollNearbyPlayers();
+
+	UPROPERTY()
+	TObjectPtr<class AEXPSpawnPoint> SpawnPoint;
 	
 };

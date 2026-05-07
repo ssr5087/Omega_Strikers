@@ -48,7 +48,33 @@ void AOSGameMode::BeginPlay()
 	LOG_GT(TEXT("플레이어 대기중"))
 	
 	// 경험치오브 스폰액터 관리
-	//UGameplayStatics::GetAllActorsOfClass(GetWorld(), ASpawnEXPOrb::StaticClass(), SpawnEXPOrbPoints);
+	TArray<AActor*> FoundActors;
+	
+	UGameplayStatics::GetAllActorsOfClass(
+		GetWorld(),
+		AEXPSpawnPoint::StaticClass(),
+		FoundActors
+	);
+	
+	for (AActor* Actor : FoundActors)
+	{
+		if (AEXPSpawnPoint* Point = Cast<AEXPSpawnPoint>(Actor))
+		{
+			SpawnPoints.Add(Point);
+		}
+	}
+	
+	LOG_SR_E(TEXT("경험치 오브 생성"));
+	// 시작 즉시 한번 생성
+	SpawnAllEXPOrbs();
+	
+	GetWorldTimerManager().SetTimer(
+		SpawnTimer,
+		this,
+		&AOSGameMode::SpawnEXPOrbs,
+		10.f,
+		true
+	);
 }
 
 void AOSGameMode::PostLogin(APlayerController* NewPlayer)
@@ -258,6 +284,7 @@ void AOSGameMode::SpawnCoreBall()
 	}
 }
 
+
 void AOSGameMode::OnGoalScored(int32 ScoringTeam)
 {
 	AOSGameState* gs = GetGameState<AOSGameState>();
@@ -319,3 +346,85 @@ void AOSGameMode::EndMatch(int32 WinningTeam)
 
 	// TODO: 결과 화면 -> 일정 시간 후 로비로 복귀
 }
+
+void AOSGameMode::SpawnEXPOrbs()
+{
+	if (SpawnPoints.Num() < 3) return;
+	
+	
+
+	// 랜덤 셔플
+	TArray<AEXPSpawnPoint*> Shuffled = SpawnPoints;
+
+	for (int32 i = 0; i < Shuffled.Num(); i++)
+	{
+		int32 RandIndex = FMath::RandRange(i, Shuffled.Num() - 1);
+		Shuffled.Swap(i, RandIndex);
+	}
+
+	// 앞에서 3개 선택
+	for (int32 i = 0; i < 3; i++)
+	{
+		AEXPSpawnPoint* Point = Shuffled[i];
+		if (!Point || Point->bHasOrb) continue;
+
+		FActorSpawnParameters Params;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+		AEXPOrb* Orb = GetWorld()->SpawnActor<AEXPOrb>(
+			EXPOrbClass,
+			Point->GetActorLocation(),
+			FRotator::ZeroRotator,
+			Params
+		);
+
+		if (Orb)
+		{
+			Point->bHasOrb = true;
+
+			// 🔥 Orb가 사라질 때 다시 false
+			Orb->OnDestroyed.AddDynamic(this, &AOSGameMode::OnOrbDestroyed);
+		}
+	}
+}
+
+void AOSGameMode::SpawnAllEXPOrbs()
+{
+	for (AEXPSpawnPoint* Point : SpawnPoints)
+	{
+		if (!Point) 
+			return;
+		
+		FActorSpawnParameters Params;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		
+		AEXPOrb* Orb = GetWorld()->SpawnActor<AEXPOrb>(
+			EXPOrbClass,
+			Point->GetActorLocation(),
+			FRotator::ZeroRotator,
+			Params
+		);
+		
+		if (Orb)
+		{
+			Point->bHasOrb = true;
+		}
+	}
+}
+
+void AOSGameMode::OnOrbDestroyed(AActor* DestroyedActor)
+{
+	AEXPOrb* Orb =Cast<AEXPOrb>(DestroyedActor);
+	if (!Orb)
+		return;
+	
+	for (AEXPSpawnPoint* Point : SpawnPoints)
+	{
+		if (Point && Point->GetActorLocation().Equals(Orb->GetActorLocation(), 1.f))
+		{
+			Point->bHasOrb = false;
+			break;
+		}
+	}
+}
+
