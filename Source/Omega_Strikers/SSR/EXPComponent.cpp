@@ -68,14 +68,14 @@ void UEXPComponent::LevelUP()
 	if (!Player)
 		return;
 	
-	CurrentEXP = 0;
+	// CurrentEXP = 0;
 	
 	Player->Level++;
 	
 	UE_LOG(LogTemp, Warning, TEXT("Level UP! ->  %d"), Player->Level);
 	
 	// Delegate (서버용)
-	// OnLevelUp.Broadcast(Player->Level);
+	OnLevelUp.Broadcast(Player->Level);
 }
 
 // Replication

@@ -4,34 +4,40 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "Components/Button.h"
 #include "Components/TextBlock.h"
 #include "SessionItemWidget.generated.h"
 
-/**
- * 
- */
+
 UCLASS()
 class OMEGA_STRIKERS_API USessionItemWidget : public UUserWidget
 {
 	GENERATED_BODY()
 	
 public:
-	void Setup(int32 InIndex);  // ⭐ 이거 있어야 함
-	void SetupHostedSession();
-
-public:
-	virtual bool Initialize() override;
-
-	UPROPERTY(meta = (BindWidget))
-	UButton* JoinButton;
-
-	int32 SessionIndex;
-	bool bIsHostedSessionEntry = false;
-
-	UFUNCTION()
-	void OnClicked();
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+	class UTextBlock* txt_roomName;
 	
-	UPROPERTY(meta = (BindWidget))
-	UTextBlock* RoomNameText;
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+	class UTextBlock* txt_hostName;
+	
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+	class UTextBlock* txt_playerCount;
+	
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+	class UTextBlock* txt_pingSpeed;
+	
+	
+	int32 sessionNumber;
+	
+	void Set(const struct FSessionInfo& SessionInfo);
+	
+	// 세션 조인
+	
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+	class UButton* btn_join;
+	
+	UFUNCTION()
+	void JoinSession();
+	
+	void NativeConstruct() override;
 };

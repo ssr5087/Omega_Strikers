@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
+#include "Omega_Strikers/SSR/EXPOrb.h"
+#include "Omega_Strikers/SSR/SpawnEXPOrb.h"
 #include "OSGameMode.generated.h"
 
 // 매치 진행 단계
@@ -115,4 +117,15 @@ public:
 	// 타이머 핸들
 	FTimerHandle CountdownTimer;
 	FTimerHandle RoundEndTimer;
+
+public:
+	// 경험치오브 스폰액터 관리
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<AEXPOrb> EXPOrbClass;
+	
+	UPROPERTY()
+	TArray<ASpawnEXPOrb*> SpawnEXPOrbPoints;
+	
+	FTimerHandle SpawnEXPOrbTimer;
+	
 };
