@@ -187,9 +187,6 @@ public:
 	void ServerRPC_UpdateSecondaryDirection(FVector2D AimDir);
 	
 	UFUNCTION(NetMulticast, Reliable)
-	void MulticastRPC_RejectSecondarySkill();
-	
-	UFUNCTION(NetMulticast, Reliable)
 	void MulticastRPC_EndSecondarySkill();
 	
 	
