@@ -5,6 +5,7 @@
 
 #include "OSCharCardWidget.h"
 #include "Components/Button.h"
+#include "Components/Image.h"
 #include "Components/TextBlock.h"
 #include "Components/UniformGridPanel.h"
 #include "Omega_Strikers/Omega_Strikers.h"
@@ -56,6 +57,40 @@ void UOSCharSelectWidget::ExtractUniqueCharacters(TArray<FName>& OutNames, TMap<
 }
 
 // ═══════════════════════════════════════════
+//  ★ 이름 규칙으로 텍스처 자동 로드
+//
+//  TextureBasePath = "/Game/UI/Characters"
+//  ★ TMap 매핑으로 텍스처 로드
+//
+//  CharToTextureName에서 내부명을 찾아서 경로 조립
+//  Aimi → MagicalPlaymaker
+//  → /Game/Resource/UI/Art/Characters/CloseUp/T_UI_Portrait_CloseUp_MagicalPlaymaker
+// ═══════════════════════════════════════════
+UTexture2D* UOSCharSelectWidget::LoadCharIconTexture(FName CharacterID, const FString& Suffix)
+{
+	// 매핑 테이블에서 내부명 찾기
+	const FName* internalName = CharToTextureName.Find(CharacterID);
+	if (internalName == nullptr)
+	{
+		LOG_GT_W(TEXT("매핑 없음 -> %s (Details에서 CharToTextureName 세팅 필요)"), *CharacterID.ToString());
+		return nullptr;
+	}
+	
+	// 경로 조립: {BasePath}/T_UI_Portrait_CloseUp_{InternalName}
+	const FString fileName = FString::Printf(TEXT("T_UI_Portrait_CloseUp_%s"), *internalName->ToString());
+	const FString FullPath = FString::Printf(TEXT("%s/%s.%s"), *TextureBasePath, *fileName, *fileName);
+ 
+	UTexture2D* tex = LoadObject<UTexture2D>(nullptr, *FullPath);
+ 
+	if (tex == nullptr)
+	{
+		LOG_GT_W(TEXT("CharSelect: 텍스처 없음 → %s"), *FullPath);
+	}
+ 
+	return tex;
+}
+
+// ═══════════════════════════════════════════
 //  그리드 생성
 // ═══════════════════════════════════════════
 void UOSCharSelectWidget::BuildGrid()
@@ -75,7 +110,10 @@ void UOSCharSelectWidget::BuildGrid()
 		UOSCharCardWidget* card = CreateWidget<UOSCharCardWidget>(GetOwningPlayer(), CardWidgetClass);
 		if ( !card ) continue;
 		
-		card->Setup(name);
+		// ★ 초상화 자동 로드
+		UTexture2D* portrait = LoadCharIconTexture(name, TEXT("Portrait"));
+		
+		card->Setup(name, portrait);
 		card->OnClicked.AddDynamic(this, &UOSCharSelectWidget::OnCardClicked);
 		
 		CharacterGrid->AddChildToUniformGrid(card, idx / Columns, idx % Columns);
@@ -95,6 +133,21 @@ void UOSCharSelectWidget::BuildGrid()
 // ═══════════════════════════════════════════
 void UOSCharSelectWidget::UpdatePreview(FName CharacterID)
 {
+	// ★ 전신 이미지 자동 로드
+	if (PreviewImage != nullptr)
+	{
+		UTexture2D* fullBody = LoadCharIconTexture(CharacterID, TEXT("FullBody"));
+		if (fullBody != nullptr)
+		{
+			PreviewImage->SetBrushFromTexture(fullBody);
+			PreviewImage->SetVisibility(ESlateVisibility::Visible);
+		}
+		else
+		{
+			PreviewImage->SetVisibility(ESlateVisibility::Hidden);
+		}
+	}
+	
 	// 이름
 	if (PreviewName) PreviewName->SetText(FText::FromName(CharacterID));
 	

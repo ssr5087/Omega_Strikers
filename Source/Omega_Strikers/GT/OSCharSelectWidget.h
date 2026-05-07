@@ -75,10 +75,21 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category="CharSelect")
 	int32 Columns = 5;
 	
+	// ★ 텍스처 매핑
+	// 캐릭터 ID(Aimi 등) → 텍스처 내부명(MagicalPlaymaker 등)
+	// Details 패널에서 한 번만 세팅
+	UPROPERTY(EditDefaultsOnly, Category = "CharSelect|Texture")
+	TMap<FName, FName> CharToTextureName;
+ 
+	// CloseUp 텍스처 폴더 경로
+	UPROPERTY(EditDefaultsOnly, Category = "CharSelect|Texture")
+	FString TextureBasePath = TEXT("/Game/Resource/UI/Art/Characters/CloseUp");
+	
 	// --- 내부 ---
 	
 	// CharacterStat에서 고유 캐릭터 이름 + Lv.1 스탯 추출
 	void ExtractUniqueCharacters(TArray<FName>& OutNames, TMap<FName, FCharacterStat>& OutStats);
+	UTexture2D* LoadCharIconTexture(FName CharacterID, const FString& Suffix);
 	
 	void BuildGrid();
 	void UpdatePreview(FName CharacterID);

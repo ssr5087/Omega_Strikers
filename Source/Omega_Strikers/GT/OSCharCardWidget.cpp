@@ -8,7 +8,7 @@
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
 
-void UOSCharCardWidget::Setup(FName InCharacterID)
+void UOSCharCardWidget::Setup(FName InCharacterID, UTexture2D* InPortrait)
 {
 	CharacterID = InCharacterID;
 	
@@ -17,8 +17,11 @@ void UOSCharCardWidget::Setup(FName InCharacterID)
 		NameText->SetText(FText::FromName(CharacterID));
 	}
 	
-	// TODO: 초상화 텍스쳐가 준비되면 여기서 로드
-	//PortraitImage->SetBrushFromTexture()
+	// 초상화 텍스처 적용
+	if (PortraitImage != nullptr && InPortrait != nullptr)
+	{
+		PortraitImage->SetBrushFromTexture(InPortrait);
+	}
 	
 	SetSelected(false);
 }

@@ -22,7 +22,7 @@ class OMEGA_STRIKERS_API UOSCharCardWidget : public UUserWidget
 public:
 	// 카드 세팅 (캐릭터 이름만 있으면 동작)
 	UFUNCTION(BlueprintCallable)
-	void Setup(FName InCharacterID);
+	void Setup(FName InCharacterID, UTexture2D* InPortrait);
 	
 	UFUNCTION(BlueprintCallable)
 	void SetSelected(bool bSelected);
