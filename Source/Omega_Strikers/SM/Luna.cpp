@@ -11,6 +11,7 @@
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Net/UnrealNetwork.h"
 #include "Omega_Strikers/Omega_Strikers.h"
 
 
@@ -116,7 +117,7 @@ void ALuna::Use_PrimarySkill()
 	if (bPrimarySkillCoolDown) {return;}
 	
 	// 애니메이션 실행 transition 세팅
-	bIsProcessingPrimary = true;
+	bPrimaryAnimTrans = true;
 	
 	// 발사 방향 저장
 	PrimaryDir = CursorDir;
@@ -132,7 +133,7 @@ void ALuna::Use_PrimarySkill()
 	
 	// 애니메이션 실행 transition 처리 타이머
 	FTimerHandle Primary;
-	GetWorld()->GetTimerManager().SetTimer(Primary, [this]()->void {bIsProcessingPrimary = false;}, 1.f, false);
+	GetWorld()->GetTimerManager().SetTimer(Primary, [this]()->void {bPrimaryAnimTrans = false;}, 1.f, false);
 }
 
 void ALuna::SpawnPrimaryRocket()
@@ -184,8 +185,9 @@ void ALuna::Use_SecondarySkill()
 	// 클라에서만 처리
 	if (!IsLocallyControlled()) {return;}
 	
-	// 로컬 입력 분기 및 애니메이션 실행용으로 즉시 켜준다
-	bIsProcessingSecondary = true;
+	// 그냥 동기화로 처리함 RPC로 여기저기서 하려니까 너무 복잡함
+	// // 로컬 입력 분기용으로 즉시 켜준다
+	// bIsProcessingSecondary = true;
 
 	// 로컬에서도 최초 방향은 세팅해둔다
 	CurDir = FVector(CursorDir.X, CursorDir.Y, 0.0f);
@@ -273,6 +275,7 @@ void ALuna::OnDashOverlap(UPrimitiveComponent* OverlappedComponent, AActor* Othe
 			GetCharacterMovement()->BrakingFrictionFactor = 2.0f;
 			GetCharacterMovement()->BrakingDecelerationWalking = 2048.0f;
 
+			bSecondaryAnimTrans = false;
 			bIsProcessingSecondary = false;
 			bIsChangingDirection = false;
 			CurDir = FVector::ZeroVector;
@@ -305,6 +308,7 @@ void ALuna::OnDashHit(UPrimitiveComponent* HitComponent, AActor* OtherActor,
 	GetCharacterMovement()->BrakingFrictionFactor = 2.0f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 2048.0f;
 
+	bSecondaryAnimTrans = false;
 	bIsProcessingSecondary = false;
 	bIsChangingDirection = false;
 	CurDir = FVector::ZeroVector;
@@ -329,7 +333,7 @@ void ALuna::Use_SpecialSkill()
 	if (bSpecialSkillCoolDown) {return;}
 	
 	// 애니메이션 transition
-	bIsProcessingSpecial = true;
+	bSpecialAnimTrans = true;
 	
 	// 발사 위치 지정
 	SpecialLoc = MouseCursorLoc;
@@ -345,7 +349,7 @@ void ALuna::Use_SpecialSkill()
 
 	// 애니메이션 실행 transition 처리 타이머
 	FTimerHandle Special;
-	GetWorld()->GetTimerManager().SetTimer(Special, [this]()->void {bIsProcessingSpecial = false;}, 1.f, false);
+	GetWorld()->GetTimerManager().SetTimer(Special, [this]()->void {bSpecialAnimTrans = false;}, 1.f, false);
 }
 
 void ALuna::SpawnSpecialRocket()
@@ -397,6 +401,11 @@ void ALuna::Use_Flip()
 void ALuna::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	
+	DOREPLIFETIME(ALuna, bPrimaryAnimTrans);
+	DOREPLIFETIME(ALuna, bSecondaryAnimTrans);
+	DOREPLIFETIME(ALuna, bSpecialAnimTrans);
+	DOREPLIFETIME(ALuna, bIsProcessingSecondary);
 }
 
 // ----------------- Primary -----------------
@@ -440,6 +449,9 @@ void ALuna::ServerRPC_StartSecondarySkill_Implementation(FVector2D StartDir)
 	GetWorldTimerManager().SetTimer(MoveTimer, this, &ALuna::Update_SecondaryMove, 0.01f, true);
 	
 	// 애니메이션 실행 transition 세팅
+	bSecondaryAnimTrans = true;
+	
+	// 처리 중 변수 세팅
 	bIsProcessingSecondary = true;
 	
 	// 쿨타임 관리
@@ -480,6 +492,7 @@ void ALuna::MulticastRPC_EndSecondarySkill_Implementation()
 	GetCharacterMovement()->BrakingFrictionFactor = 2.0f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 2048.0f;
 
+	bSecondaryAnimTrans = false;
 	bIsProcessingSecondary = false;
 	bIsChangingDirection = false;
 	CurDir = FVector::ZeroVector;

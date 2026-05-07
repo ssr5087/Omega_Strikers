@@ -96,8 +96,8 @@ public:
 	bool bSpecialSkillCoolDown = false;
 	
 	// 각 스킬 쿨타임
-	float PrimarySkillCool = 6.5f;		// 6.5
-	float SecondarySkillCool = 1.5f;	// 14
+	float PrimarySkillCool = 0.5f;		// 6.5
+	float SecondarySkillCool = 14.f;	// 14
 	float SpecialSkillCool = 1.5f;		// 35
 	
 	// ----------------- Primary -----------------
@@ -107,7 +107,8 @@ public:
 	virtual void Use_PrimarySkill() override;
 	
 	// 애니메이션 transition
-	bool bIsProcessingPrimary = false;
+	UPROPERTY(Replicated)
+	bool bPrimaryAnimTrans = false;
 	
 	// 입력 Complete 시점의 커서 방향 저장
 	FVector2D PrimaryDir;
@@ -125,6 +126,11 @@ public:
 	virtual void Use_SecondarySkill() override;
 	
 	// 애니메이션 transition
+	UPROPERTY(Replicated)
+	bool bSecondaryAnimTrans = false;
+	
+	// 충돌 전까지 처리 중
+	UPROPERTY(Replicated)
 	bool bIsProcessingSecondary = false;
 	
 	// 충돌 시 전달할 Impact Data
@@ -157,7 +163,8 @@ public:
 	virtual void Use_SpecialSkill() override;
 	
 	// 애니메이션 transition
-	bool bIsProcessingSpecial = false;
+	UPROPERTY(Replicated)
+	bool bSpecialAnimTrans = false;
 	
 	// 입력 Complete 시점의 커서 위치 저장
 	FVector SpecialLoc;
@@ -186,8 +193,8 @@ public:
 	UFUNCTION(Server, Unreliable)
 	void ServerRPC_UpdateSecondaryDirection(FVector2D AimDir);
 	
-	UFUNCTION(NetMulticast, Reliable)
-	void MulticastRPC_RejectSecondarySkill();
+	// UFUNCTION(NetMulticast, Reliable)
+	// void MulticastRPC_RejectSecondarySkill();
 	
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastRPC_EndSecondarySkill();

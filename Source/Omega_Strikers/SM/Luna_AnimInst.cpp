@@ -21,9 +21,9 @@ void ULuna_AnimInst::NativeUpdateAnimation(float DeltaSeconds)
 	{
 		bIsMoving = Luna->GetVelocity().Size2D() > 1.f;
 		bIsProcessingCoreHit = Luna->bCoreHitCoolDown; // 얘 가라로 해놓은 거니까 나중에 맞게 다시 처리할 필요 있음
-		bIsProcessingPrimary = Luna->bIsProcessingPrimary;
-		bIsProcessingSecondary = Luna->bIsProcessingSecondary;
-		bIsProcessingSpecial = Luna->bIsProcessingSpecial;
+		bIsProcessingPrimary = Luna->bPrimaryAnimTrans;
+		bIsProcessingSecondary = Luna->bSecondaryAnimTrans;
+		bIsProcessingSpecial = Luna->bSpecialAnimTrans;
 	}
 }
 
