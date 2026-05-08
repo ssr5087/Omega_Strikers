@@ -32,6 +32,7 @@ APlayerBase::APlayerBase()
 	// ========= Component =========
 	
 	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_EXPOrb, ECR_Overlap);
 	
 	// 이동 관련 MovementComponent 조정
 	bUseControllerRotationYaw = false;
