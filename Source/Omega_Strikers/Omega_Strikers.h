@@ -43,3 +43,9 @@ UE_LOG(LogTeam, Warning, TEXT("[SM][W][%s:%d] %s"), TEXT(__FUNCTION__), __LINE__
 
 #define LOG_SM_E(Format, ...) \
 UE_LOG(LogTeam, Error, TEXT("[SM][E][%s:%d] %s"), TEXT(__FUNCTION__), __LINE__, *FString::Printf(Format, ##__VA_ARGS__))
+
+// ==================
+// 경험치 트레이스 채널
+// ===================
+
+#define ECC_EXPOrb ECC_GameTraceChannel1

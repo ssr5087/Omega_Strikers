@@ -4,18 +4,17 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "SpawnEXPOrb.generated.h"
+#include "EXPSpawnPoint.generated.h"
 
 UCLASS()
-class OMEGA_STRIKERS_API ASpawnEXPOrb : public AActor
+class OMEGA_STRIKERS_API AEXPSpawnPoint : public AActor
 {
 	GENERATED_BODY()
-	
+
 public:
 	// Sets default values for this actor's properties
-	ASpawnEXPOrb();
+	AEXPSpawnPoint();
 
-	// 오브 있는지 체크용
+	// 이미 Orb가 있는지 체크용
 	bool bHasOrb = false;
-	
 };

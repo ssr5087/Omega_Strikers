@@ -11,6 +11,7 @@
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Net/UnrealNetwork.h"
 #include "Omega_Strikers/Omega_Strikers.h"
 
 
@@ -110,33 +111,15 @@ void ALuna::Ready_PrimarySkill()
 
 void ALuna::Use_PrimarySkill()
 {
-	// [Primary] 스폰 - 걔가 알아서 이동 - 맨 처음 충돌 객체 저장 - 값 전달 - Destroy
-	
-	// 현재 쿨타임 중이면 실행 안 됨
-	if (bPrimarySkillCoolDown) {return;}
-	
-	// 애니메이션 실행 transition 세팅
-	bIsProcessingPrimary = true;
-	
-	// 발사 방향 저장
-	PrimaryDir = CursorDir;
-	
-	// 스킬 사용 방향을 바라보도록 설정
-	GetCharacterMovement()->bOrientRotationToMovement = false;
-	SetActorRotation(UKismetMathLibrary::MakeRotFromXZ(FVector(PrimaryDir.X, PrimaryDir.Y, 0), GetActorUpVector()));
-	
-	// 쿨타임 관리
-	bPrimarySkillCoolDown = true;
-	FTimerHandle PrimarySkillTimer;
-	GetWorld()->GetTimerManager().SetTimer(PrimarySkillTimer, [this]()->void {bPrimarySkillCoolDown = false;}, PrimarySkillCool, false);
-	
-	// 애니메이션 실행 transition 처리 타이머
-	FTimerHandle Primary;
-	GetWorld()->GetTimerManager().SetTimer(Primary, [this]()->void {bIsProcessingPrimary = false;}, 1.f, false);
+	// 입력되면 플레이어 -> 마우스 커서 방향 벡터만 매개변수로 서버 RPC 전달
+	ServerRPC_StartPrimarySkill(CursorDir);
 }
 
 void ALuna::SpawnPrimaryRocket()
 {
+	// 서버 & 클라 둘 다 노티파이를 타고 옴. but 서버에서만 실행
+	if (!HasAuthority()) {return;}
+
 	// 스폰 트랜스폼 만들기
 	FTransform LauncherTransform;
 	
@@ -166,6 +149,7 @@ void ALuna::SpawnPrimaryRocket()
 
 void ALuna::End_PrimarySkill()
 {
+	// 서버 & 클라 둘 다 노티파이를 타고 옴
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 }
 
@@ -181,11 +165,12 @@ void ALuna::Ready_SecondarySkill()
 
 void ALuna::Use_SecondarySkill()
 {
-	// 클라에서만 처리
+	// 소유 캐릭터에서만 처리
 	if (!IsLocallyControlled()) {return;}
 	
-	// 로컬 입력 분기 및 애니메이션 실행용으로 즉시 켜준다
-	bIsProcessingSecondary = true;
+	// 그냥 동기화로 처리함 RPC로 여기저기서 하려니까 너무 복잡함
+	// // 로컬 입력 분기용으로 즉시 켜준다
+	// bIsProcessingSecondary = true;
 
 	// 로컬에서도 최초 방향은 세팅해둔다
 	CurDir = FVector(CursorDir.X, CursorDir.Y, 0.0f);
@@ -273,6 +258,7 @@ void ALuna::OnDashOverlap(UPrimitiveComponent* OverlappedComponent, AActor* Othe
 			GetCharacterMovement()->BrakingFrictionFactor = 2.0f;
 			GetCharacterMovement()->BrakingDecelerationWalking = 2048.0f;
 
+			bSecondaryAnimTrans = false;
 			bIsProcessingSecondary = false;
 			bIsChangingDirection = false;
 			CurDir = FVector::ZeroVector;
@@ -283,6 +269,7 @@ void ALuna::OnDashOverlap(UPrimitiveComponent* OverlappedComponent, AActor* Othe
 	}
 }
 
+// 벽 충돌도 조건으로 넣어서 방어적으로 처리
 void ALuna::OnDashHit(UPrimitiveComponent* HitComponent, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
@@ -305,6 +292,7 @@ void ALuna::OnDashHit(UPrimitiveComponent* HitComponent, AActor* OtherActor,
 	GetCharacterMovement()->BrakingFrictionFactor = 2.0f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 2048.0f;
 
+	bSecondaryAnimTrans = false;
 	bIsProcessingSecondary = false;
 	bIsChangingDirection = false;
 	CurDir = FVector::ZeroVector;
@@ -324,32 +312,15 @@ void ALuna::Ready_SpecialSkill()
 
 void ALuna::Use_SpecialSkill()
 {
-	// [Special] 지정 위치에 z축 이동만 하는 로켓 소환
-	// 바닥 좌표에 도달하는 순간 모든 적군과 코어에 방향과 충격량 각각 전달
-	if (bSpecialSkillCoolDown) {return;}
-	
-	// 애니메이션 transition
-	bIsProcessingSpecial = true;
-	
-	// 발사 위치 지정
-	SpecialLoc = MouseCursorLoc;
-	
-	// 스킬 사용 방향을 바라보도록 설정
-	GetCharacterMovement()->bOrientRotationToMovement = false;
-	SetActorRotation(UKismetMathLibrary::MakeRotFromXZ(FVector(CursorDir.X, CursorDir.Y, 0), GetActorUpVector()));
-	
-	// 쿨타임 관리
-	bSpecialSkillCoolDown = true;
-	FTimerHandle SpecialSkillTimer;
-	GetWorld()->GetTimerManager().SetTimer(SpecialSkillTimer, [this]()->void {bSpecialSkillCoolDown = false;}, SpecialSkillCool, false);
-
-	// 애니메이션 실행 transition 처리 타이머
-	FTimerHandle Special;
-	GetWorld()->GetTimerManager().SetTimer(Special, [this]()->void {bIsProcessingSpecial = false;}, 1.f, false);
+	// 입력되면 마우스 커서 위치 벡터만 매개변수로 서버 RPC 전달
+	ServerRPC_StartSpecialSkill(MouseCursorLoc);	
 }
 
 void ALuna::SpawnSpecialRocket()
 {
+	// 서버 & 클라 둘 다 노티파이를 타고 옴. but 서버에서만 실행
+	if (!HasAuthority()) {return;}
+	
 	// 스폰 트랜스폼 만들기
 	FTransform LauncherTransform;
 	
@@ -372,6 +343,7 @@ void ALuna::SpawnSpecialRocket()
 
 void ALuna::End_SpecialSkill()
 {
+	// 서버 & 클라 둘 다 노티파이를 타고 옴. but 서버에서만 실행
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 }
 
@@ -397,11 +369,46 @@ void ALuna::Use_Flip()
 void ALuna::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	
+	DOREPLIFETIME(ALuna, bPrimaryAnimTrans);
+	DOREPLIFETIME(ALuna, bSecondaryAnimTrans);
+	DOREPLIFETIME(ALuna, bSpecialAnimTrans);
+	DOREPLIFETIME(ALuna, bIsProcessingSecondary);
 }
 
 // ----------------- Primary -----------------
 
+void ALuna::ServerRPC_StartPrimarySkill_Implementation(FVector2D SpawnDir)
+{
+	// 현재 쿨타임 중이면 실행 안 됨
+	if (bPrimarySkillCoolDown) {return;}
+	
+	// 애니메이션 실행 transition 세팅
+	bPrimaryAnimTrans = true;
+	
+	// 발사 방향 저장
+	PrimaryDir = SpawnDir;
+	
+	// 스킬 사용 방향을 바라보도록 설정 - 클라에서도 멀티캐스트
+	GetCharacterMovement()->bOrientRotationToMovement = false;
+	SetActorRotation(UKismetMathLibrary::MakeRotFromXZ(FVector(PrimaryDir.X, PrimaryDir.Y, 0), GetActorUpVector()));
+	MulticastRPC_StartPrimaryLook();
+	
+	// 쿨타임 관리
+	bPrimarySkillCoolDown = true;
+	FTimerHandle PrimarySkillTimer;
+	GetWorld()->GetTimerManager().SetTimer(PrimarySkillTimer, [this]()->void {bPrimarySkillCoolDown = false;}, PrimarySkillCool, false);
+	
+	// 애니메이션 실행 transition 처리 타이머
+	FTimerHandle Primary;
+	GetWorld()->GetTimerManager().SetTimer(Primary, [this]()->void {bPrimaryAnimTrans = false;}, 1.f, false);
+}
 
+void ALuna::MulticastRPC_StartPrimaryLook_Implementation()
+{
+	GetCharacterMovement()->bOrientRotationToMovement = false;
+	SetActorRotation(UKismetMathLibrary::MakeRotFromXZ(FVector(PrimaryDir.X, PrimaryDir.Y, 0), GetActorUpVector()));
+}
 
 // ---------------- Secondary ----------------
 
@@ -440,13 +447,15 @@ void ALuna::ServerRPC_StartSecondarySkill_Implementation(FVector2D StartDir)
 	GetWorldTimerManager().SetTimer(MoveTimer, this, &ALuna::Update_SecondaryMove, 0.01f, true);
 	
 	// 애니메이션 실행 transition 세팅
+	bSecondaryAnimTrans = true;
+	
+	// 처리 중 변수 세팅
 	bIsProcessingSecondary = true;
 	
 	// 쿨타임 관리
 	bSecondarySkillCoolDown = true;
 	FTimerHandle SecondarySkillTimer;
 	GetWorld()->GetTimerManager().SetTimer(SecondarySkillTimer, [this]()->void {bSecondarySkillCoolDown = false;}, SecondarySkillCool, false);
-
 }
 
 void ALuna::ServerRPC_UpdateSecondaryDirection_Implementation(FVector2D AimDir)
@@ -480,6 +489,7 @@ void ALuna::MulticastRPC_EndSecondarySkill_Implementation()
 	GetCharacterMovement()->BrakingFrictionFactor = 2.0f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 2048.0f;
 
+	bSecondaryAnimTrans = false;
 	bIsProcessingSecondary = false;
 	bIsChangingDirection = false;
 	CurDir = FVector::ZeroVector;
@@ -487,3 +497,35 @@ void ALuna::MulticastRPC_EndSecondarySkill_Implementation()
 }
 
 // ----------------- Special -----------------	
+
+void ALuna::ServerRPC_StartSpecialSkill_Implementation(FVector SpawnLoc)
+{
+	// 쿨타임 체크
+	if (bSpecialSkillCoolDown) {return;}
+	
+	// 애니메이션 transition
+	bSpecialAnimTrans = true;
+	
+	// 발사 위치 지정
+	SpecialLoc = SpawnLoc;
+	
+	// 스킬 사용 방향을 바라보도록 설정 - 클라에서도 멀티캐스트
+	GetCharacterMovement()->bOrientRotationToMovement = false;
+	SetActorRotation(UKismetMathLibrary::MakeRotFromXZ(FVector(CursorDir.X, CursorDir.Y, 0), GetActorUpVector()));
+	MulticastRPC_StartSpecialLook();
+	
+	// 쿨타임 관리
+	bSpecialSkillCoolDown = true;
+	FTimerHandle SpecialSkillTimer;
+	GetWorld()->GetTimerManager().SetTimer(SpecialSkillTimer, [this]()->void {bSpecialSkillCoolDown = false;}, SpecialSkillCool, false);
+
+	// 애니메이션 실행 transition 처리 타이머
+	FTimerHandle Special;
+	GetWorld()->GetTimerManager().SetTimer(Special, [this]()->void {bSpecialAnimTrans = false;}, 1.f, false);
+}
+
+void ALuna::MulticastRPC_StartSpecialLook_Implementation()
+{
+	GetCharacterMovement()->bOrientRotationToMovement = false;
+	SetActorRotation(UKismetMathLibrary::MakeRotFromXZ(FVector(CursorDir.X, CursorDir.Y, 0), GetActorUpVector()));
+}
