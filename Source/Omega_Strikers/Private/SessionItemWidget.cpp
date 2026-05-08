@@ -2,65 +2,34 @@
 
 
 #include "SessionItemWidget.h"
-#include "Components/Button.h"
 #include "OSGameInstance.h"
+#include "Components/Button.h"
 
-bool USessionItemWidget::Initialize()
+
+void USessionItemWidget::Set(const struct FSessionInfo& SessionInfo)
 {
-	Super::Initialize();
-
-	if (JoinButton)
-	{
-		JoinButton->OnClicked.AddDynamic(this, &USessionItemWidget::OnClicked);
-	}
-
-	return true;
-}
-
-void USessionItemWidget::Setup(int32 InIndex)
-{
-	SessionIndex = InIndex;
-	bIsHostedSessionEntry = false;
+	txt_roomName->SetText(FText::FromString(SessionInfo.roomName));
+	txt_hostName->SetText(FText::FromString(SessionInfo.hostName));
+	txt_playerCount->SetText(FText::FromString(SessionInfo.playerCount));
+	txt_pingSpeed->SetText(FText::FromString(FString::Printf(TEXT("%dms"), SessionInfo.pingSpeed)));
 	
-	if (UOSGameInstance* GI = GetGameInstance<UOSGameInstance>())
-	{
-		if (!GI->CachedResults.IsValidIndex(SessionIndex)) return;
-
-		if (RoomNameText)
-		{
-			RoomNameText->SetText(FText::FromString(GI->BuildSessionDisplayText(SessionIndex)));
-		}
-	}
+	
+	sessionNumber = SessionInfo.index;
 }
 
-void USessionItemWidget::SetupHostedSession()
+void USessionItemWidget::NativeConstruct()
 {
-	SessionIndex = INDEX_NONE;
-	bIsHostedSessionEntry = true;
-
-	if (UOSGameInstance* GI = GetGameInstance<UOSGameInstance>())
-	{
-		if (RoomNameText)
-		{
-			RoomNameText->SetText(FText::FromString(GI->BuildHostedSessionDisplayText()));
-		}
-	}
-
-	if (JoinButton)
-	{
-		JoinButton->SetIsEnabled(false);
-	}
+	Super::NativeConstruct();
+	
+	btn_join->OnClicked.AddDynamic(this, &USessionItemWidget::JoinSession);
+	
 }
 
-void USessionItemWidget::OnClicked()
+void USessionItemWidget::JoinSession()
 {
-	if (bIsHostedSessionEntry)
+	auto gi = Cast<UOSGameInstance>(GetWorld()->GetGameInstance());
+	if (gi)
 	{
-		return;
-	}
-
-	if (UOSGameInstance* GI = GetGameInstance<UOSGameInstance>())
-	{
-		GI->JoinSessionByIndex(SessionIndex);
+		gi->JoinSelectedSession(sessionNumber);
 	}
 }

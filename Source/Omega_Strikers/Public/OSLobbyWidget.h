@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "OSGameInstance.h"
 #include "SessionItemWidget.h"
 #include "OSLobbyWidget.generated.h"
 
@@ -14,42 +15,93 @@ class OMEGA_STRIKERS_API UOSLobbyWidget : public UUserWidget
 	GENERATED_BODY()
 	
 public:
-	virtual bool Initialize() override;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(BindWidget))
+	class UButton* btn_createRoom;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(BindWidget))
+	class UEditableText* edit_roomName;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(BindWidget))
+	class USlider* slider_playerCount;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(BindWidget))
+	class UTextBlock* txt_playerCount;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(BindWidget))
+	class UWidgetSwitcher* WidgetSwitcher;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(BindWidget))
+	class UButton* btn_createSession;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(BindWidget))
+	class UButton* btn_findSession;
+	
+	UFUNCTION()
+	void SwitchCreatePanel();
+	
+	UFUNCTION()
+	void SwitchFindPanel();
+	
+	// 메인 화면 돌아가기 버튼
+	
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+	class UButton* btn_createSessionBack;
+	
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+	class UButton* btn_findSessionBack;
+	
+	// 방 검색 버튼
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+	class UButton* btn_find;
+	
+	// 검색 중 메세지
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+	class UTextBlock* txt_findingMsg;
+	
+	// 게임 시작 버튼
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+	class UButton* btn_gameToStart;
+	
+	// 방찾기 버튼 클릭시 호출될 콜백
+	UFUNCTION()
+	void OnClickedFindSession();
+	
+	// 게임시작
+	UFUNCTION()
+	void OnClickedGameToStart();
+	
+	UFUNCTION()
+	void BackToMain();
+	
+	
+public:
+	// ------------- 세션 슬롯 ---------------
+	// Canvas_FindRoom의 스크롤박스 위젯
+	UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
+	class UScrollBox* Scroll_RoomList;
+	
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<class USessionItemWidget> sessionInfoWidget;
+	
+	UFUNCTION()
+	void AddSlotWidget(const struct FSessionInfo& SessionInfo);
+	
+	// 방 찾기 상태 이벤트 콜백
+	UFUNCTION()
+	void OnChangeButtonEnable(bool bIsSearching);
+	
+	UPROPERTY()
+	class UOSGameInstance* gi;
+	
+	
+public:
 	virtual void NativeConstruct() override;
-	virtual void NativeDestruct() override;
-	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
-
-	// 버튼 바인딩
-	UPROPERTY(meta = (BindWidget))
-	class UButton* HostButton;
-
-	UPROPERTY(meta = (BindWidget))
-	class UButton* FindButton;
-
-	UPROPERTY(meta = (BindWidget))
-	class UScrollBox* SessionList;
-
-	UPROPERTY(meta = (BindWidgetOptional))
-	class UTextBlock* CurrentPlayerCountText;
-
-	// 클릭 함수
+	
 	UFUNCTION()
-	void OnClickHost();
-
+	void CreateRoom();
+	
+	// Slider Callback
 	UFUNCTION()
-	void OnClickFind();
+	void OnValueChanged(float Value);
 	
-	
-	void AddSessionItem(int32 Index);
-	void AddHostedSessionItem();
-	
-	// UI에서 세션 목록 받기
-	UFUNCTION(BlueprintCallable)
-	void RefreshSessionList();
-
-	UFUNCTION(BlueprintCallable)
-	void RefreshCurrentPlayerCount();
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="UI")
-	TSubclassOf<class USessionItemWidget> SessionItemClass;
 };

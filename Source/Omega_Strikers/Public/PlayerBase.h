@@ -161,8 +161,12 @@ public:
 	FCharacterStat CurrentStat;
 	
 	// 초기 레벨
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(ReplicatedUsing = OnRep_Level)
 	int32 Level = 1;
+	
+	UFUNCTION()
+	void OnRep_Level();
 	
 	// 캐릭터 이름
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -192,5 +196,10 @@ public:
 	
 	// EXP Component
 	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Component")
+	TObjectPtr<class UEXPComponent> EXPComp;
+	
+	UFUNCTION()
+	void HandleLevelUp(int32 NewLevel);
 };
 

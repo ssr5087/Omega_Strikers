@@ -46,6 +46,9 @@ void AOSGameMode::BeginPlay()
 	}
 	
 	LOG_GT(TEXT("플레이어 대기중"))
+	
+	// 경험치오브 스폰액터 관리
+	//UGameplayStatics::GetAllActorsOfClass(GetWorld(), ASpawnEXPOrb::StaticClass(), SpawnEXPOrbPoints);
 }
 
 void AOSGameMode::PostLogin(APlayerController* NewPlayer)
