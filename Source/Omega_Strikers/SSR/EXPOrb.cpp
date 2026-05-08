@@ -6,6 +6,7 @@
 #include "EXPComponent.h"
 #include "PlayerBase.h"
 #include "Components/SphereComponent.h"
+#include "Omega_Strikers/Omega_Strikers.h"
 
 
 // Sets default values
@@ -19,7 +20,10 @@ AEXPOrb::AEXPOrb()
 	RootComponent = CollisionComp;
 	
 	CollisionComp->SetSphereRadius(100.f);
-	CollisionComp->SetCollisionProfileName(TEXT("OverlapAllDynamic"));
+	// ->SetCollisionProfileName(TEXT("OverlapAllDynamic"));
+	CollisionComp->SetCollisionObjectType(ECC_EXPOrb);
+	CollisionComp->SetCollisionResponseToAllChannels(ECR_Ignore);
+	CollisionComp->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 	
 	// 메쉬
 	// Mesh->CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
@@ -42,6 +46,8 @@ void AEXPOrb::BeginPlay()
 void AEXPOrb::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp,
 	int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
+	LOG_SR_W(TEXT("EXP 오버랩 함수 실행"));
+	
 	// 서버에서만 관리
 	if (!HasAuthority())
 		return;

@@ -48,6 +48,8 @@ public:
 	UPROPERTY(EditAnywhere)
 	int32 MaxEXP = 100;
 	
+	
+	
 	// UI 용
 	UFUNCTION()
 	void OnRep_CurrentEXP();

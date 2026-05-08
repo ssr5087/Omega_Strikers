@@ -10,7 +10,7 @@
 // Sets default values for this component's properties
 UEXPComponent::UEXPComponent()
 {
-	PrimaryComponentTick.bCanEverTick = true;
+	PrimaryComponentTick.bCanEverTick = false;
 	SetIsReplicated(true);
 	
 }
@@ -56,6 +56,7 @@ void UEXPComponent::AddEXP(int32 Amount)
 	if (CurrentEXP >= MaxEXP)
 	{
 		LevelUP();
+		
 	}
 }
 
@@ -71,6 +72,7 @@ void UEXPComponent::LevelUP()
 	// CurrentEXP = 0;
 	
 	Player->Level++;
+	CurrentEXP -= MaxEXP;
 	
 	UE_LOG(LogTemp, Warning, TEXT("Level UP! ->  %d"), Player->Level);
 	

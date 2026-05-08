@@ -199,6 +199,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Component")
 	TObjectPtr<class UEXPComponent> EXPComp;
 	
+	
+	// 레벨업 함수 추가
 	UFUNCTION()
 	void HandleLevelUp(int32 NewLevel);
 };
