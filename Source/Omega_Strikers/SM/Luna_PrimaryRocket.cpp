@@ -17,6 +17,10 @@ ALuna_PrimaryRocket::ALuna_PrimaryRocket()
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 	
+	// 동기화 옵션 설정
+	bReplicates = true;
+	SetReplicateMovement(true);
+	
 	BoxComp = CreateDefaultSubobject<UBoxComponent>("BoxComp");
 	SetRootComponent(BoxComp);
 	BoxComp->SetBoxExtent(FVector(150.0f, 70.0f, 70.0f));
@@ -38,6 +42,8 @@ void ALuna_PrimaryRocket::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	// 어차피 서버에서만 스폰되지만 혹시 모르니까
+	if (!HasAuthority()) {return;}
 	
 	// 소환 후 0.35초 이후에 가속, Impact Data도 같이 갱신
 	FTimerHandle SpeedChanger;
@@ -77,11 +83,17 @@ void ALuna_PrimaryRocket::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	
+	// 어차피 서버에서만 스폰되지만 혹시 모르니까
+	if (!HasAuthority()) {return;}
+	
 	SetActorLocation(GetActorLocation() + GetActorForwardVector() * DeltaTime * Speed);
 }
 
 void ALuna_PrimaryRocket::InitRocket(AActor* InOwnerActor)
 {
+	// 어차피 서버에서만 스폰되지만 혹시 모르니까
+	if (!HasAuthority()) {return;}
+
 	// 데이터 셋 불러올 PlayerBase(Luna)로 캐스팅
 	OwnerActorRef = Cast<ALuna>(InOwnerActor);
 	
@@ -103,6 +115,9 @@ void ALuna_PrimaryRocket::InitRocket(AActor* InOwnerActor)
 void ALuna_PrimaryRocket::OnRocketOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
+	// 어차피 서버에서만 스폰되지만 혹시 모르니까
+	if (!HasAuthority()) {return;}
+	
 	if (OtherActor == this || OtherActor == OwnerActorRef) {return;}
 	// OtherActor가 존재하고 그 놈이 인터페이스 구현했으면
 	if (OtherActor && OtherActor->Implements<UOSImpactReceiver>())
