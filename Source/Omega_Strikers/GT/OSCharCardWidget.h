@@ -29,6 +29,8 @@ public:
 	
 	UFUNCTION(BlueprintPure)
 	FName GetCharacterID() const { return CharacterID; }
+
+	void SetLocked(bool bLocked, const FString& Name = FString(""));
 	
 	UPROPERTY(BlueprintAssignable)
 	FOnCardClicked OnClicked;
@@ -53,4 +55,7 @@ private:
 	void HandleClicked();
 	
 	FName CharacterID;
+	
+	// 잠금 상태 — SetSelected가 덮어쓰지 않도록
+	bool bIsLocked = false;
 };

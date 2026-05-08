@@ -5,6 +5,7 @@
 
 #include "Net/UnrealNetwork.h"
 #include "Omega_Strikers/Omega_Strikers.h"
+#include "Omega_Strikers/GT/OSCharSelectGameMode.h"
 
 AOSPlayerState::AOSPlayerState()
 {
@@ -16,6 +17,7 @@ void AOSPlayerState::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>&
 	
 	DOREPLIFETIME(AOSPlayerState, TeamID);
 	DOREPLIFETIME(AOSPlayerState, SelectedCharacter);
+	DOREPLIFETIME(AOSPlayerState, bCharacterConfirmed);
 	DOREPLIFETIME(AOSPlayerState, Goals);
 	DOREPLIFETIME(AOSPlayerState, Assists);
 	DOREPLIFETIME(AOSPlayerState, Knockouts);
@@ -92,6 +94,59 @@ void AOSPlayerState::ResetMatchStats()
 	Knockouts = 0;
 }
 
+// ═══════════════════════════════════════════════════════
+// RPC
+// ═══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
+// 캐릭터 선택 — CharSelect 레벨 RPC (GameMode 검증)
+// ═══════════════════════════════════════════════════════
+void AOSPlayerState::Server_RequestSelectCharacter_Implementation(FName CharacterID)
+{
+	AOSCharSelectGameMode* gm = GetWorld()->GetAuthGameMode<AOSCharSelectGameMode>();
+	
+	if ( gm )
+	{
+		// CharSelect 레벨 → GameMode가 중복 검증
+		bool bOK = gm->TrySelectCharacter(this, CharacterID);
+		if (bOK)
+		{
+			SelectedCharacter = CharacterID;
+		}
+		else
+		{
+			Client_OnSelectRejected(CharacterID,
+				TEXT("이미 다른 플레이어가 선택한 캐릭터입니다."));
+		}
+	}
+	else
+	{
+		// 다른 레벨 → 기존 로직
+		SelectedCharacter = CharacterID;
+	}
+}
 
+void AOSPlayerState::Server_RequestConfirmCharacter_Implementation()
+{
+	AOSCharSelectGameMode* gm = GetWorld()->GetAuthGameMode<AOSCharSelectGameMode>();
+	if ( !gm ) return;
+	
+	bool bOK = gm->TrySelectCharacter(this, SelectedCharacter);
+	if ( bOK ) bCharacterConfirmed = true;
+	else Client_OnSelectRejected(SelectedCharacter, TEXT("확정 실패 — 캐릭터를 먼저 선택하거나 중복을 확인하세요."));
+}
 
+void AOSPlayerState::Server_RequestCancelConfirm_Implementation()
+{
+	AOSCharSelectGameMode* gm = GetWorld()->GetAuthGameMode<AOSCharSelectGameMode>();
+	if ( !gm ) return;
 
+	gm->CancelConfirmCharacter(this);
+	bCharacterConfirmed = false;
+}
+
+void AOSPlayerState::Client_OnSelectRejected_Implementation(FName CharacterID, const FString& Reason)
+{
+	LOG_GT_W(TEXT("선택 거부: %s (%s)"), *CharacterID.ToString(), *Reason);
+
+	OnSelectRejected.Broadcast(CharacterID, Reason);
+}

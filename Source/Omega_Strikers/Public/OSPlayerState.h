@@ -9,6 +9,7 @@
 #include "OSPlayerState.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnTeamAssigned, AOSPlayerState*, Player, int32, TeamID);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnSelectRejected, FName, CharacterID, const FString&, Reason);
 
 UCLASS()
 class OMEGA_STRIKERS_API AOSPlayerState : public APlayerState
@@ -36,6 +37,32 @@ public:
 	
 	UFUNCTION(Server, Reliable)
 	void Server_SelectCharacter(FName CharacterID);
+	
+	// ═══════════════════════════════════════════
+	// 캐릭터 선택 — 네트워크 RPC
+	// ═══════════════════════════════════════════
+	UFUNCTION(BlueprintCallable, Category = "OS|CharSelect")
+	bool IsCharacterConfirmed() const { return bCharacterConfirmed; }
+
+	/** 캐릭터 선택 요청 (GameMode에서 중복 검증) */
+	UFUNCTION(Server, Reliable)
+	void Server_RequestSelectCharacter(FName CharacterID);
+
+	/** 캐릭터 확정 요청 */
+	UFUNCTION(Server, Reliable)
+	void Server_RequestConfirmCharacter();
+
+	/** 확정 취소 */
+	UFUNCTION(Server, Reliable)
+	void Server_RequestCancelConfirm();
+
+	/** 선택 거부 알림 (서버 → 클라이언트) */
+	UFUNCTION(Client, Reliable)
+	void Client_OnSelectRejected(FName CharacterID, const FString& Reason);
+
+	/** 위젯에서 바인딩 — 거부 시 UI 갱신 */
+	UPROPERTY(BlueprintAssignable, Category = "OS|Events")
+	FOnSelectRejected OnSelectRejected;
 	
 	// ═══════════════════════════════════════════
 	// 인게임 스탯 (현재 매치)
@@ -92,4 +119,7 @@ private:
 	// OnRep
 	UFUNCTION()
 	void OnRep_TeamID();
+
+	UPROPERTY(Replicated)
+	bool bCharacterConfirmed = false;
 };

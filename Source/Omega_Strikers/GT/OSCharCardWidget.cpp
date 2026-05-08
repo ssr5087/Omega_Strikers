@@ -30,7 +30,35 @@ void UOSCharCardWidget::SetSelected(bool bSelected)
 {
 	if (!SelectBorder) return;
 	
+	// 잠긴 상태면 Selected 색상 덮어쓰지 않음
+	if ( bIsLocked ) return;
+	
 	SelectBorder->SetBrushColor(bSelected ? FLinearColor(0.95f, 0.2f, 0.48f, 1.f) : FLinearColor(0.f, 0.f, 0.f, 0.f));
+}
+
+void UOSCharCardWidget::SetLocked(bool bLocked, const FString& Name)
+{
+	if (!CardButton || !SelectBorder) return;
+
+	if (bLocked)
+	{
+		// 회색 테두리 + 반투명 + 클릭 불가
+		SelectBorder->SetBrushColor(FLinearColor(0.4f, 0.4f, 0.4f, 0.8f));
+		CardButton->SetIsEnabled(false);
+		if (PortraitImage)
+			PortraitImage->SetColorAndOpacity(FLinearColor(0.3f, 0.3f, 0.3f, 0.6f));
+		if (NameText && !Name.IsEmpty())
+			NameText->SetText(FText::FromString(Name));
+	}
+	else
+	{
+		// 원복
+		CardButton->SetIsEnabled(true);
+		if (PortraitImage)
+			PortraitImage->SetColorAndOpacity(FLinearColor::White);
+		if (NameText)
+			NameText->SetText(FText::FromName(CharacterID));
+	}
 }
 
 void UOSCharCardWidget::NativeConstruct()
@@ -45,5 +73,8 @@ void UOSCharCardWidget::NativeConstruct()
 
 void UOSCharCardWidget::HandleClicked()
 {
+	// 잠긴 카드는 클릭 무시
+	if ( bIsLocked ) return;
+	
 	OnClicked.Broadcast(CharacterID);
 }

@@ -106,11 +106,15 @@ private:
 	FString FullPath = TEXT("/Game/Resource/UI/Art/Characters/Full");
 	
 	// --- 내부 ---
+	FName SelectedID;
 	FName CurrentSelection = NAME_None;
 
 	UPROPERTY()
 	TArray<TObjectPtr<UOSCharCardWidget>> CardWidgets;
 
+	// 캐릭터 ID -> Lv.1 스탯 캐시
+	TMap<FName, FCharacterStat> StatCache;
+	
 	UPROPERTY()
 	TObjectPtr<AOSCharSelectGameState> CachedGameState;
 	
@@ -141,11 +145,14 @@ private:
 	UFUNCTION()
 	void OnBackClicked();
 	
-	FName SelectedID;
+	// 확정 버튼 (서버에 락 요청)
+	UFUNCTION()
+	void OnConfirmClicked();
 	
-	UPROPERTY()
-	TArray<UOSCharCardWidget*> Cards;
+	// 확정 취소 버튼
+	UFUNCTION()
+	void OnCancelClicked();
 	
-	// 캐릭터 ID -> Lv.1 스탯 캐시
-	TMap<FName, FCharacterStat> StatCache;
+	// 확정/취소 버튼 상태 갱신
+	void UpdateButtonStates();
 };

@@ -4,6 +4,8 @@
 #include "OSCharSelectWidget.h"
 
 #include "OSCharCardWidget.h"
+#include "OSCharSelectGameState.h"
+#include "OSPlayerState.h"
 #include "Components/Button.h"
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
@@ -32,7 +34,40 @@ void UOSCharSelectWidget::NativeConstruct()
 		BackButton->OnClicked.AddDynamic(this, &UOSCharSelectWidget::OnBackClicked);
 	}
 	
+	if (ConfirmButton)
+	{
+		ConfirmButton->OnClicked.AddDynamic(this, &UOSCharSelectWidget::OnConfirmClicked);
+	}	
+	
+	if (CancelButton)
+	{
+		CancelButton->OnClicked.AddDynamic(this, &UOSCharSelectWidget::OnCancelClicked);
+		CancelButton->SetVisibility(ESlateVisibility::Collapsed);
+	}
+	
 	BuildGrid();
+	
+	// GameState 구독
+	CachedGameState = GetWorld()->GetGameState<AOSCharSelectGameState>();
+	if ( CachedGameState )
+	{
+		CachedGameState->OnCharSelectListUpdated.AddDynamic(this, &UOSCharSelectWidget::OnCharSelectListUpdated);
+	}
+	
+	// PlayerState 거부 알림 구독
+	if ( APlayerController* pc = GetOwningPlayer() )
+	{
+		AOSPlayerState* ps = Cast<AOSPlayerState>(pc->PlayerState);
+		if (ps)
+		{
+		    ps->OnSelectRejected.AddDynamic(
+		        this, &UOSCharSelectWidget::OnMySelectRejected);
+		}
+	}
+	
+	// 초기 UI 반영
+	RefreshCardStates();
+	UpdateButtonStates();
 }
 
 // ═══════════════════════════════════════════
@@ -116,7 +151,7 @@ void UOSCharSelectWidget::BuildGrid()
 	if ( CardWidgetClass.Get() == nullptr || !CharacterGrid ) return;
 	
 	CharacterGrid->ClearChildren();
-	Cards.Empty();
+	CardWidgets.Empty();
 	StatCache.Empty();
 	
 	TArray<FName> names;
@@ -135,7 +170,7 @@ void UOSCharSelectWidget::BuildGrid()
 		card->OnClicked.AddDynamic(this, &UOSCharSelectWidget::OnCardClicked);
 		
 		CharacterGrid->AddChildToUniformGrid(card, idx / Columns, idx % Columns);
-		Cards.Add(card);
+		CardWidgets.Add(card);
 		idx++;
 	}
 	
@@ -182,20 +217,33 @@ void UOSCharSelectWidget::UpdatePreview(FName CharacterID)
 
 void UOSCharSelectWidget::ClearSelections()
 {
-	for (UOSCharCardWidget* card : Cards)
+	for (UOSCharCardWidget* card : CardWidgets)
 	{
 		if (card) card->SetSelected(false);
 	}
 }
 
 // ═══════════════════════════════════════════
-//  카드 클릭
+//  카드 클릭 (네트워크 연동)
 // ═══════════════════════════════════════════
 void UOSCharSelectWidget::OnCardClicked(FName CharacterID)
 {
+	APlayerController* pc = GetOwningPlayer();
+	if ( !pc ) return;
+	
+	AOSPlayerState* ps = Cast<AOSPlayerState>(pc->PlayerState);
+	if (!ps) return;
+
+	// ── 확정 상태면 무시 ──
+	if (ps->IsCharacterConfirmed()) return;
+	
+	// ── 잠긴 캐릭터 무시 ──
+	if (CachedGameState && CachedGameState->IsCharacterLocked(CharacterID)) return;
+
+	// ── 로컬 UI 갱신 (낙관적) ── 
 	SelectedID = CharacterID;
 	ClearSelections();
-	for (UOSCharCardWidget* card : Cards)
+	for (UOSCharCardWidget* card : CardWidgets)
 	{
 		if (card && card->GetCharacterID() == CharacterID)
 		{
@@ -203,22 +251,180 @@ void UOSCharSelectWidget::OnCardClicked(FName CharacterID)
 			break;
 		}
 	}
-	
 	UpdatePreview(CharacterID);
+	
+	// ── 서버에 선택 요청 ──
+	ps->Server_RequestSelectCharacter(CharacterID);
+
+	UpdateButtonStates();
 }
 
 // ═══════════════════════════════════════════
-//  선택 확정 / 뒤로
+//  선택 확정 / 뒤로 / 확정 취소
 // ═══════════════════════════════════════════
 void UOSCharSelectWidget::OnSelectClicked()
 {
 	if (SelectedID.IsNone()) return;
 	
 	OnConfirmed.Broadcast(SelectedID);
-	//RemoveFromParent();
 }
 
 void UOSCharSelectWidget::OnBackClicked()
 {
 	RemoveFromParent();
+}
+
+void UOSCharSelectWidget::NativeDestruct()
+{
+	if ( CachedGameState )
+	{
+		CachedGameState->OnCharSelectListUpdated.RemoveDynamic(this, &UOSCharSelectWidget::OnCharSelectListUpdated);
+	}
+	
+	Super::NativeDestruct();
+}
+
+// ═══════════════════════════════════════════
+//  네트워크 콜백
+// ═══════════════════════════════════════════
+void UOSCharSelectWidget::OnCharSelectListUpdated()
+{
+	// GameState의 선택 목록이 변경됨 -> 카드 UI 갱신
+	RefreshCardStates();
+	UpdateButtonStates();
+}
+
+void UOSCharSelectWidget::RefreshCardStates()
+{
+	if ( !CachedGameState ) return;
+	
+	APlayerController* pc = GetOwningPlayer();
+	if ( !pc ) return;
+	
+	int32 myPID = -1;
+	if (AOSPlayerState* ps = Cast<AOSPlayerState>(pc->PlayerState)) myPID = ps->GetPlayerId();
+	
+	for (UOSCharCardWidget* card : CardWidgets)
+	{
+		if ( !card ) continue;
+		
+		FName cid = card->GetCharacterID();
+		
+		bool bLockedByOther = false;
+		bool bLockedByMe = false;
+		bool bSelectedByMe = (cid == SelectedID);
+		FString LockerName;
+		
+		for (const FOSCharSelectEntry& entry : CachedGameState->CharSelectList)
+		{
+			if (entry.CharacterID == cid && entry.bConfirmed)
+			{
+				if (entry.PlayerIndex == myPID) bLockedByMe = true;
+				else
+				{
+					bLockedByOther = true;
+					LockerName = entry.PlayerName;
+				}
+				break;
+			}
+		}
+		
+		// 카드 비주얼 업데이트
+		if ( bLockedByOther )
+		{
+			card->SetSelected(false);
+			card->SetLocked(true, LockerName);
+		}
+		else if ( bLockedByMe )
+		{
+			card->SetSelected(true);
+			card->SetLocked(false);  // 내가 확정 — 골드 하이라이트
+		}
+		else if ( bSelectedByMe )
+		{
+			card->SetSelected(true);
+			card->SetLocked(false);
+		}
+		else
+		{
+			card->SetSelected(false);
+			card->SetLocked(false);
+		}
+	}
+}
+
+void UOSCharSelectWidget::OnMySelectRejected(FName CharacterID, const FString& Reason)
+{
+	// 선택 거부 -> 선택 해제 
+	SelectedID = NAME_None;
+	ClearSelections();
+	RefreshCardStates();
+	UpdateButtonStates();
+	
+	// 상태 메시지 표시
+	if ( StatusText )
+	{
+		StatusText->SetText(FText::FromString(Reason));
+		StatusText->SetColorAndOpacity(FSlateColor(FLinearColor(0.9f, 0.2f, 0.2f, 1.f)));
+		StatusText->SetVisibility(ESlateVisibility::Visible);
+	}
+}
+
+void UOSCharSelectWidget::OnConfirmClicked()
+{
+	if (SelectedID.IsNone()) return;
+
+	// ── 서버에 확정 요청 ──
+	APlayerController* PC = GetOwningPlayer();
+	if (!PC) return;
+	AOSPlayerState* PS = Cast<AOSPlayerState>(PC->PlayerState);
+	if (!PS) return;
+	PS->Server_RequestConfirmCharacter();
+
+	if (ConfirmButtonText) ConfirmButtonText->SetText(FText::FromString(TEXT("확정 요청 중...")));
+}
+
+void UOSCharSelectWidget::OnCancelClicked()
+{
+	// ── 서버에 확정 취소 요청 ──
+	APlayerController* PC = GetOwningPlayer();
+	if (!PC) return;
+	AOSPlayerState* PS = Cast<AOSPlayerState>(PC->PlayerState);
+	if (!PS) return;
+	PS->Server_RequestCancelConfirm();
+
+	UpdateButtonStates();
+}
+
+// ═══════════════════════════════════════════
+//  버튼 상태 관리
+// ═══════════════════════════════════════════
+void UOSCharSelectWidget::UpdateButtonStates()
+{
+	bool bConfirmed = false;
+
+	APlayerController* PC = GetOwningPlayer();
+	if (PC)
+	{
+	    AOSPlayerState* PS = Cast<AOSPlayerState>(PC->PlayerState);
+	    bConfirmed = PS ? PS->IsCharacterConfirmed() : false;
+	}
+
+	if (bConfirmed)
+	{
+		if (ConfirmButton) ConfirmButton->SetIsEnabled(false);
+		if (ConfirmButtonText)
+			ConfirmButtonText->SetText(FText::FromString(TEXT("확정됨")));
+		if (CancelButton)
+			CancelButton->SetVisibility(ESlateVisibility::Visible);
+	}
+	else
+	{
+		if (ConfirmButton)
+			ConfirmButton->SetIsEnabled(!SelectedID.IsNone());
+		if (ConfirmButtonText)
+			ConfirmButtonText->SetText(FText::FromString(TEXT("확정")));
+		if (CancelButton)
+			CancelButton->SetVisibility(ESlateVisibility::Collapsed);
+	}
 }

@@ -79,10 +79,11 @@ bool AOSCharSelectGameMode::TryConfirmCharacter(AOSPlayerState* Player)
 	}
 	
 	// 레이스 컨디션 방어 - 최종 중복 체크
+	// 다른 플레이어가 '같은' 캐릭터를 이미 확정했는지 확인
 	for (const FOSCharSelectEntry& entry : gs->CharSelectList)
 	{
 		if (entry.PlayerIndex != myEntry.PlayerIndex &&
-			entry.CharacterID != myEntry.CharacterID &&
+			entry.CharacterID == myEntry.CharacterID &&
 			entry.bConfirmed)
 		{
 			myEntry.CharacterID = NAME_None;
