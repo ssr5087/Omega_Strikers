@@ -3,8 +3,6 @@
 
 #include "EXPSpawnPoint.h"
 
-#include "EXPOrb.h"
-
 
 // Sets default values
 AEXPSpawnPoint::AEXPSpawnPoint()
@@ -13,25 +11,5 @@ AEXPSpawnPoint::AEXPSpawnPoint()
 	PrimaryActorTick.bCanEverTick = false;
 }
 
-bool AEXPSpawnPoint::CanSpawnOrb() const
-{
-	return !bHasOrb && !IsValid(SpawnedOrb);
-}
 
-void AEXPSpawnPoint::RegisterOrb(AEXPOrb* InOrb)
-{
-	SpawnedOrb = InOrb;
-	bHasOrb = IsValid(InOrb);
-}
-
-void AEXPSpawnPoint::ClearOrb(const AEXPOrb* InOrb)
-{
-	if (InOrb && SpawnedOrb != InOrb)
-	{
-		return;
-	}
-
-	SpawnedOrb = nullptr;
-	bHasOrb = false;
-}
 

@@ -6,7 +6,6 @@
 #include "GameFramework/PlayerController.h"
 #include "Omega_Strikers/SM/OSPlayerController.h"
 #include "Omega_Strikers/SSR/EXPOrb.h"
-#include "Omega_Strikers/SSR/EXPSpawnPoint.h"
 #include "OSTopDownController.generated.h"
 
 /**

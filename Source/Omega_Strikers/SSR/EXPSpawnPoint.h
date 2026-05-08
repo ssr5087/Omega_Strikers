@@ -15,14 +15,6 @@ public:
 	// Sets default values for this actor's properties
 	AEXPSpawnPoint();
 
-	bool CanSpawnOrb() const;
-	void RegisterOrb(class AEXPOrb* InOrb);
-	void ClearOrb(const class AEXPOrb* InOrb = nullptr);
-
 	// 이미 Orb가 있는지 체크용
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="EXP")
 	bool bHasOrb = false;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="EXP")
-	TObjectPtr<class AEXPOrb> SpawnedOrb;
 };

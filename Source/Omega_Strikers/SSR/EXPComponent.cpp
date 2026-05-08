@@ -10,7 +10,7 @@
 // Sets default values for this component's properties
 UEXPComponent::UEXPComponent()
 {
-	PrimaryComponentTick.bCanEverTick = true;
+	PrimaryComponentTick.bCanEverTick = false;
 	SetIsReplicated(true);
 	
 }
@@ -39,47 +39,24 @@ void UEXPComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorCo
 
 void UEXPComponent::Server_AddEXP_Implementation(int32 Amount)
 {
-	AddEXPInternal(Amount);
+	AddEXP(Amount);
 }
 
 void UEXPComponent::AddEXP(int32 Amount)
 {
-	if (Amount <= 0)
-	{
-		return;
-	}
-
-	if (!GetOwner())
-	{
-		return;
-	}
-
 	if (!GetOwner()->HasAuthority())
-	{
-		Server_AddEXP(Amount);
 		return;
-	}
-
-	AddEXPInternal(Amount);
-}
-
-void UEXPComponent::AddEXPInternal(int32 Amount)
-{
-	if (!GetOwner() || !GetOwner()->HasAuthority() || Amount <= 0)
-	{
-		return;
-	}
-
+	
 	CurrentEXP += Amount;
 	
 	APlayerBase* Player = Cast<APlayerBase>(GetOwner());
 	if (!Player)
 		return;
 	
-	while (CurrentEXP >= MaxEXP)
+	if (CurrentEXP >= MaxEXP)
 	{
-		CurrentEXP -= MaxEXP;
 		LevelUP();
+		
 	}
 }
 
@@ -95,6 +72,7 @@ void UEXPComponent::LevelUP()
 	// CurrentEXP = 0;
 	
 	Player->Level++;
+	CurrentEXP -= MaxEXP;
 	
 	UE_LOG(LogTemp, Warning, TEXT("Level UP! ->  %d"), Player->Level);
 	

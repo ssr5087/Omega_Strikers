@@ -103,7 +103,6 @@ public:
 	class ACoreArena* ArenaRef = nullptr;
 	
 protected:
-	
 	virtual void BeginPlay() override;
 	
 	UPROPERTY()
@@ -126,13 +125,13 @@ public:
 	
 	UPROPERTY()
 	TArray<AEXPSpawnPoint*> SpawnPoints;
-
+	
 	FTimerHandle SpawnTimer;
 
-	UFUNCTION(BlueprintCallable, Category="EXP")
+	UFUNCTION()
 	void SpawnEXPOrbs();
 	
-	UFUNCTION(BlueprintCallable, Category="EXP")
+	UFUNCTION()
 	void SpawnAllEXPOrbs();
 	
 	UFUNCTION()

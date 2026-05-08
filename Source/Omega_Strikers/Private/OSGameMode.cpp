@@ -47,24 +47,27 @@ void AOSGameMode::BeginPlay()
 	
 	LOG_GT(TEXT("플레이어 대기중"))
 	
+	
 	// 경험치오브 스폰액터 관리
+	
+	// 서버에서 처리
+	// if (!HasAuthority())
+	// 	return;
+	
 	TArray<AActor*> FoundActors;
 	
-	UGameplayStatics::GetAllActorsOfClass(
-		GetWorld(),
-		AEXPSpawnPoint::StaticClass(),
-		FoundActors
-	);
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AEXPSpawnPoint::StaticClass(), FoundActors);
 	
 	for (AActor* Actor : FoundActors)
 	{
-		if (AEXPSpawnPoint* Point = Cast<AEXPSpawnPoint>(Actor))
+		AEXPSpawnPoint* SpawnPoint = Cast<AEXPSpawnPoint>(Actor);
+
+		if (SpawnPoint)
 		{
-			SpawnPoints.Add(Point);
+			SpawnPoints.Add(SpawnPoint);
 		}
 	}
 	
-	LOG_SR_E(TEXT("경험치 오브 생성"));
 	// 시작 즉시 한번 생성
 	SpawnAllEXPOrbs();
 	
@@ -285,6 +288,7 @@ void AOSGameMode::SpawnCoreBall()
 }
 
 
+
 void AOSGameMode::OnGoalScored(int32 ScoringTeam)
 {
 	AOSGameState* gs = GetGameState<AOSGameState>();
@@ -347,11 +351,10 @@ void AOSGameMode::EndMatch(int32 WinningTeam)
 	// TODO: 결과 화면 -> 일정 시간 후 로비로 복귀
 }
 
+// 경험치 EXPOrb 스폰
 void AOSGameMode::SpawnEXPOrbs()
 {
 	if (SpawnPoints.Num() < 3) return;
-	
-	
 
 	// 랜덤 셔플
 	TArray<AEXPSpawnPoint*> Shuffled = SpawnPoints;
@@ -392,32 +395,31 @@ void AOSGameMode::SpawnAllEXPOrbs()
 {
 	for (AEXPSpawnPoint* Point : SpawnPoints)
 	{
-		if (!Point) 
-			return;
-		
+		if (!Point) continue;
+
 		FActorSpawnParameters Params;
-		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-		
+		Params.SpawnCollisionHandlingOverride =
+			ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
 		AEXPOrb* Orb = GetWorld()->SpawnActor<AEXPOrb>(
 			EXPOrbClass,
 			Point->GetActorLocation(),
 			FRotator::ZeroRotator,
 			Params
 		);
-		
+
 		if (Orb)
 		{
-			Point->bHasOrb = true;
+			LOG_GT(TEXT("초기 Orb 생성 완료"));
 		}
 	}
 }
 
 void AOSGameMode::OnOrbDestroyed(AActor* DestroyedActor)
 {
-	AEXPOrb* Orb =Cast<AEXPOrb>(DestroyedActor);
-	if (!Orb)
-		return;
-	
+	AEXPOrb* Orb = Cast<AEXPOrb>(DestroyedActor);
+	if (!Orb) return;
+
 	for (AEXPSpawnPoint* Point : SpawnPoints)
 	{
 		if (Point && Point->GetActorLocation().Equals(Orb->GetActorLocation(), 1.f))
@@ -427,4 +429,3 @@ void AOSGameMode::OnOrbDestroyed(AActor* DestroyedActor)
 		}
 	}
 }
-
