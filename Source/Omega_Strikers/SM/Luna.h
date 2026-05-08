@@ -182,6 +182,13 @@ public:
 
 	// ----------------- Primary -----------------
 	
+	// 스킬 사용 입력(LShift 뗐을 때) 시 서버 RPC
+	UFUNCTION(Server, Reliable)
+	void ServerRPC_StartPrimarySkill(FVector2D SpawnDir);
+	
+	// 서버에서 스킬 사용 확정 시 클라 시선처리용 멀티캐스트 RPC
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRPC_StartPrimaryLook();
 	
 	// ---------------- Secondary ----------------
 	
@@ -201,5 +208,13 @@ public:
 	
 	
 	// ----------------- Special -----------------	
+	
+	// 스킬 사용 입력(R 뗐을 때) 시 서버 RPC
+	UFUNCTION(Server, Reliable)
+	void ServerRPC_StartSpecialSkill(FVector SpawnLoc);
+	
+	// 서버에서 스킬 사용 확정 시 클라 시선처리용 멀티캐스트 RPC
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRPC_StartSpecialLook();
 
 };

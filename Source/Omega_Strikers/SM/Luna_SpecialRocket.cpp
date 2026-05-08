@@ -3,6 +3,7 @@
 
 #include "Luna_SpecialRocket.h"
 
+#include "Luna.h"
 #include "PlayerBase.h"
 #include "Components/BoxComponent.h"
 #include "Core/CoreBall.h"
@@ -15,6 +16,10 @@ ALuna_SpecialRocket::ALuna_SpecialRocket()
 {
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+	
+	// 동기화 옵션 설정
+	bReplicates = true;
+	SetReplicateMovement(true);
 	
 	BoxComp = CreateDefaultSubobject<UBoxComponent>("BoxComp");
 	SetRootComponent(BoxComp);
@@ -44,24 +49,40 @@ void ALuna_SpecialRocket::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	
+	// 어차피 서버에서만 스폰되지만 혹시 모르니까
+	if (!HasAuthority()) {return;}
+	
 	SetActorLocation(GetActorLocation() + GetActorForwardVector() * DeltaTime * 5000);
 }
 
 void ALuna_SpecialRocket::InitRocket(AActor* InOwnerActor)
 {
-	OwnerActorRef = InOwnerActor;
+	// 어차피 서버에서만 스폰되지만 혹시 모르니까
+	if (!HasAuthority()) {return;}
 	
-	// 데이터 적용 필요
-	SpecialNearImpactData.CoreKnockbackPower = 3000.f;
-	SpecialNearImpactData.PlayerKnockbackPower = 300.f;
-	SpecialNearImpactData.PlayerDamage = 100.f;
-	SpecialFarImpactData.CoreKnockbackPower = 5000.f;
-	SpecialFarImpactData.PlayerKnockbackPower = 500.f;
-	SpecialFarImpactData.PlayerDamage = 200.f;
+	// 데이터 셋 불러올 PlayerBase(Luna)로 캐스팅
+	OwnerActorRef = Cast<ALuna>(InOwnerActor);
+	
+	// 실패 시 리턴
+	if (!IsValid(OwnerActorRef)) {return;}
+	
+	// 성공 시 데이터 셋 불러오기
+	FCharacterSkill* SkillFar = OwnerActorRef->GetSkillData(FName(TEXT("Luna_Special_Outer")));
+	FCharacterSkill* SkillNear = OwnerActorRef->GetSkillData(FName(TEXT("Luna_Special_Center")));
+	
+	// 데이터 셋 로드 실패 시 리턴
+	if (!SkillFar || !SkillNear) {return;}
+	
+	// 데이터 적용
+	SpecialFarImpactData = OwnerActorRef->MakeImpactData(*SkillFar);
+	SpecialNearImpactData = OwnerActorRef->MakeImpactData(*SkillNear);
 }
 
 void ALuna_SpecialRocket::OnSpecialRocketOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
+	// 어차피 서버에서만 스폰되지만 혹시 모르니까
+	if (!HasAuthority()) {return;}
+	
 	// 충돌 지점의 월드 위치
 	FVector2D fallLoc = FVector2D(GetActorLocation().X, GetActorLocation().Y);
 	

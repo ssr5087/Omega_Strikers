@@ -40,7 +40,7 @@ public:
 	FOSImpactData SpecialFarImpactData;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Rocket")
-	TObjectPtr<AActor> OwnerActorRef = nullptr;
+	TObjectPtr<class ALuna> OwnerActorRef = nullptr;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Rocket")
 	EOSTeam TeamSide = EOSTeam::Red;
