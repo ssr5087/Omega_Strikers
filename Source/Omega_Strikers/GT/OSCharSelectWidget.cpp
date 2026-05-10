@@ -16,6 +16,8 @@
 void UOSCharSelectWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
+
+	GetWorld()->GetTimerManager().ClearTimer(BindTimerHandle);
 	
 	// UI 전용 입력 모드로 전환 - 마우스는 위젯에서만 동작
 	if (APlayerController* pc = GetOwningPlayer())
@@ -49,16 +51,7 @@ void UOSCharSelectWidget::NativeConstruct()
 		CachedGameState->OnCharSelectListUpdated.AddDynamic(this, &UOSCharSelectWidget::OnCharSelectListUpdated);
 	}
 	
-	// PlayerState 거부 알림 구독
-	if ( APlayerController* pc = GetOwningPlayer() )
-	{
-		AOSPlayerState* ps = Cast<AOSPlayerState>(pc->PlayerState);
-		if (ps)
-		{
-		    ps->OnSelectRejected.AddDynamic(
-		        this, &UOSCharSelectWidget::OnMySelectRejected);
-		}
-	}
+	TryBindPlayerState();
 	
 	// 초기 UI 반영
 	RefreshCardStates();
@@ -264,6 +257,8 @@ void UOSCharSelectWidget::OnBackClicked()
 
 void UOSCharSelectWidget::NativeDestruct()
 {
+	GetWorld()->GetTimerManager().ClearTimer(BindTimerHandle);
+	
 	if ( CachedGameState )
 	{
 		CachedGameState->OnCharSelectListUpdated.RemoveDynamic(this, &UOSCharSelectWidget::OnCharSelectListUpdated);
@@ -411,4 +406,37 @@ void UOSCharSelectWidget::UpdateButtonStates()
 		if (ConfirmButtonText) ConfirmButtonText->SetText(FText::FromString(TEXT("선택")));
 		if (CancelButton) CancelButton->SetVisibility(ESlateVisibility::Collapsed);
 	}
+}
+
+void UOSCharSelectWidget::OnMyConfirmChanged(AOSPlayerState* Player, bool bConfirmed)
+{
+	LOG_GT_W(TEXT("★★ Widget: OnMyConfirmChanged bConfirmed=%d"), bConfirmed);
+	RefreshCardStates();
+	UpdateButtonStates();
+}
+
+void UOSCharSelectWidget::TryBindPlayerState()
+{
+	APlayerController* pc = GetOwningPlayer();
+	if (!pc) return;
+
+	AOSPlayerState* ps = Cast<AOSPlayerState>(pc->PlayerState);
+	if (!ps)
+	{
+		// PlayerState 아직 없음 → 0.1초 후 재시도
+		GetWorld()->GetTimerManager().SetTimer(
+			BindTimerHandle, this, 
+			&UOSCharSelectWidget::TryBindPlayerState, 0.1f, false);
+		return;
+	}
+
+	// 바인딩 성공
+	ps->OnSelectRejected.AddDynamic(this, &UOSCharSelectWidget::OnMySelectRejected);
+	ps->OnPlayerConfirmChanged.AddDynamic(this, &UOSCharSelectWidget::OnMyConfirmChanged);
+    
+	// 혹시 이미 확정된 상태면 즉시 반영
+	UpdateButtonStates();
+	RefreshCardStates();
+    
+	LOG_GT_W(TEXT("★ PlayerState 바인딩 완료: %s"), *ps->GetPlayerName());
 }

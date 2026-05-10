@@ -10,6 +10,7 @@
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnTeamAssigned, AOSPlayerState*, Player, int32, TeamID);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnSelectRejected, FName, CharacterID, const FString&, Reason);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPlayerConfirmChanged, AOSPlayerState*, Player, bool, bConfirmed);
 
 UCLASS()
 class OMEGA_STRIKERS_API AOSPlayerState : public APlayerState
@@ -96,6 +97,9 @@ public:
 	// ═══════════════════════════════════════════
 	UPROPERTY(BlueprintAssignable, Category="OS|Events")
 	FOnTeamAssigned OnTeamAssigned;
+
+	UPROPERTY(BlueprintAssignable, Category = "OS|Events")
+	FOnPlayerConfirmChanged OnPlayerConfirmChanged;
 	
 private:
 	UPROPERTY(ReplicatedUsing = OnRep_TeamID)
@@ -120,6 +124,9 @@ private:
 	UFUNCTION()
 	void OnRep_TeamID();
 
-	UPROPERTY(Replicated)
+	UPROPERTY(ReplicatedUsing=OnRep_bCharacterConfirmed)
 	bool bCharacterConfirmed = false;
+
+	UFUNCTION()
+	void OnRep_bCharacterConfirmed();
 };

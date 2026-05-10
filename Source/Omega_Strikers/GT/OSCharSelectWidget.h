@@ -9,6 +9,7 @@
 #include "Omega_Strikers/SSR/CharacterStat.h"
 #include "OSCharSelectWidget.generated.h"
 
+class AOSPlayerState;
 struct FCharacterStat;
 class UOSCharCardWidget;
 class UButton;
@@ -148,4 +149,11 @@ private:
 	
 	// 확정/취소 버튼 상태 갱신
 	void UpdateButtonStates();
+
+	UFUNCTION()
+	void OnMyConfirmChanged(AOSPlayerState* Player, bool bConfirmed);
+
+	FTimerHandle BindTimerHandle;
+
+	void TryBindPlayerState();
 };
