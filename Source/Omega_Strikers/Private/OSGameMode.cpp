@@ -3,6 +3,7 @@
 
 #include "OSGameMode.h"
 
+#include "OSGameInstance.h"
 #include "OSGameState.h"
 #include "OSPlayerState.h"
 #include "Core/CoreArena.h"
@@ -80,6 +81,54 @@ void AOSGameMode::BeginPlay()
 	);
 }
 
+// ═══════════════════════════════════════════════════════
+// ★ 선택된 캐릭터에 맞는 Pawn 클래스 반환
+// ═══════════════════════════════════════════════════════
+UClass* AOSGameMode::GetDefaultPawnClassForController_Implementation(AController* InController)
+{
+	if (!InController) return DefaultPawnClass;
+	
+	// 1) GameInstance에서 선택된 캐릭터 ID 가져오기
+	UOSGameInstance* gi = Cast<UOSGameInstance>(GetGameInstance());
+	if ( !gi )
+	{
+		LOG_GT_E(TEXT("GameInstance 캐스팅 실패 → DefaultPawn"));
+		return DefaultPawnClass;
+	}
+	
+	// PlayerController의 NetPlayerIndex로 조회
+	APlayerController* pc = Cast<APlayerController>(InController);
+	if ( !pc )
+	{
+		return DefaultPawnClass;
+	}
+	
+	const int32 playerIndex = pc->NetPlayerIndex;
+	const FName characterID = gi->GetCharacterSelection(playerIndex);
+	
+	if ( characterID.IsNone() )
+	{
+		LOG_GT_E(TEXT("Player_%d 캐릭터 미선택 → DefaultPawn"), playerIndex);
+		return DefaultPawnClass;
+	}
+	
+	// 2) CharacterPawnMap에서 PawnClass 조회
+	TSubclassOf<APlayerBase>* foundClass = CharacterPawnMap.Find(characterID);
+	if ( foundClass && *foundClass )
+	{
+		LOG_GT(TEXT("Player_%d → %s → %s"),
+			playerIndex,
+			*characterID.ToString(),
+			*(*foundClass)->GetName());
+		return *foundClass;
+	}
+	
+	// 3) 매핑 없음 → DefaultPawn
+	LOG_GT_E(TEXT("Player_%d: '%s' CharacterPawnMap에 매핑 없음 → DefaultPawn"),
+		playerIndex, *characterID.ToString());
+	return DefaultPawnClass;
+}
+
 void AOSGameMode::PostLogin(APlayerController* NewPlayer)
 {
 	Super::PostLogin(NewPlayer);
@@ -87,13 +136,23 @@ void AOSGameMode::PostLogin(APlayerController* NewPlayer)
 	if (!NewPlayer) return;
 	
 	// ** 팀 배정
-	int32 AssignedTeam = AssignTeam(NewPlayer);
+	int32 assignedTeam = AssignTeam(NewPlayer);
 	AOSPlayerState* ps = NewPlayer->GetPlayerState<AOSPlayerState>();
 	
-	if (ps)
+	if ( ps )
 	{
-		ps->SetTeamID(AssignedTeam);
-		LOG_GT(TEXT("Player %s 소속 팀 : %d"), *ps->GetPlayerName(), AssignedTeam);
+		ps->SetTeamID(assignedTeam);
+		LOG_GT(TEXT("Player %s 소속 팀 : %d"), *ps->GetPlayerName(), assignedTeam);
+	}
+
+	// ★ GameInstance에서 선택 캐릭터 로그
+	UOSGameInstance* gi = Cast<UOSGameInstance>(GetGameInstance());
+	if ( gi )
+	{
+		FName CharID = gi->GetCharacterSelection(NewPlayer->NetPlayerIndex);
+		LOG_GT(TEXT("Player %s 선택 캐릭터: %s"),
+			*NewPlayer->GetName(),
+			CharID.IsNone() ? TEXT("(없음)") : *CharID.ToString());
 	}
 	
 	// ** 인원 체크 -> 자동 시작
@@ -286,8 +345,6 @@ void AOSGameMode::SpawnCoreBall()
 			spawnLocation.X, spawnLocation.Y, spawnLocation.Z);
 	}
 }
-
-
 
 void AOSGameMode::OnGoalScored(int32 ScoringTeam)
 {

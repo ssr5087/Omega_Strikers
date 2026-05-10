@@ -187,3 +187,25 @@ void UOSGameInstance::GameToStart()
 {
 	GetWorld()->ServerTravel(TEXT("/Game/Maps/Arena?listen?port=7777"));
 }
+
+// ═══════════════════════════════════════════════════════
+//  ★ 캐릭터 선택 저장/조회
+// ═══════════════════════════════════════════════════════
+
+void UOSGameInstance::SaveCharacterSelection(int32 PlayerIndex, FName CharacterID)
+{
+	CharacterSelections.Add(PlayerIndex, CharacterID);
+	LOG_GT(TEXT("캐릭터 저장 [Player_%d] -> %s"), PlayerIndex, *CharacterID.ToString());
+}
+
+FName UOSGameInstance::GetCharacterSelection(int32 PlayerIndex) const
+{
+	const FName* found = CharacterSelections.Find(PlayerIndex);
+	return found ? *found : NAME_None;
+}
+
+void UOSGameInstance::ClearCharacterSelections()
+{
+	CharacterSelections.Empty();
+	LOG_GT(TEXT("캐릭터 선택 초기화"));
+}
