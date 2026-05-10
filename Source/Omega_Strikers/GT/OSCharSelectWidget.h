@@ -71,9 +71,6 @@ private:
 	UUniformGridPanel* CharacterGrid;
 	
 	UPROPERTY(meta = (BindWidget))
-	UButton* SelectButton;
-	
-	UPROPERTY(meta = (BindWidget))
 	UButton* BackButton;
 	
 	// 상태 표시
@@ -134,13 +131,9 @@ private:
 
 	UFUNCTION()
 	void OnMySelectRejected(FName CharacterID, const FString& Reason);
-
 	
 	UFUNCTION()
 	void OnCardClicked(FName CharacterID);
-	
-	UFUNCTION()
-	void OnSelectClicked();
 	
 	UFUNCTION()
 	void OnBackClicked();

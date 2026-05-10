@@ -24,11 +24,6 @@ void UOSCharSelectWidget::NativeConstruct()
 		pc->SetShowMouseCursor(true);
 	}
 	
-	if (SelectButton)
-	{
-		SelectButton->OnClicked.AddDynamic(this, &UOSCharSelectWidget::OnSelectClicked);
-	}
-	
 	if (BackButton)
 	{
 		BackButton->OnClicked.AddDynamic(this, &UOSCharSelectWidget::OnBackClicked);
@@ -262,13 +257,6 @@ void UOSCharSelectWidget::OnCardClicked(FName CharacterID)
 // ═══════════════════════════════════════════
 //  선택 확정 / 뒤로 / 확정 취소
 // ═══════════════════════════════════════════
-void UOSCharSelectWidget::OnSelectClicked()
-{
-	if (SelectedID.IsNone()) return;
-	
-	OnConfirmed.Broadcast(SelectedID);
-}
-
 void UOSCharSelectWidget::OnBackClicked()
 {
 	RemoveFromParent();
@@ -380,6 +368,7 @@ void UOSCharSelectWidget::OnConfirmClicked()
 	AOSPlayerState* PS = Cast<AOSPlayerState>(PC->PlayerState);
 	if (!PS) return;
 	PS->Server_RequestConfirmCharacter();
+	OnConfirmed.Broadcast(SelectedID);
 
 	if (ConfirmButtonText) ConfirmButtonText->SetText(FText::FromString(TEXT("확정 요청 중...")));
 }
@@ -413,18 +402,13 @@ void UOSCharSelectWidget::UpdateButtonStates()
 	if (bConfirmed)
 	{
 		if (ConfirmButton) ConfirmButton->SetIsEnabled(false);
-		if (ConfirmButtonText)
-			ConfirmButtonText->SetText(FText::FromString(TEXT("확정됨")));
-		if (CancelButton)
-			CancelButton->SetVisibility(ESlateVisibility::Visible);
+		if (ConfirmButtonText) ConfirmButtonText->SetText(FText::FromString(TEXT("확정")));
+		if (CancelButton) CancelButton->SetVisibility(ESlateVisibility::Visible);
 	}
 	else
 	{
-		if (ConfirmButton)
-			ConfirmButton->SetIsEnabled(!SelectedID.IsNone());
-		if (ConfirmButtonText)
-			ConfirmButtonText->SetText(FText::FromString(TEXT("확정")));
-		if (CancelButton)
-			CancelButton->SetVisibility(ESlateVisibility::Collapsed);
+		if (ConfirmButton) ConfirmButton->SetIsEnabled(!SelectedID.IsNone());
+		if (ConfirmButtonText) ConfirmButtonText->SetText(FText::FromString(TEXT("선택")));
+		if (CancelButton) CancelButton->SetVisibility(ESlateVisibility::Collapsed);
 	}
 }
