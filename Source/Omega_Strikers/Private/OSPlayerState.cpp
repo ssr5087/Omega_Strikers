@@ -44,6 +44,12 @@ void AOSPlayerState::OnRep_TeamID()
 	LOG_GT(TEXT("Player assigned to Team %d"), TeamID);
 }
 
+void AOSPlayerState::OnRep_bCharacterConfirmed()
+{
+	LOG_GT(TEXT("★ OnRep_bCharacterConfirmed: %s, bConfirmed=%d"), *GetPlayerName(), bCharacterConfirmed);
+	OnPlayerConfirmChanged.Broadcast(this, bCharacterConfirmed);
+}
+
 // ═══════════════════════════════════════════════════════
 // 캐릭터 선택 (클라이언트 → 서버 RPC)
 // ═══════════════════════════════════════════════════════
@@ -128,10 +134,18 @@ void AOSPlayerState::Server_RequestSelectCharacter_Implementation(FName Characte
 void AOSPlayerState::Server_RequestConfirmCharacter_Implementation()
 {
 	AOSCharSelectGameMode* gm = GetWorld()->GetAuthGameMode<AOSCharSelectGameMode>();
+	LOG_GT(TEXT("▶ ConfirmCharacter: GM=%s, SelectedCharacter=%s"), 
+		gm ? TEXT("OK") : TEXT("NULL"), *SelectedCharacter.ToString());
 	if ( !gm ) return;
 	
 	bool bOK = gm->TrySelectCharacter(this, SelectedCharacter);
-	if ( bOK ) bCharacterConfirmed = true;
+	LOG_GT(TEXT("▶ TrySelectCharacter 결과: %s"), bOK ? TEXT("SUCCESS") : TEXT("FAIL"));
+	if ( bOK )
+	{
+		bCharacterConfirmed = true;
+		OnRep_bCharacterConfirmed();
+		
+	}
 	else Client_OnSelectRejected(SelectedCharacter, TEXT("확정 실패 — 캐릭터를 먼저 선택하거나 중복을 확인하세요."));
 }
 
@@ -142,6 +156,7 @@ void AOSPlayerState::Server_RequestCancelConfirm_Implementation()
 
 	gm->CancelConfirmCharacter(this);
 	bCharacterConfirmed = false;
+	OnRep_bCharacterConfirmed();
 }
 
 void AOSPlayerState::Client_OnSelectRejected_Implementation(FName CharacterID, const FString& Reason)
