@@ -5,6 +5,7 @@
 
 #include "OSCharSelectGameState.h"
 #include "OSCharSelectTypes.h"
+#include "OSGameInstance.h"
 #include "OSPlayerState.h"
 #include "Omega_Strikers/Omega_Strikers.h"
 
@@ -153,6 +154,32 @@ void AOSCharSelectGameMode::OnAllPlayersConfirmed()
 {
 	LOG_GT(TEXT("=== 전원 확정! 아레나 이동 ==="));
 	
+	// ★ GameInstance에 캐릭터 선택 저장
+	UOSGameInstance* gi = Cast<UOSGameInstance>(GetGameInstance());
+	if ( gi )
+	{
+		AOSCharSelectGameState* gs = GetGameState<AOSCharSelectGameState>();
+		if (gs)
+		{
+			gi->ClearCharacterSelections();
+			
+			for (const FOSCharSelectEntry& entry : gs->CharSelectList)
+			{
+				if (entry.bConfirmed && !entry.CharacterID.IsNone())
+				{
+					gi->SaveCharacterSelection(entry.PlayerIndex, entry.CharacterID);
+				}
+			}
+		}
+		
+		LOG_GT(TEXT("GameInstance에 %d명 캐릭터 선택 저장 완료"), gi->GetAllSelections().Num());
+	}
+	else
+	{
+		LOG_GT_W(TEXT("GameInstance 캐스팅 실패! Project Settings → Game Instance Class 확인"));
+	}
+	
+	// 아레나로 이동
 	UWorld* world = GetWorld();
 	if ( world )
 	{

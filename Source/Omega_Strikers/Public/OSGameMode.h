@@ -8,6 +8,7 @@
 #include "Omega_Strikers/SSR/EXPSpawnPoint.h"
 #include "OSGameMode.generated.h"
 
+class APlayerBase;
 // 매치 진행 단계
 UENUM(BlueprintType)
 enum class EOSMatchPhase : uint8
@@ -44,6 +45,20 @@ public:
 	
 	UPROPERTY(EditAnywhere, Category="OS|Match")
 	float RoundEndDelay = 3.0f; // 라운드 종료 후 딜레이
+
+	// ═══════════════════════════════════════════
+	// ★ 캐릭터 → Pawn 매핑
+	// ═══════════════════════════════════════════
+	
+	/**
+	 * CharacterID → Pawn 클래스 매핑
+	 * 에디터 Details에서 설정:
+	 *   "Aimi"    → BP_Aimi
+	 *   "Zentaro" → BP_Zentaro
+	 *   ...
+	 */
+	UPROPERTY(EditAnywhere, Category="OS|Character")
+	TMap<FName, TSubclassOf<APlayerBase>> CharacterPawnMap;
 	
 	// ═══════════════════════════════════════════
 	// 플레이어 관리 오버라이드
@@ -51,6 +66,9 @@ public:
 	virtual void PostLogin(APlayerController* NewPlayer) override;
 	virtual void Logout(AController* Exiting) override;
 	virtual AActor* ChoosePlayerStart_Implementation(AController* Player) override;
+
+	/** ★ 선택된 캐릭터에 맞는 Pawn 클래스 반환 */
+	virtual UClass* GetDefaultPawnClassForController_Implementation(AController* InController) override;
 	
 	// ═══════════════════════════════════════════
 	// 매치 흐름

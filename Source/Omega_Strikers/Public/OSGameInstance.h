@@ -76,11 +76,31 @@ public:
 	// 게임 시작
 	void GameToStart();
 	
-	
 	// 방 찾기 완료 콜백을 등록할 델리게이트
 	FSearchSignature onSearchCompleted;
 	
 	// 세션 검색 상태 델리게이트 추가
 	FSearchStateSignature onSearchState;
-	
+
+	// ═══════════════════════════════════════════════════════
+	//  ★ 캐릭터 선택 저장 (ServerTravel 시 PlayerState 소멸 대비)
+	//  Key: PlayerIndex (0, 1, 2, ...)
+	//  Value: CharacterID ("Aimi", "Zentaro", ...)
+	// ═══════════════════════════════════════════════════════
+
+	/** 캐릭터 선택 저장 */
+	void SaveCharacterSelection(int32 PlayerIndex, FName CharacterID);
+
+	/** 저장된 캐릭터 ID 조회 (없으면 NAME_None) */
+	FName GetCharacterSelection(int32 PlayerIndex) const;
+
+	/** 전체 선택 초기화 (새 매치 시작 시) */
+	void ClearCharacterSelections();
+
+	/** 전체 선택 맵 (디버그/로그용) */
+	const TMap<int32, FName>& GetAllSelections() const { return CharacterSelections; }
+
+private:
+	UPROPERTY()
+	TMap<int32, FName> CharacterSelections;
 };
