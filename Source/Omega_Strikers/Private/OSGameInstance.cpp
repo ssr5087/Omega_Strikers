@@ -51,6 +51,7 @@ void UOSGameInstance::CreateSession(FString roomName, int32 playerCount)
 	sessionSettings.bAllowJoinInProgress = true;
 	
 	// 6. 세션에 참여할 수 있는 공개(public) 연결의 최대 허용 수
+	LOG_SR_W(TEXT("CreateSession playerCount : %d"), playerCount);
 	sessionSettings.NumPublicConnections = playerCount;
 	
 	// 7. 커스텀 룸네임 설정
@@ -64,7 +65,6 @@ void UOSGameInstance::CreateSession(FString roomName, int32 playerCount)
 	
 	LOG_SR_W(TEXT("Create Session Start : %s"), *mySessionName);
 	sessionInterface->CreateSession(*netID, FName(mySessionName), sessionSettings);
-	
 }
 
 void UOSGameInstance::OnCreateSessionComplete(FName SessionName, bool bWasSuccessful)
@@ -91,7 +91,7 @@ void UOSGameInstance::FindOtherSession()
 	sessionSearch->bIsLanQuery = IOnlineSubsystem::Get()->GetSubsystemName() == FName("NULL");
 	
 	// 3. 최대 검색 세션 수
-	sessionSearch->MaxSearchResults = 5;
+	sessionSearch->MaxSearchResults = 100;
 	
 	// 4. 세션 검색
 	sessionInterface->FindSessions(0, sessionSearch.ToSharedRef());
