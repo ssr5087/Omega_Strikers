@@ -158,17 +158,20 @@ void AOSCharSelectGameMode::OnAllPlayersConfirmed()
 	UOSGameInstance* gi = Cast<UOSGameInstance>(GetGameInstance());
 	if ( gi )
 	{
-		AOSCharSelectGameState* gs = GetGameState<AOSCharSelectGameState>();
-		if (gs)
+		// ★ PlayerController를 순회해서 NetPlayerIndex 기준으로 저장
+		for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
 		{
-			gi->ClearCharacterSelections();
-			
-			for (const FOSCharSelectEntry& entry : gs->CharSelectList)
+			APlayerController* pc = It->Get();
+			if ( !pc ) continue;
+            
+			AOSPlayerState* ps = Cast<AOSPlayerState>(pc->PlayerState);
+			if ( !ps ) continue;
+            
+			FName charID = ps->GetSelectedCharacter();
+			if ( !charID.IsNone() )
 			{
-				if (entry.bConfirmed && !entry.CharacterID.IsNone())
-				{
-					gi->SaveCharacterSelection(entry.PlayerIndex, entry.CharacterID);
-				}
+				gi->SaveCharacterSelection(pc->NetPlayerIndex, charID);
+				LOG_GT(TEXT("저장: NetPlayerIndex=%d → %s"), pc->NetPlayerIndex, *charID.ToString());
 			}
 		}
 		
@@ -183,7 +186,16 @@ void AOSCharSelectGameMode::OnAllPlayersConfirmed()
 	UWorld* world = GetWorld();
 	if ( world )
 	{
-		const FString url = ArenaMapPath + TEXT("?listen");
+		FString url = ArenaMapPath + TEXT("?listen");
+		
+		// ★ GameMode 클래스 지정
+		if ( ArenaGameModeClass )
+		{
+			const FString gmPath = ArenaGameModeClass->GetPathName();
+			url = FString::Printf(TEXT("%s?game=%s?listen"), *ArenaMapPath, *gmPath);
+		}
+    
+		LOG_GT(TEXT("ServerTravel URL: %s"), *url);
 		world->ServerTravel(url);
 	}
 }

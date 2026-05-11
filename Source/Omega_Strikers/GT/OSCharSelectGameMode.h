@@ -39,6 +39,10 @@ protected:
 	// 아레나 맵 경로
 	UPROPERTY(EditDefaultsOnly, Category= "OS|Map")
 	FString ArenaMapPath = TEXT("/Game/Maps/Arena");
+
+	// ★ 추가: 아레나 GameMode 클래스
+	UPROPERTY(EditDefaultsOnly, Category= "OS|Map")
+	TSubclassOf<AGameModeBase> ArenaGameModeClass;
 	
 private:
 	// 전원 확정 -> 아레나 이동
