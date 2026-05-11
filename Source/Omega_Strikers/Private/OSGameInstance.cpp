@@ -185,7 +185,7 @@ void UOSGameInstance::OnJoinSessionComplete(FName SessionName, EOnJoinSessionCom
 
 void UOSGameInstance::GameToStart()
 {
-	GetWorld()->ServerTravel(TEXT("/Game/Maps/Arena?listen?port=7777"));
+	GetWorld()->ServerTravel(TEXT("/Game/Maps/CharSelect?listen?port=7777"));
 }
 
 // ═══════════════════════════════════════════════════════

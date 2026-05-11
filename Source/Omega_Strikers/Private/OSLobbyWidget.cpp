@@ -14,13 +14,13 @@
 void UOSLobbyWidget::SwitchCreatePanel()
 {
 	//Widget 활성화
-	WidgetSwitcher->SetActiveWidgetIndex(1);
+	WidgetSwitcher->SetActiveWidgetIndex(2);
 }
 
 void UOSLobbyWidget::SwitchFindPanel()
 {
 	//Widget 활성화
-	WidgetSwitcher->SetActiveWidgetIndex(2);
+	WidgetSwitcher->SetActiveWidgetIndex(3);
 	// find 안누르고 처음에 find 찾고 시작한다.
 	OnClickedFindSession();
 }
