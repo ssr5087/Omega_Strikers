@@ -320,7 +320,7 @@ void APlayerBase::KnockbackIncrease()
 	if (!HasAuthority()) {return;}
 	
 	// Stagger 상태에서는 넉백 거리가 3.5454배 증가, 간단하게 3.5로 맞춤
-	KnockbackRatio = 7.f;
+	KnockbackRatio = 13.f;
 }
 
 void APlayerBase::KnockbackDecrease()
@@ -329,7 +329,7 @@ void APlayerBase::KnockbackDecrease()
 	if (!HasAuthority()) {return;}
 	
 	// Stagger 원상복구. 추후 넉백 계수에 관한 장비 데이터가 존재할 경우 수정할 필요성 있음.
-	KnockbackRatio = 2.f;
+	KnockbackRatio = 5.f;
 }
 
 void APlayerBase::OnRep_Level()
