@@ -72,7 +72,8 @@ void UOSGameInstance::OnCreateSessionComplete(FName SessionName, bool bWasSucces
 	LOG_SR_W(TEXT("Session Name : %s, bWasSuccessful : %d"), *mySessionName, bWasSuccessful);
 	if (bWasSuccessful)
 	{
-		UGameplayStatics::OpenLevel(GetWorld(), FName(TEXT("/Game/Maps/Lobby")), true,
+		// 잠시 아레나 맵으로 설정
+		UGameplayStatics::OpenLevel(GetWorld(), FName(TEXT("/Game/Maps/Arena")), true,
 			TEXT("listen?port=7777"));
 	}
 }
