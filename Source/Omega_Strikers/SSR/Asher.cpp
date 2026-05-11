@@ -10,7 +10,6 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "Asher_AnimInstance.h"
 #include "Net/UnrealNetwork.h"
-#include "Omega_Strikers/SM/HPComponent.h"
 
 
 // Sets default values
@@ -86,16 +85,7 @@ void AAsher::Ready_SecondarySkill()
 	{
 		return;
 	}
-
-	// SecondaryDashDirection = FVector(CursorDir.X, CursorDir.Y, 0.f).GetSafeNormal();
-	// if (SecondaryDashDirection.IsNearlyZero())
-	// {
-	// 	SecondaryDashDirection = GetActorForwardVector();
-	// 	SecondaryDashDirection.Z = 0.f;
-	// 	SecondaryDashDirection.Normalize();
-	// }
-	//
-	// SetActorRotation(SecondaryDashDirection.Rotation());
+	
 }
 
 void AAsher::Ready_SpecialSkill()
@@ -115,7 +105,13 @@ void AAsher::Ready_Flip()
 
 void AAsher::Use_CoreHit()
 {
-	Super::Use_CoreHit();
+	bAimingCoreHit = false;
+
+	if (!IsLocallyControlled())
+		return;
+
+	ServerRPC_StartCoreHit(CursorDir);
+	ServerRPC_CoreHit(CursorDir);
 }
 
 void AAsher::Use_PrimarySkill()
@@ -492,6 +488,9 @@ UAsher_AnimInstance* AAsher::GetAsher_AnimInstance() const
 	return Cast<UAsher_AnimInstance>(GetMesh()->GetAnimInstance());
 }
 
+
+
+
 void AAsher::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -501,6 +500,24 @@ void AAsher::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimePr
 	DOREPLIFETIME(AAsher, bSpecial_SkillCoolDown);
 	DOREPLIFETIME(AAsher, bSecondary_SkillCoolDown);
 	DOREPLIFETIME(AAsher, bIsSecondary_Dashing);
+}
+
+void AAsher::ServerRPC_StartCoreHit_Implementation(FVector2D SkillDir)
+{
+	if (bCoreHitCoolDown)
+	{
+		return;
+	}
+
+	CursorDir = SkillDir.GetSafeNormal();
+	if (CursorDir.IsNearlyZero())
+	{
+		const FVector Forward = GetActorForwardVector().GetSafeNormal2D();
+		CursorDir = FVector2D(Forward.X, Forward.Y);
+	}
+
+	SetActorRotation(FVector(CursorDir.X, CursorDir.Y, 0.f).Rotation());
+	MulticastRPC_PlayCoreHit(CursorDir);
 }
 
 void AAsher::ServerRPC_StartPrimarySkill_Implementation(FVector2D SkillDir)
@@ -595,6 +612,20 @@ void AAsher::ServerRPC_StartSpecialSkill_Implementation(FVector2D SkillDir)
 		Special_SkillCool,
 		false
 	);
+}
+
+void AAsher::MulticastRPC_PlayCoreHit_Implementation(FVector2D SkillDir)
+{
+	const FVector Forward = FVector(SkillDir.X, SkillDir.Y, 0.f).GetSafeNormal();
+	if (!Forward.IsNearlyZero())
+	{
+		SetActorRotation(Forward.Rotation());
+	}
+
+	if (UAsher_AnimInstance* Anim = GetAsher_AnimInstance())
+	{
+		Anim->PlayStrike();
+	}
 }
 
 void AAsher::MulticastRPC_PlayPrimarySkill_Implementation(FVector2D SkillDir)
