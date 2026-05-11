@@ -42,6 +42,7 @@ public:
 	TObjectPtr<class UAnimMontage> SpecialMontage;
 	
 	// 재생 함수
+	void PlayStrike();
 	void PlayPrimary();
 	void PlaySecondary();
 	void PlaySpecial();

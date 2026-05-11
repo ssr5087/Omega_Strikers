@@ -28,6 +28,14 @@ void UAsher_AnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	bIsPrimaryAttacking = OwnerCharacter->bIsPrimary_Attacking;
 }
 
+void UAsher_AnimInstance::PlayStrike()
+{
+	if (StrikeMontage)
+	{
+		Montage_Play(StrikeMontage);
+	}
+}
+
 void UAsher_AnimInstance::PlayPrimary()
 {
 	if (PrimaryMontage)
@@ -35,6 +43,7 @@ void UAsher_AnimInstance::PlayPrimary()
 		Montage_Play(PrimaryMontage);
 	}
 }
+
 
 void UAsher_AnimInstance::PlaySecondary()
 {
