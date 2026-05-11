@@ -10,7 +10,6 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "Asher_AnimInstance.h"
 #include "Net/UnrealNetwork.h"
-#include "Omega_Strikers/SM/HPComponent.h"
 
 
 // Sets default values
@@ -86,16 +85,7 @@ void AAsher::Ready_SecondarySkill()
 	{
 		return;
 	}
-
-	// SecondaryDashDirection = FVector(CursorDir.X, CursorDir.Y, 0.f).GetSafeNormal();
-	// if (SecondaryDashDirection.IsNearlyZero())
-	// {
-	// 	SecondaryDashDirection = GetActorForwardVector();
-	// 	SecondaryDashDirection.Z = 0.f;
-	// 	SecondaryDashDirection.Normalize();
-	// }
-	//
-	// SetActorRotation(SecondaryDashDirection.Rotation());
+	
 }
 
 void AAsher::Ready_SpecialSkill()
