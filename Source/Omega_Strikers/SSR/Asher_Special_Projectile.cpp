@@ -14,6 +14,8 @@ AAsher_Special_Projectile::AAsher_Special_Projectile()
 {
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+	bReplicates = true;
+	SetReplicateMovement(true);
 	
 	Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 	SetRootComponent(Root);
@@ -45,11 +47,14 @@ AAsher_Special_Projectile::AAsher_Special_Projectile()
 void AAsher_Special_Projectile::BeginPlay()
 {
 	Super::BeginPlay();
-	
-	CollisionComp->OnComponentBeginOverlap.AddDynamic(
-		this,
-		&AAsher_Special_Projectile::OnHitOverlap
-	);
+
+	if (HasAuthority())
+	{
+		CollisionComp->OnComponentBeginOverlap.AddDynamic(
+			this,
+			&AAsher_Special_Projectile::OnHitOverlap
+		);
+	}
 	
 	if (ShieldClass)
 	{
@@ -65,8 +70,11 @@ void AAsher_Special_Projectile::BeginPlay()
 void AAsher_Special_Projectile::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	
-	AddActorWorldOffset(MoveDirection * Speed * DeltaTime);
+
+	if (HasAuthority())
+	{
+		AddActorWorldOffset(MoveDirection * Speed * DeltaTime);
+	}
 }
 
 void AAsher_Special_Projectile::Init(const FVector& Dir, EOSTeam InTeam)
@@ -79,12 +87,14 @@ void AAsher_Special_Projectile::Init(const FVector& Dir, EOSTeam InTeam)
 void AAsher_Special_Projectile::OnHitOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
+	if (!HasAuthority())
+	{
+		return;
+	}
 	
 	// 자기 자신 or 오너 무시
 	if (!OtherActor || OtherActor == GetOwner())
 	{
-		auto name = OtherActor->GetName();
-		//GEngine->AddOnScreenDebugMessage(1,1,FColor::Magenta,name);
 		return;
 	}
 	
@@ -94,10 +104,6 @@ void AAsher_Special_Projectile::OnHitOverlap(UPrimitiveComponent* OverlappedComp
 	
 	if (!OtherActor->Implements<UOSImpactReceiver>())
 	{
-		
-		//UE_LOG(LogTemp, Warning, );
-		auto name = OtherActor->GetName();
-		//GEngine->AddOnScreenDebugMessage(2,1,FColor::Magenta,name);
 		return;
 	}
 	

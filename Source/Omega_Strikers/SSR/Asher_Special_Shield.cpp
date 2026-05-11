@@ -13,6 +13,8 @@
 AAsher_Special_Shield::AAsher_Special_Shield()
 {
 	PrimaryActorTick.bCanEverTick = true;
+	bReplicates = true;
+	SetReplicateMovement(true);
 
 	// Root
 	Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
@@ -68,25 +70,28 @@ void AAsher_Special_Shield::BeginPlay()
 	
 	// 🔥 Owner 캐싱 (핵심)
 	OwnerPlayer = Cast<APlayerBase>(GetOwner());
-	
-	GetWorld()->GetTimerManager().SetTimer(
-		DamageTimer,
-		this,
-		&AAsher_Special_Shield::ApplyDamage,
-		DamageInterval,
-		true
-	);
-	
-	// 1.5초 후 삭제
-	GetWorld()->GetTimerManager().SetTimer(
-		LifeTimer,
-		[this]()
-		{
-			Destroy();
-		},
-		1.5f,
-		false
-	);
+
+	if (HasAuthority())
+	{
+		GetWorld()->GetTimerManager().SetTimer(
+			DamageTimer,
+			this,
+			&AAsher_Special_Shield::ApplyDamage,
+			DamageInterval,
+			true
+		);
+		
+		// 1.5초 후 삭제
+		GetWorld()->GetTimerManager().SetTimer(
+			LifeTimer,
+			[this]()
+			{
+				Destroy();
+			},
+			1.5f,
+			false
+		);
+	}
 }
 
 // Called every frame
@@ -94,8 +99,11 @@ void AAsher_Special_Shield::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	
-	// 방패 이동
-	AddActorWorldOffset(MoveDirection* MoveSpeed * DeltaTime);
+	if (HasAuthority())
+	{
+		// 방패 이동
+		AddActorWorldOffset(MoveDirection* MoveSpeed * DeltaTime);
+	}
 }
 
 void AAsher_Special_Shield::Init(const FVector& InDirection, const FRotator& InRotation)
@@ -112,6 +120,11 @@ bool AAsher_Special_Shield::IsCenter(AActor* Target)
 
 void AAsher_Special_Shield::ApplyDamage()
 {
+	if (!HasAuthority())
+	{
+		return;
+	}
+
 	if (!OwnerPlayer)
 		return;
 	

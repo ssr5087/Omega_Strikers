@@ -8,6 +8,8 @@
 #include "Core/CoreBall.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Asher_AnimInstance.h"
+#include "Net/UnrealNetwork.h"
 #include "Omega_Strikers/SM/HPComponent.h"
 
 
@@ -16,6 +18,8 @@ AAsher::AAsher()
 {
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+	SetNetUpdateFrequency(100.f);
+	SetMinNetUpdateFrequency(60.f);
 	
 	
 	// 스켈레탈 메시 설정
@@ -71,7 +75,7 @@ void AAsher::Ready_PrimarySkill()
 	if (bIsPrimary_Attacking)
 		return;
 	
-	UE_LOG(LogTemp, Warning, TEXT("1234"))
+	UE_LOG(LogTemp, Warning, TEXT("1234"));
 }
 
 void AAsher::Ready_SecondarySkill()
@@ -118,100 +122,34 @@ void AAsher::Use_PrimarySkill()
 {
 	Super::Use_PrimarySkill();
 	
-	// 스킬 쿨타임일때는 사용금지
-	if (bPrimary_SkillCoolDown)
+	if (!IsLocallyControlled())
+	{
 		return;
-	// 스킬 쿨타임일때는 사용금지
-	if (bIsPrimary_Attacking)
-		return;
-	
-	bIsPrimary_Attacking = true;
-	HitActors.Empty();
-	
-	// 1타 실행
-	DoPrimaryHit1();
-	
-	// 2타 예약
-	GetWorldTimerManager().SetTimer(
-		PrimaryHit2Timer,
-		this,
-		&AAsher::DoPrimaryHit2,
-		0.25f,
-		false
-	);
-	
-	// 콤보 종료
-	GetWorldTimerManager().SetTimer(
-		PrimaryEndTimer,
-		[this]()
-		{
-			bIsPrimary_Attacking = false;
-			Primary_SkillCool = 4.f;
-		},
-		0.6f,
-		false
-	);
+	}
+
+	ServerRPC_StartPrimarySkill(CursorDir);
 }
 
 void AAsher::Use_SecondarySkill()
 {
 	Super::Use_SecondarySkill();
 
-	if (bSecondary_SkillCoolDown || bIsSecondary_Dashing)
+	if (!IsLocallyControlled())
 	{
 		return;
 	}
-	
-	SecondaryDashDirection = FVector(CursorDir.X, CursorDir.Y, 0.f).GetSafeNormal();
-	if (SecondaryDashDirection.IsNearlyZero())
-	{
-		SecondaryDashDirection = GetActorForwardVector();
-		SecondaryDashDirection.Z = 0.f;
-		SecondaryDashDirection.Normalize();
-	}
 
-	SetActorRotation(SecondaryDashDirection.Rotation());
-
-	// if (SecondaryDashDirection.IsNearlyZero())
-	// {
-	// 	SecondaryDashDirection = FVector(CursorDir.X, CursorDir.Y, 0.f).GetSafeNormal();
-	// }
-	//
-	// if (SecondaryDashDirection.IsNearlyZero())
-	// {
-	// 	SecondaryDashDirection = GetActorForwardVector();
-	// 	SecondaryDashDirection.Z = 0.f;
-	// 	SecondaryDashDirection.Normalize();
-	// }
-
-	bSecondary_SkillCoolDown = true;
-	SecondaryHitActors.Empty();
-	DoSecondaryDash();
+	ServerRPC_StartSecondarySkill(CursorDir);
 }
 
 void AAsher::Use_SpecialSkill()
 {
 	Super::Use_SpecialSkill();
 	
-	// 쿨타임 중일때는 사용금지
-	if (bSpecial_SkillCoolDown)
+	if (!IsLocallyControlled())
 		return;
-	
-	bSpecial_SkillCoolDown = true;
-	
-	HitActors.Empty();
-	DoSpecialProjectile();
-	
-	// 👉 쿨타임 시작
-	GetWorld()->GetTimerManager().SetTimer(
-		SpecialSkillTimer,
-		[this]()
-		{
-			bSpecial_SkillCoolDown = false;
-		},
-		Special_SkillCool,
-		false
-		);
+
+	ServerRPC_StartSpecialSkill(CursorDir);
 }
 
 void AAsher::Use_Flip()
@@ -357,6 +295,13 @@ void AAsher::DoPrimaryHit2()
 void AAsher::DoSpecialProjectile()
 {
 	FVector Forward = FVector(CursorDir.X, CursorDir.Y, 0.f).GetSafeNormal();
+	if (Forward.IsNearlyZero())
+	{
+		Forward = GetActorForwardVector();
+		Forward.Z = 0.f;
+		Forward.Normalize();
+	}
+
 	FVector SpawnLocation = GetActorLocation() + Forward * 200.f;
 
 	auto Projectile = GetWorld()->SpawnActor<AAsher_Special_Projectile>(
@@ -396,6 +341,11 @@ void AAsher::DoSpecialShield(FVector SpawnLocation, FVector Direction)
 
 void AAsher::DoSecondaryDash()
 {
+	if (!HasAuthority())
+	{
+		return;
+	}
+
 	if (!GetWorld())
 	{
 		return;
@@ -440,6 +390,11 @@ void AAsher::DoSecondaryDash()
 
 void AAsher::DoSecondaryDashTrace()
 {
+	if (!HasAuthority())
+	{
+		return;
+	}
+
 	if (!GetWorld())
 	{
 		return;
@@ -509,6 +464,11 @@ void AAsher::DoSecondaryDashTrace()
 
 void AAsher::EndSecondaryDash()
 {
+	if (!HasAuthority())
+	{
+		return;
+	}
+
 	if (!bIsSecondary_Dashing)
 	{
 		return;
@@ -525,4 +485,156 @@ void AAsher::EndSecondaryDash()
 	bIsSecondary_Dashing = false;
 	SecondaryDashDirection = FVector::ZeroVector;
 	SecondaryHitActors.Empty();
+}
+
+UAsher_AnimInstance* AAsher::GetAsher_AnimInstance() const
+{
+	return Cast<UAsher_AnimInstance>(GetMesh()->GetAnimInstance());
+}
+
+void AAsher::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AAsher, bIsPrimary_Attacking);
+	DOREPLIFETIME(AAsher, bPrimary_SkillCoolDown);
+	DOREPLIFETIME(AAsher, bSpecial_SkillCoolDown);
+	DOREPLIFETIME(AAsher, bSecondary_SkillCoolDown);
+	DOREPLIFETIME(AAsher, bIsSecondary_Dashing);
+}
+
+void AAsher::ServerRPC_StartPrimarySkill_Implementation(FVector2D SkillDir)
+{
+	if (bPrimary_SkillCoolDown || bIsPrimary_Attacking)
+	{
+		return;
+	}
+
+	CursorDir = SkillDir.GetSafeNormal();
+	if (CursorDir.IsNearlyZero())
+	{
+		const FVector Forward = GetActorForwardVector().GetSafeNormal2D();
+		CursorDir = FVector2D(Forward.X, Forward.Y);
+	}
+
+	bIsPrimary_Attacking = true;
+	HitActors.Empty();
+	SetActorRotation(FVector(CursorDir.X, CursorDir.Y, 0.f).Rotation());
+	MulticastRPC_PlayPrimarySkill(CursorDir);
+
+	DoPrimaryHit1();
+
+	GetWorldTimerManager().SetTimer(
+		PrimaryHit2Timer,
+		this,
+		&AAsher::DoPrimaryHit2,
+		0.25f,
+		false
+	);
+
+	GetWorldTimerManager().SetTimer(
+		PrimaryEndTimer,
+		[this]()
+		{
+			bIsPrimary_Attacking = false;
+			Primary_SkillCool = 4.f;
+		},
+		0.6f,
+		false
+	);
+}
+
+void AAsher::ServerRPC_StartSecondarySkill_Implementation(FVector2D SkillDir)
+{
+	if (bSecondary_SkillCoolDown || bIsSecondary_Dashing)
+	{
+		return;
+	}
+
+	SecondaryDashDirection = FVector(SkillDir.X, SkillDir.Y, 0.f).GetSafeNormal();
+	if (SecondaryDashDirection.IsNearlyZero())
+	{
+		SecondaryDashDirection = GetActorForwardVector();
+		SecondaryDashDirection.Z = 0.f;
+		SecondaryDashDirection.Normalize();
+	}
+
+	SetActorRotation(SecondaryDashDirection.Rotation());
+	bSecondary_SkillCoolDown = true;
+	SecondaryHitActors.Empty();
+	MulticastRPC_PlaySecondarySkill(FVector2D(SecondaryDashDirection.X, SecondaryDashDirection.Y));
+	DoSecondaryDash();
+}
+
+void AAsher::ServerRPC_StartSpecialSkill_Implementation(FVector2D SkillDir)
+{
+	if (bSpecial_SkillCoolDown)
+	{
+		return;
+	}
+
+	CursorDir = SkillDir.GetSafeNormal();
+	if (CursorDir.IsNearlyZero())
+	{
+		const FVector Forward = GetActorForwardVector().GetSafeNormal2D();
+		CursorDir = FVector2D(Forward.X, Forward.Y);
+	}
+
+	SetActorRotation(FVector(CursorDir.X, CursorDir.Y, 0.f).Rotation());
+	bSpecial_SkillCoolDown = true;
+	HitActors.Empty();
+	MulticastRPC_PlaySpecialSkill(CursorDir);
+	DoSpecialProjectile();
+
+	GetWorld()->GetTimerManager().SetTimer(
+		SpecialSkillTimer,
+		[this]()
+		{
+			bSpecial_SkillCoolDown = false;
+		},
+		Special_SkillCool,
+		false
+	);
+}
+
+void AAsher::MulticastRPC_PlayPrimarySkill_Implementation(FVector2D SkillDir)
+{
+	const FVector Forward = FVector(SkillDir.X, SkillDir.Y, 0.f).GetSafeNormal();
+	if (!Forward.IsNearlyZero())
+	{
+		SetActorRotation(Forward.Rotation());
+	}
+
+	if (UAsher_AnimInstance* Anim = GetAsher_AnimInstance())
+	{
+		Anim->PlayPrimary();
+	}
+}
+
+void AAsher::MulticastRPC_PlaySecondarySkill_Implementation(FVector2D SkillDir)
+{
+	const FVector Forward = FVector(SkillDir.X, SkillDir.Y, 0.f).GetSafeNormal();
+	if (!Forward.IsNearlyZero())
+	{
+		SetActorRotation(Forward.Rotation());
+	}
+
+	if (UAsher_AnimInstance* Anim = GetAsher_AnimInstance())
+	{
+		Anim->PlaySecondary();
+	}
+}
+
+void AAsher::MulticastRPC_PlaySpecialSkill_Implementation(FVector2D SkillDir)
+{
+	const FVector Forward = FVector(SkillDir.X, SkillDir.Y, 0.f).GetSafeNormal();
+	if (!Forward.IsNearlyZero())
+	{
+		SetActorRotation(Forward.Rotation());
+	}
+
+	if (UAsher_AnimInstance* Anim = GetAsher_AnimInstance())
+	{
+		Anim->PlaySpecial();
+	}
 }

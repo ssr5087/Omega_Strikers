@@ -3,9 +3,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "CharacterStat.h"
 #include "PlayerBase.h"
 #include "Asher.generated.h"
+
+class UAsher_AnimInstance;
+
 
 UCLASS()
 class OMEGA_STRIKERS_API AAsher : public APlayerBase
@@ -28,6 +30,8 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 public:
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 	virtual void Ready_CoreHit() override;
 	virtual void Ready_PrimarySkill() override;
 	virtual void Ready_SecondarySkill() override;
@@ -45,6 +49,7 @@ public:
 public:
 	// Primary Skill
 	// 콤보 상태일때
+	UPROPERTY(Replicated)
 	bool bIsPrimary_Attacking = false;
 	// 맞은 대상 기록 (중복 방지)
 	TSet<AActor*> HitActors;
@@ -53,6 +58,7 @@ public:
 	FTimerHandle PrimaryEndTimer;
 	
 	// boolean 스킬 쿨타임 체크
+	UPROPERTY(Replicated)
 	bool bPrimary_SkillCoolDown = false;
 	
 	// 스킬 쿨타임 시간
@@ -74,6 +80,7 @@ public:
 	TSubclassOf<class AAsher_Special_Shield> SpecialShieldClass;
 	
 	// boolean 스킬 쿨타임 체크
+	UPROPERTY(Replicated)
 	bool bSpecial_SkillCoolDown = false;
 	
 	// 스킬 타이머 설정
@@ -90,7 +97,9 @@ public:
 	// ---------------------------------------
 	
 	// Secondary Skill
+	UPROPERTY(Replicated)
 	bool bSecondary_SkillCoolDown = false;
+	UPROPERTY(Replicated)
 	bool bIsSecondary_Dashing = false;
 
 	FTimerHandle SecondarySkillTimer;
@@ -119,4 +128,27 @@ public:
 	void DoSecondaryDash();
 	void DoSecondaryDashTrace();
 	void EndSecondaryDash();
+	
+	// 애니메이션
+	
+	UAsher_AnimInstance* GetAsher_AnimInstance() const;
+
+	UFUNCTION(Server, Reliable)
+	void ServerRPC_StartPrimarySkill(FVector2D SkillDir);
+
+	UFUNCTION(Server, Reliable)
+	void ServerRPC_StartSecondarySkill(FVector2D SkillDir);
+
+	UFUNCTION(Server, Reliable)
+	void ServerRPC_StartSpecialSkill(FVector2D SkillDir);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRPC_PlayPrimarySkill(FVector2D SkillDir);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRPC_PlaySecondarySkill(FVector2D SkillDir);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRPC_PlaySpecialSkill(FVector2D SkillDir);
+	
 };
