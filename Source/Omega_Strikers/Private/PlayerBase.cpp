@@ -18,6 +18,7 @@
 #include "Omega_Strikers/SM/OSPlayerController.h"
 #include "Omega_Strikers/SSR/CharacterSkill.h"
 #include "Omega_Strikers/SSR/EXPComponent.h"
+#include "SkillIndicatorBase.h"
 
 // Sets default values
 APlayerBase::APlayerBase()
@@ -125,9 +126,63 @@ void APlayerBase::BeginPlay()
 // ════════════════════════════════════════════════════════════
 void APlayerBase::ClearAllAiming()
 {
+	bAimingCoreHit   = false;
 	bAimingPrimary   = false;
 	bAimingSecondary = false;
 	bAimingSpecial   = false;
+	HideSkillIndicator();
+}
+
+void APlayerBase::ShowSkillIndicator(TSubclassOf<ASkillIndicatorBase> IndicatorClass, ESkillType SkillType)
+{
+	if (!IsLocallyControlled())
+	{
+		return;
+	}
+
+	HideSkillIndicator();
+
+	UClass* SpawnClass = IndicatorClass ? IndicatorClass.Get() : ASkillIndicatorBase::StaticClass();
+	if (!SpawnClass || !GetWorld())
+	{
+		return;
+	}
+
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = this;
+	SpawnParams.Instigator = this;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	CurrentIndicator = GetWorld()->SpawnActor<ASkillIndicatorBase>(
+		SpawnClass,
+		GetActorLocation(),
+		GetActorRotation(),
+		SpawnParams);
+
+	if (!CurrentIndicator)
+	{
+		return;
+	}
+
+	ConfigureSkillIndicator(SkillType, CurrentIndicator);
+	CurrentIndicator->UpdateIndicator(this);
+}
+
+void APlayerBase::HideSkillIndicator()
+{
+	if (!CurrentIndicator)
+	{
+		return;
+	}
+
+	CurrentIndicator->Destroy();
+	CurrentIndicator = nullptr;
+}
+
+void APlayerBase::ConfigureSkillIndicator(ESkillType SkillType, ASkillIndicatorBase* Indicator)
+{
+	(void)SkillType;
+	(void)Indicator;
 }
 
 // Called every frame
@@ -160,6 +215,11 @@ void APlayerBase::Tick(float DeltaTime)
 		}
 		
 		//GEngine->AddOnScreenDebugMessage(2, DeltaTime, FColor::Cyan, FString::Printf(TEXT("조준 방향 : (%.2f, %.2f)"), CursorDir.X, CursorDir.Y));
+	}
+
+	if (IsLocallyControlled() && CurrentIndicator)
+	{
+		CurrentIndicator->UpdateIndicator(this);
 	}
 }
 
@@ -249,7 +309,7 @@ void APlayerBase::Ready_Flip() {}
 
 void APlayerBase::Use_CoreHit()
 {
-	bAimingCoreHit = false;
+	ClearAllAiming();
 	
 	// 클라에서만 실행
 	if (!IsLocallyControlled()) {return;}
@@ -257,11 +317,11 @@ void APlayerBase::Use_CoreHit()
 	ServerRPC_CoreHit(CursorDir);
 }
 
-void APlayerBase::Use_PrimarySkill() { bAimingPrimary = false; }
+void APlayerBase::Use_PrimarySkill() { ClearAllAiming(); }
 
-void APlayerBase::Use_SecondarySkill() { bAimingSecondary = false; }
+void APlayerBase::Use_SecondarySkill() { ClearAllAiming(); }
 
-void APlayerBase::Use_SpecialSkill() { bAimingSpecial = false; }
+void APlayerBase::Use_SpecialSkill() { ClearAllAiming(); }
 
 void APlayerBase::Use_Flip() {}
 

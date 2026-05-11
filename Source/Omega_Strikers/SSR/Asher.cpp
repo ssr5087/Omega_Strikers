@@ -10,6 +10,7 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "Asher_AnimInstance.h"
 #include "Net/UnrealNetwork.h"
+#include "SkillIndicatorBase.h"
 
 
 // Sets default values
@@ -45,6 +46,39 @@ void AAsher::BeginPlay()
 	UE_LOG(LogTemp, Warning, TEXT("Power: %.1f"), CurrentStat.Power);
 }
 
+// 스킬 사거리 표시
+void AAsher::ConfigureSkillIndicator(ESkillType SkillType, ASkillIndicatorBase* Indicator)
+{
+	Super::ConfigureSkillIndicator(SkillType, Indicator);
+
+	if (!Indicator)
+	{
+		return;
+	}
+
+	float IndicatorRange = 0.f;
+
+	switch (SkillType)
+	{
+	case ESkillType::Primary:
+		IndicatorRange = 175.f;
+		break;
+
+	case ESkillType::Secondary:
+		IndicatorRange = Secondary_DashDistance;
+		break;
+
+	case ESkillType::Special:
+		IndicatorRange = 500.f;
+		break;
+
+	default:
+		return;
+	}
+
+	Indicator->SetIndicatorRange(IndicatorRange);
+}
+
 // Called every frame
 void AAsher::Tick(float DeltaTime)
 {
@@ -65,37 +99,38 @@ void AAsher::Ready_CoreHit()
 
 void AAsher::Ready_PrimarySkill()
 {
-	Super::Ready_PrimarySkill();
-	
 	// 쿨타임 중일때는 사용금지
 	if (bPrimary_SkillCoolDown)
 		return;
 	// 콤보중일때도 사용 금지
 	if (bIsPrimary_Attacking)
 		return;
+
+	Super::Ready_PrimarySkill();
+	ShowSkillIndicator(PrimaryIndicatorClass, ESkillType::Primary);
 	
 	UE_LOG(LogTemp, Warning, TEXT("1234"));
 }
 
 void AAsher::Ready_SecondarySkill()
 {
-	Super::Ready_SecondarySkill();
-
 	if (bSecondary_SkillCoolDown || bIsSecondary_Dashing)
 	{
 		return;
 	}
-	
+
+	Super::Ready_SecondarySkill();
+	ShowSkillIndicator(SecondaryIndicatorClass, ESkillType::Secondary);
 }
 
 void AAsher::Ready_SpecialSkill()
 {
-	Super::Ready_SpecialSkill();
-	
 	// 쿨타임 중일때는 사용금지
 	if (bSpecial_SkillCoolDown)
 		return;
-	
+
+	Super::Ready_SpecialSkill();
+	ShowSkillIndicator(SpecialIndicatorClass, ESkillType::Special);
 }
 
 void AAsher::Ready_Flip()
@@ -164,7 +199,7 @@ void AAsher::DoPrimaryHit1()
 		GetWorld(),
 		Center,
 		Center,
-		150.f,
+		250.f, // 기본값 150
 		UEngineTypes::ConvertToTraceType(ECC_Pawn),
 		false,
 		TArray<AActor*>(),
@@ -216,7 +251,7 @@ void AAsher::DoPrimaryHit2()
 		GetWorld(),
 		Center,
 		Center,
-		200.f,
+		400.f,
 		UEngineTypes::ConvertToTraceType(ECC_Pawn),
 		false,
 		TArray<AActor*>(),

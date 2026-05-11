@@ -33,6 +33,9 @@ protected:
 	bool bAimingSecondary = false;
 	bool bAimingSpecial = false;
 	void ClearAllAiming();
+	void ShowSkillIndicator(TSubclassOf<class ASkillIndicatorBase> IndicatorClass, ESkillType SkillType);
+	void HideSkillIndicator();
+	virtual void ConfigureSkillIndicator(ESkillType SkillType, class ASkillIndicatorBase* Indicator);
 
 public:	
 	// Called every frame
@@ -203,5 +206,21 @@ public:
 	// 레벨업 함수 추가
 	UFUNCTION()
 	void HandleLevelUp(int32 NewLevel);
+	
+	// Ready UI 스킬 인디케이터
+	UPROPERTY()
+	class ASkillIndicatorBase* CurrentIndicator;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Indicator")
+	TSubclassOf<ASkillIndicatorBase> CoreHitIndicatorClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Indicator")
+	TSubclassOf<ASkillIndicatorBase> PrimaryIndicatorClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Indicator")
+	TSubclassOf<ASkillIndicatorBase> SecondaryIndicatorClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Indicator")
+	TSubclassOf<ASkillIndicatorBase> SpecialIndicatorClass;
 };
 
