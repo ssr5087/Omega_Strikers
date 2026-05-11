@@ -88,24 +88,6 @@ UClass* AOSGameMode::GetDefaultPawnClassForController_Implementation(AController
 {
 	if (!InController) return DefaultPawnClass;
 	
-	// 시연용 임시 코드 (알파 이후 삭제)
-	if (APlayerController* PC = Cast<APlayerController>(InController))
-	{
-		// 리슨 서버의 호스트 플레이어
-		if (PC->IsLocalController() && ServerPawnClass)
-		{
-			return ServerPawnClass;
-		}
-
-		// 접속한 클라이언트 플레이어
-		if (ClientPawnClass)
-		{
-			return ClientPawnClass;
-		}
-		
-		return Super::GetDefaultPawnClassForController_Implementation(InController);
-	}
-	
 	// 1) GameInstance에서 선택된 캐릭터 ID 가져오기
 	UOSGameInstance* gi = Cast<UOSGameInstance>(GetGameInstance());
 	if ( !gi )

@@ -154,11 +154,4 @@ public:
 	
 	UFUNCTION()
 	void OnOrbDestroyed(AActor* DestroyedActor);
-	
-	// 시연용 임시 코드(알파 이후 삭제)
-	UPROPERTY(EditDefaultsOnly, Category="Temp")
-	TSubclassOf<APawn> ServerPawnClass;
-
-	UPROPERTY(EditDefaultsOnly, Category="Temp")
-	TSubclassOf<APawn> ClientPawnClass;
 };
