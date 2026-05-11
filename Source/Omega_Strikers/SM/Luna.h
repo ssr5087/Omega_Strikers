@@ -73,6 +73,12 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stat|SkillRange")
 	float PrimaryRange = 5000.f;
 	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
+	TSubclassOf<class ULunaSkillCool> CoolTimeUI;
+	
+	UPROPERTY()
+	class ULunaSkillCool* skillUI;
+	
 	// =================== Skill ===================
 	
 	virtual void PlayerMove(const struct FInputActionValue& InputActionValue) override;
@@ -200,8 +206,8 @@ public:
 	UFUNCTION(Server, Unreliable)
 	void ServerRPC_UpdateSecondaryDirection(FVector2D AimDir);
 	
-	// UFUNCTION(NetMulticast, Reliable)
-	// void MulticastRPC_RejectSecondarySkill();
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRPC_StartSecondaryCool();
 	
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastRPC_EndSecondarySkill();
