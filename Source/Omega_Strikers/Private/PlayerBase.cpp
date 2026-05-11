@@ -320,7 +320,7 @@ void APlayerBase::KnockbackIncrease()
 	if (!HasAuthority()) {return;}
 	
 	// Stagger 상태에서는 넉백 거리가 3.5454배 증가, 간단하게 3.5로 맞춤
-	KnockbackRatio = 3.5f;
+	KnockbackRatio = 7.f;
 }
 
 void APlayerBase::KnockbackDecrease()
@@ -329,7 +329,7 @@ void APlayerBase::KnockbackDecrease()
 	if (!HasAuthority()) {return;}
 	
 	// Stagger 원상복구. 추후 넉백 계수에 관한 장비 데이터가 존재할 경우 수정할 필요성 있음.
-	KnockbackRatio = 1.f;
+	KnockbackRatio = 2.f;
 }
 
 void APlayerBase::OnRep_Level()
@@ -392,6 +392,7 @@ FOSImpactData APlayerBase:: MakeImpactData(const FCharacterSkill& Skill)
 	Data.PlayerKnockbackPower = Skill.PlayerKB_Flat + (CurrentStat.Power * Skill.PlayerKB_Scale);
 	// 코어 넉백
 	Data.CoreKnockbackPower = Skill.CoreKB_Flat + (CurrentStat.Power * Skill.CoreKB_Scale);
+	Data.CoreKnockbackPower *= 2;
 	
 	return Data;
 }
@@ -461,6 +462,7 @@ void APlayerBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 	
 	DOREPLIFETIME(APlayerBase, TeamSide);
 	DOREPLIFETIME(APlayerBase, KnockbackRatio);
+	DOREPLIFETIME(APlayerBase, bCoreHitCoolDown);
 	
 	// EXP
 	DOREPLIFETIME(APlayerBase, Level);
