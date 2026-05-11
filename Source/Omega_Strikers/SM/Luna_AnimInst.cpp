@@ -30,13 +30,11 @@ void ULuna_AnimInst::NativeUpdateAnimation(float DeltaSeconds)
 
 void ULuna_AnimInst::AnimNotify_PrimarySpawn()
 {
-	LOG_SM_E(TEXT("스폰 노티파이까지 잘 온 거냐? 클라도 오면 2개 뜨는 거냐?"));
 	Luna->SpawnPrimaryRocket();
 }
 
 void ULuna_AnimInst::AnimNotify_PrimarySpawnEnd()
 {
-	LOG_SM_E(TEXT("종료 노티파이까지 잘 온 거냐? 클라도 오면 2개 뜨는 거냐?"));
 	Luna->End_PrimarySkill();
 }
 

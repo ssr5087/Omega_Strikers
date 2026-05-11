@@ -7,6 +7,8 @@
 #include "InputActionValue.h"
 #include "Luna_PrimaryRocket.h"
 #include "Luna_SpecialRocket.h"
+#include "Blueprint/UserWidget.h"
+#include "LunaSkillCool.h"
 #include "Components/BoxComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -54,6 +56,19 @@ void ALuna::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	// 내가 조작 중인 캐릭터가 루나일 때만 UI 붙이기
+	if (IsLocallyControlled())
+	{
+		LOG_SM_W(TEXT("나 얘 조작 중인데"));
+		// UI 붙이기
+		skillUI = CreateWidget<ULunaSkillCool>(GetWorld(), CoolTimeUI);
+		if (skillUI)
+		{
+			LOG_SM_W(TEXT("붙었냐?"));
+			skillUI->AddToViewport();
+		}
+	}
+	
 	// 임의 설정
 	TeamSide = EOSTeam::Red;
 }
@@ -98,6 +113,11 @@ void ALuna::Ready_CoreHit()
 void ALuna::Use_CoreHit()
 {
 	Super::Use_CoreHit();
+	
+	if (IsLocallyControlled() && skillUI)
+	{
+		skillUI->LoadCore();
+	}
 }
 
 // ==================================================================
@@ -406,6 +426,10 @@ void ALuna::ServerRPC_StartPrimarySkill_Implementation(FVector2D SpawnDir)
 
 void ALuna::MulticastRPC_StartPrimaryLook_Implementation()
 {
+	if (IsLocallyControlled() && skillUI)
+	{
+		skillUI->LoadPrim();
+	}
 	GetCharacterMovement()->bOrientRotationToMovement = false;
 	SetActorRotation(UKismetMathLibrary::MakeRotFromXZ(FVector(PrimaryDir.X, PrimaryDir.Y, 0), GetActorUpVector()));
 }
@@ -452,10 +476,21 @@ void ALuna::ServerRPC_StartSecondarySkill_Implementation(FVector2D StartDir)
 	// 처리 중 변수 세팅
 	bIsProcessingSecondary = true;
 	
+	// 쿨타임 UI 애니메이션 재생
+	MulticastRPC_StartSecondaryCool();
+	
 	// 쿨타임 관리
 	bSecondarySkillCoolDown = true;
 	FTimerHandle SecondarySkillTimer;
 	GetWorld()->GetTimerManager().SetTimer(SecondarySkillTimer, [this]()->void {bSecondarySkillCoolDown = false;}, SecondarySkillCool, false);
+}
+
+void ALuna::MulticastRPC_StartSecondaryCool_Implementation()
+{
+	if (IsLocallyControlled() && skillUI)
+	{
+		skillUI->LoadSeco();
+	}
 }
 
 void ALuna::ServerRPC_UpdateSecondaryDirection_Implementation(FVector2D AimDir)
@@ -526,6 +561,10 @@ void ALuna::ServerRPC_StartSpecialSkill_Implementation(FVector SpawnLoc)
 
 void ALuna::MulticastRPC_StartSpecialLook_Implementation()
 {
+	if (IsLocallyControlled() && skillUI)
+	{
+		skillUI->LoadSpec();
+	}
 	GetCharacterMovement()->bOrientRotationToMovement = false;
 	SetActorRotation(UKismetMathLibrary::MakeRotFromXZ(FVector(CursorDir.X, CursorDir.Y, 0), GetActorUpVector()));
 }
