@@ -138,8 +138,8 @@ void AOSPlayerState::Server_RequestConfirmCharacter_Implementation()
 		gm ? TEXT("OK") : TEXT("NULL"), *SelectedCharacter.ToString());
 	if ( !gm ) return;
 	
-	bool bOK = gm->TrySelectCharacter(this, SelectedCharacter);
-	LOG_GT(TEXT("▶ TrySelectCharacter 결과: %s"), bOK ? TEXT("SUCCESS") : TEXT("FAIL"));
+	bool bOK = gm->TryConfirmCharacter(this);
+	LOG_GT(TEXT("▶ TryConfirmCharacter 결과: %s"), bOK ? TEXT("SUCCESS") : TEXT("FAIL"));
 	if ( bOK )
 	{
 		bCharacterConfirmed = true;
