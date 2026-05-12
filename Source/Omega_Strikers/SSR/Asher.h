@@ -21,6 +21,7 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+	virtual void ConfigureSkillIndicator(ESkillType SkillType, class ASkillIndicatorBase* Indicator) override;
 
 public:
 	// Called every frame
@@ -37,7 +38,7 @@ public:
 	virtual void Ready_SecondarySkill() override;
 	virtual void Ready_SpecialSkill() override;
 	virtual void Ready_Flip() override;
-	
+
 	virtual void Use_CoreHit() override;
 	virtual void Use_PrimarySkill() override;
 	virtual void Use_SecondarySkill() override;
@@ -133,6 +134,10 @@ public:
 	
 	UAsher_AnimInstance* GetAsher_AnimInstance() const;
 
+	// 네트워크 동기화
+	UFUNCTION(Server, Reliable)
+	void ServerRPC_StartCoreHit(FVector2D SkillDir);
+
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_StartPrimarySkill(FVector2D SkillDir);
 
@@ -141,6 +146,9 @@ public:
 
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_StartSpecialSkill(FVector2D SkillDir);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRPC_PlayCoreHit(FVector2D SkillDir);
 
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastRPC_PlayPrimarySkill(FVector2D SkillDir);

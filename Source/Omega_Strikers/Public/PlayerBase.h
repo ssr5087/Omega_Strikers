@@ -33,6 +33,9 @@ protected:
 	bool bAimingSecondary = false;
 	bool bAimingSpecial = false;
 	void ClearAllAiming();
+	void ShowSkillIndicator(TSubclassOf<class ASkillIndicatorBase> IndicatorClass, ESkillType SkillType);
+	void HideSkillIndicator();
+	virtual void ConfigureSkillIndicator(ESkillType SkillType, class ASkillIndicatorBase* Indicator);
 
 public:	
 	// Called every frame
@@ -136,6 +139,9 @@ public:
 	// Impact Data 처리 함수(인터페이스 함수)
 	virtual bool ReceiveImpact_Implementation(const FOSImpactData& ImpactData, AActor* InstigatorActor) override;
 	void ApplyKnockback(FVector2D KnockbackDir, float KnockbackPow);
+
+	// 같은 프레임/연쇄 충돌에서 ReceiveImpact가 재진입하는 것을 방지
+	bool bIsProcessingImpact = false;
 	
 	// 넉백 계수 관리 함수
 	void KnockbackIncrease();
@@ -203,5 +209,21 @@ public:
 	// 레벨업 함수 추가
 	UFUNCTION()
 	void HandleLevelUp(int32 NewLevel);
+	
+	// Ready UI 스킬 인디케이터
+	UPROPERTY()
+	class ASkillIndicatorBase* CurrentIndicator;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Indicator")
+	TSubclassOf<ASkillIndicatorBase> CoreHitIndicatorClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Indicator")
+	TSubclassOf<ASkillIndicatorBase> PrimaryIndicatorClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Indicator")
+	TSubclassOf<ASkillIndicatorBase> SecondaryIndicatorClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Indicator")
+	TSubclassOf<ASkillIndicatorBase> SpecialIndicatorClass;
 };
 
