@@ -7,6 +7,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Omega_Strikers/SM/OSImpactReceiver.h"
 #include "PlayerBase.h"
+#include "Omega_Strikers/Omega_Strikers.h"
 
 
 // Sets default values
@@ -73,6 +74,9 @@ void AAsher_Special_Shield::BeginPlay()
 
 	if (HasAuthority())
 	{
+		// 첫 틱이 늦게 시작되면 "한 번만 맞는 것처럼" 보일 수 있어서 즉시 1회 적용
+		ApplyDamage();
+
 		GetWorld()->GetTimerManager().SetTimer(
 			DamageTimer,
 			this,
@@ -88,7 +92,7 @@ void AAsher_Special_Shield::BeginPlay()
 			{
 				Destroy();
 			},
-			1.5f,
+			2.0f,
 			false
 		);
 	}
@@ -102,7 +106,7 @@ void AAsher_Special_Shield::Tick(float DeltaTime)
 	if (HasAuthority())
 	{
 		// 방패 이동
-		AddActorWorldOffset(MoveDirection* MoveSpeed * DeltaTime);
+		AddActorWorldOffset(MoveDirection* MoveSpeed * DeltaTime, true);
 	}
 }
 
@@ -120,6 +124,7 @@ bool AAsher_Special_Shield::IsCenter(AActor* Target)
 
 void AAsher_Special_Shield::ApplyDamage()
 {
+	LOG_SR_W(TEXT("ApplyDamage Called"));
 	if (!HasAuthority())
 	{
 		return;
@@ -129,9 +134,15 @@ void AAsher_Special_Shield::ApplyDamage()
 		return;
 	
 	HitActors.Empty(); 
+	CollisionComp->UpdateOverlaps();
 	
 	TArray<AActor*> OverlappingActors;
-	GetOverlappingActors(OverlappingActors);
+	CollisionComp->GetOverlappingActors(OverlappingActors);
+	if (OverlappingActors.Num() == 0)
+	{
+		// overlap 갱신이 지연되는 경우를 대비한 보강 판정
+		GetOverlappingActors(OverlappingActors);
+	}
 	
 	for (auto Target : OverlappingActors)
 	{
@@ -142,24 +153,25 @@ void AAsher_Special_Shield::ApplyDamage()
 		if (HitActors.Contains(Target))
 			continue;
 		
-		// // 방향 (중심 -> 대상), 수정 필요할듯
-		// FVector2D Dir = FVector2D(
-		// 	Target->GetActorLocation().X - GetActorLocation().X,
-		// 	Target->GetActorLocation().Y - GetActorLocation().Y
-		// ).GetSafeNormal();
-		
-		// FVector2D Dir = FVector2D(MoveDirection.X, MoveDirection.Y);
-		
+		LOG_SR_W(TEXT("Hit : %s"), *Target->GetName());
 		FName RowName = IsCenter(Target)
 			? TEXT("Asher_Special_Center")
-			: TEXT("Asher_Special_Edge");
+			: TEXT("Asher_Special_Side");
 		
 		FCharacterSkill* Skill = OwnerPlayer->GetSkillData(RowName);
 		if (!Skill)
-			return;
+			continue;
 		
 		// 🔥 CSV 기반 데미지 계산
 		FOSImpactData Data = OwnerPlayer->MakeImpactData(*Skill);
+		
+		// 추가
+		FVector2D Dir = FVector2D(
+	Target->GetActorLocation().X - GetActorLocation().X,
+	Target->GetActorLocation().Y - GetActorLocation().Y
+		).GetSafeNormal();
+
+		Data.Direction = Dir;
 		
 		IOSImpactReceiver::Execute_ReceiveImpact(Target, Data, this);
 		

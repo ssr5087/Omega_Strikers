@@ -47,6 +47,8 @@ AAsher_Special_Projectile::AAsher_Special_Projectile()
 void AAsher_Special_Projectile::BeginPlay()
 {
 	Super::BeginPlay();
+	
+	SetLifeSpan(5.0);
 
 	if (HasAuthority())
 	{
