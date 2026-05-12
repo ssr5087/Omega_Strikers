@@ -96,19 +96,26 @@ UClass* AOSGameMode::GetDefaultPawnClassForController_Implementation(AController
 		return DefaultPawnClass;
 	}
 	
-	// PlayerController의 NetPlayerIndex로 조회
+	// PlayerState에서 UniqueNetId 기반 키 추출
 	APlayerController* pc = Cast<APlayerController>(InController);
-	if ( !pc )
+	if ( !pc || !pc->PlayerState )
 	{
+		LOG_GT_E(TEXT("PC 또는 PlayerState 없음 → DefaultPawn"));
 		return DefaultPawnClass;
 	}
 	
-	const int32 playerIndex = pc->NetPlayerIndex;
-	const FName characterID = gi->GetCharacterSelection(playerIndex);
+	const FString playerKey = UOSGameInstance::GetPlayerKey(pc->PlayerState);
+	const FName characterID = gi->GetCharacterSelection(playerKey);
 	
 	if ( characterID.IsNone() )
 	{
-		LOG_GT_E(TEXT("Player_%d 캐릭터 미선택 → DefaultPawn"), playerIndex);
+		LOG_GT_E(TEXT("[%s] 캐릭터 미선택 → DefaultPawn"), *playerKey);
+		
+		// ★ 디버그: 저장된 전체 목록 출력
+		for (const auto& pair : gi->GetAllSelections())
+		{
+			LOG_GT(TEXT("  저장된 키: [%s] → %s"), *pair.Key, *pair.Value.ToString());
+		}
 		return DefaultPawnClass;
 	}
 	
@@ -116,16 +123,16 @@ UClass* AOSGameMode::GetDefaultPawnClassForController_Implementation(AController
 	TSubclassOf<APlayerBase>* foundClass = CharacterPawnMap.Find(characterID);
 	if ( foundClass && *foundClass )
 	{
-		LOG_GT(TEXT("Player_%d → %s → %s"),
-			playerIndex,
+		LOG_GT(TEXT("[%s] → %s → %s"),
+			*playerKey,
 			*characterID.ToString(),
 			*(*foundClass)->GetName());
 		return *foundClass;
 	}
 	
 	// 3) 매핑 없음 → DefaultPawn
-	LOG_GT_E(TEXT("Player_%d: '%s' CharacterPawnMap에 매핑 없음 → DefaultPawn"),
-		playerIndex, *characterID.ToString());
+	LOG_GT_E(TEXT("[%s]: '%s' CharacterPawnMap에 매핑 없음 → DefaultPawn"),
+		*playerKey, *characterID.ToString());
 	return DefaultPawnClass;
 }
 
@@ -147,11 +154,13 @@ void AOSGameMode::PostLogin(APlayerController* NewPlayer)
 
 	// ★ GameInstance에서 선택 캐릭터 로그
 	UOSGameInstance* gi = Cast<UOSGameInstance>(GetGameInstance());
-	if ( gi )
+	if ( gi && ps )
 	{
-		FName CharID = gi->GetCharacterSelection(NewPlayer->NetPlayerIndex);
-		LOG_GT(TEXT("Player %s 선택 캐릭터: %s"),
+		FString playerKey = UOSGameInstance::GetPlayerKey(ps);
+		FName CharID = gi->GetCharacterSelection(playerKey);
+		LOG_GT(TEXT("Player %s [%s] 선택 캐릭터: %s"),
 			*NewPlayer->GetName(),
+			*playerKey,
 			CharID.IsNone() ? TEXT("(없음)") : *CharID.ToString());
 	}
 	

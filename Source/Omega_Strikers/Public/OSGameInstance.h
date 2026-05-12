@@ -89,18 +89,20 @@ public:
 	// ═══════════════════════════════════════════════════════
 
 	/** 캐릭터 선택 저장 */
-	void SaveCharacterSelection(int32 PlayerIndex, FName CharacterID);
+	void SaveCharacterSelection(const FString& PlayerKey, FName CharacterID);
 
 	/** 저장된 캐릭터 ID 조회 (없으면 NAME_None) */
-	FName GetCharacterSelection(int32 PlayerIndex) const;
+	FName GetCharacterSelection(const FString& PlayerKey) const;
 
 	/** 전체 선택 초기화 (새 매치 시작 시) */
 	void ClearCharacterSelections();
 
 	/** 전체 선택 맵 (디버그/로그용) */
-	const TMap<int32, FName>& GetAllSelections() const { return CharacterSelections; }
+	const TMap<FString, FName>& GetAllSelections() const { return CharacterSelections; }
 
+	/** PlayerState에서 고유 키 추출 헬퍼 */
+	static FString GetPlayerKey(const APlayerState* PS);
 private:
 	UPROPERTY()
-	TMap<int32, FName> CharacterSelections;
+	TMap<FString, FName> CharacterSelections;
 };

@@ -158,7 +158,9 @@ void AOSCharSelectGameMode::OnAllPlayersConfirmed()
 	UOSGameInstance* gi = Cast<UOSGameInstance>(GetGameInstance());
 	if ( gi )
 	{
-		// ★ PlayerController를 순회해서 NetPlayerIndex 기준으로 저장
+		gi->ClearCharacterSelections();
+		
+		// ★ PlayerController → PlayerState → UniqueNetId 로 저장
 		for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
 		{
 			APlayerController* pc = It->Get();
@@ -168,11 +170,12 @@ void AOSCharSelectGameMode::OnAllPlayersConfirmed()
 			if ( !ps ) continue;
             
 			FName charID = ps->GetSelectedCharacter();
-			if ( !charID.IsNone() )
-			{
-				gi->SaveCharacterSelection(pc->NetPlayerIndex, charID);
-				LOG_GT(TEXT("저장: NetPlayerIndex=%d → %s"), pc->NetPlayerIndex, *charID.ToString());
-			}
+			if ( charID.IsNone() ) continue;
+			
+			FString playerKey = UOSGameInstance::GetPlayerKey(ps);
+			gi->SaveCharacterSelection(playerKey, charID);
+			
+			LOG_GT(TEXT("저장 : [%s] → %s"), *playerKey, *charID.ToString());
 		}
 		
 		LOG_GT(TEXT("GameInstance에 %d명 캐릭터 선택 저장 완료"), gi->GetAllSelections().Num());

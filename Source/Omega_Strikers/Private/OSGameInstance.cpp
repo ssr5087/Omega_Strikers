@@ -5,6 +5,7 @@
 #include "Omega_Strikers/Omega_Strikers.h"
 #include "OnlineSubsystem.h"
 #include "OnlineSessionSettings.h"
+#include "GameFramework/PlayerState.h"
 #include "Kismet/GameplayStatics.h"
 #include "Online/OnlineSessionNames.h"
 
@@ -101,9 +102,10 @@ void UOSGameInstance::FindOtherSession()
 void UOSGameInstance::OnFindSesssionsComplete(bool bWasSuccessful)
 {
 	// 찾기 실패시
-	if (bWasSuccessful == false)
+	if (bWasSuccessful == false || !sessionSearch.IsValid())
 	{
-		LOG_SR_W(TEXT("Session Search Failed"));
+		LOG_SR_W(TEXT("Session Search Failed or sessionSearch invalid"));
+		onSearchState.Broadcast(false);
 		return;
 	}
 	
@@ -159,6 +161,12 @@ void UOSGameInstance::OnFindSesssionsComplete(bool bWasSuccessful)
 
 void UOSGameInstance::JoinSelectedSession(int32 index)
 {
+	if (!sessionSearch.IsValid() || !sessionSearch->SearchResults.IsValidIndex(index))
+	{
+		LOG_GT_W(TEXT("JoinSelectedSession: invalid sessionSearch or index %d"), index);
+		return;
+	}
+	
 	auto sr = sessionSearch->SearchResults;
 	sessionInterface->JoinSession(0, FName(mySessionName), sr[index]);
 }
@@ -192,17 +200,10 @@ void UOSGameInstance::GameToStart()
 // ═══════════════════════════════════════════════════════
 //  ★ 캐릭터 선택 저장/조회
 // ═══════════════════════════════════════════════════════
-
-void UOSGameInstance::SaveCharacterSelection(int32 PlayerIndex, FName CharacterID)
+FString UOSGameInstance::GetPlayerKey(const APlayerState* PS)
 {
-	CharacterSelections.Add(PlayerIndex, CharacterID);
-	LOG_GT(TEXT("캐릭터 저장 [Player_%d] -> %s"), PlayerIndex, *CharacterID.ToString());
-}
-
-FName UOSGameInstance::GetCharacterSelection(int32 PlayerIndex) const
-{
-	const FName* found = CharacterSelections.Find(PlayerIndex);
-	return found ? *found : NAME_None;
+	if ( !PS ) return FString();
+	return PS->GetPlayerName();
 }
 
 void UOSGameInstance::ClearCharacterSelections()
@@ -210,3 +211,17 @@ void UOSGameInstance::ClearCharacterSelections()
 	CharacterSelections.Empty();
 	LOG_GT(TEXT("캐릭터 선택 초기화"));
 }
+
+void UOSGameInstance::SaveCharacterSelection(const FString& PlayerKey, FName CharacterID)
+{
+	CharacterSelections.Add(PlayerKey, CharacterID);
+	LOG_GT(TEXT("캐릭터 저장 [%s] -> %s"), *PlayerKey, *CharacterID.ToString());
+}
+
+FName UOSGameInstance::GetCharacterSelection(const FString& PlayerKey) const
+{
+	const FName* found = CharacterSelections.Find(PlayerKey);
+	return found ? *found : NAME_None;
+}
+
+
