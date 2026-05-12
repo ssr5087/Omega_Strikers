@@ -102,9 +102,10 @@ void UOSGameInstance::FindOtherSession()
 void UOSGameInstance::OnFindSesssionsComplete(bool bWasSuccessful)
 {
 	// 찾기 실패시
-	if (bWasSuccessful == false)
+	if (bWasSuccessful == false || !sessionSearch.IsValid())
 	{
-		LOG_SR_W(TEXT("Session Search Failed"));
+		LOG_SR_W(TEXT("Session Search Failed or sessionSearch invalid"));
+		onSearchState.Broadcast(false);
 		return;
 	}
 	
@@ -160,6 +161,12 @@ void UOSGameInstance::OnFindSesssionsComplete(bool bWasSuccessful)
 
 void UOSGameInstance::JoinSelectedSession(int32 index)
 {
+	if (!sessionSearch.IsValid() || !sessionSearch->SearchResults.IsValidIndex(index))
+	{
+		LOG_GT_W(TEXT("JoinSelectedSession: invalid sessionSearch or index %d"), index);
+		return;
+	}
+	
 	auto sr = sessionSearch->SearchResults;
 	sessionInterface->JoinSession(0, FName(mySessionName), sr[index]);
 }

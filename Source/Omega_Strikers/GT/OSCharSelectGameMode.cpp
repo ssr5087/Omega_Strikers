@@ -170,7 +170,7 @@ void AOSCharSelectGameMode::OnAllPlayersConfirmed()
 			if ( !ps ) continue;
             
 			FName charID = ps->GetSelectedCharacter();
-			if ( !charID.IsNone() ) continue;
+			if ( charID.IsNone() ) continue;
 			
 			FString playerKey = UOSGameInstance::GetPlayerKey(ps);
 			gi->SaveCharacterSelection(playerKey, charID);
