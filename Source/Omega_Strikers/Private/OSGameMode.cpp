@@ -23,6 +23,9 @@ AOSGameMode::AOSGameMode()
 	
 	// 심리스 트래블 지원
 	bUseSeamlessTravel = true;
+	
+	// ★ 기본 폰도 PlayerBase로 — DefaultPawn 스폰 방지
+	DefaultPawnClass = APlayerBase::StaticClass();
 }
 
 void AOSGameMode::BeginPlay()
@@ -138,8 +141,6 @@ UClass* AOSGameMode::GetDefaultPawnClassForController_Implementation(AController
 
 void AOSGameMode::PostLogin(APlayerController* NewPlayer)
 {
-	Super::PostLogin(NewPlayer);
-	
 	if (!NewPlayer) return;
 	
 	// ** 팀 배정
@@ -163,6 +164,8 @@ void AOSGameMode::PostLogin(APlayerController* NewPlayer)
 			*playerKey,
 			CharID.IsNone() ? TEXT("(없음)") : *CharID.ToString());
 	}
+
+	Super::PostLogin(NewPlayer);
 	
 	// ** 인원 체크 -> 자동 시작
 	int32 totalPlayers = GetTeamPlayerCount(0) + GetTeamPlayerCount(1);
