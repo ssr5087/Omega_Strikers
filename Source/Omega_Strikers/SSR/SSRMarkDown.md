@@ -1,29 +1,19 @@
-﻿너는 언리얼 엔진 게임 개발자야
+﻿# 역할
+너는 언리얼 엔진 게임 개발자야
 
 ## 목표
 오메가 스트라이커스 모작게임을 만들고 있어
-스킬의 사거리 범위를 표시하는 기능을 구현하고 싶어
+Asher의 Special 스킬을 사용하는데 지금 오류가 나고있어
+Asher_Special_Shield가 나오고나서 이런거 같아
 
 ## 해야할 일
-1. SkillIndicator의 파일에 Primary, Secondary, Special 스킬의 사거리 범위를 넣는 기능을 넣고싶어
-2. 이걸 플레이어 베이스에서 가져와서 subclassof로 가져와서 각자 캐릭터 파일에다가 Mesh를 넣어 사거리 구현을 하고싶어
-3. Ready_Primary 같은 Ready 구현부에 넣어야 될거같아
-4. 마우스로 조준하는 게임이다보니 스킬을 꾹 누르고 있을때 마우스가 움직이면 사거리가 마우스를 따라 이동해야해
-5. 지금 기준으로 Z값 +100에서 표시할수 있게 해줘
-6. 그리고 우리가 카메라가 Z축 높은 곳에서 아래로 보고 있어 그에 맞춰서 사거리가 보여야해
-7. 일단 Asher 라는 이름이 있는 파일에다가 사용하면 돼
-8. 다하고 마지막에 한국어로 코드리뷰 해줘~~~~
-
-1. 지금 마우스를 따라서 사거리가 이동하는데 중심은 사거리는 캐릭터를 중심으로 방향만 바뀌는 걸 원해
-2. 지금 사거리 표시가 잘 안보이고 있어 아마 Asher_Shield로 메시를 쓰고 있어서 그런거 같은데
-3. 난 SkillIndicatorBase를 상속받은 블루프린트로 mesh 넣어서 사거리를 보고싶어
-
-지금 사거리 StaticMesh를 직접 만들어야하는데
-Blueprint에서 scale 값을 수정할수 있게 해줘
-Location 값도 바꿀수 있어야해 
-## 추가할 일
-지금은 scale값만 바꿀수 있어
-
+1. 여기서 stack overflow가 일어나고 있어
+2. UnrealEditor_Omega_Strikers!APlayerBase::ApplyKnockback() [C:\Unreal Projects\Omega_Strikers\Omega_Strikers\Source\Omega_Strikers\Private\PlayerBase.cpp:378]
+   UnrealEditor_Omega_Strikers!APlayerBase::ReceiveImpact_Implementation() [C:\Unreal Projects\Omega_Strikers\Omega_Strikers\Source\Omega_Strikers\Private\PlayerBase.cpp:358]
+   UnrealEditor_Omega_Strikers!IOSImpactReceiver::execReceiveImpact() [C:\Unreal Projects\Omega_Strikers\Omega_Strikers\Intermediate\Build\Win64\UnrealEditor\Inc\Omega_Strikers\UHT\OSImpactReceiver.gen.cpp:127]
+3. PlayerBase에서도 충돌이 나는거같아
+4. 한번 확인하고 수정해줘
+5. 다하고 한글로 코드리뷰해줘
 
 ## 봐야할 파일
 Asher라는 이름이 들아간 모든 파일을 사용하면 돼

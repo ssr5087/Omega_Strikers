@@ -338,6 +338,13 @@ bool APlayerBase::ReceiveImpact_Implementation(const FOSImpactData& ImpactData, 
 {
 	// 넉백, 체력 상태는 서버에서만 관리
 	if (!HasAuthority()) {return false;}
+	if (bIsProcessingImpact)
+	{
+		return false;
+	}
+	TGuardValue<bool> ImpactGuard(bIsProcessingImpact, true);
+	
+	LOG_SR_W(TEXT("Dir : %s"), *ImpactData.Direction.ToString());
 	
 	// 1. 팀 사이드 체크 (공격자의 팀 사이드가 내 팀 사이드와 다를 경우에만 적용)
 	if (ImpactData.TeamSide == TeamSide)
@@ -366,9 +373,11 @@ void APlayerBase::ApplyKnockback(FVector2D KnockbackDir, float KnockbackPow)
 	// 넉백, 체력 상태는 서버에서만 관리
 	if (!HasAuthority()) {return;}
 	
+	// SSR 테스트 용
+	
 	// 2차원 벡터로 받아서 z성분이 0인 3차원 벡터로 변환(Launch 함수에 넣기 위함)
-	FVector velocity = FVector(KnockbackDir.X, KnockbackDir.Y, 0.0f);
-	LaunchCharacter(velocity * KnockbackPow * KnockbackRatio, true, false);
+	FVector velocity = FVector(KnockbackDir.X, KnockbackDir.Y, 0.0f).GetSafeNormal();
+	LaunchCharacter(velocity * KnockbackPow * KnockbackRatio, true, true);
 	
 	// 밀려난 방향을 바라보게 설정
 	SetActorRotation(UKismetMathLibrary::MakeRotFromXZ(-velocity,GetActorUpVector()));
@@ -452,6 +461,8 @@ FOSImpactData APlayerBase:: MakeImpactData(const FCharacterSkill& Skill)
 	Data.PlayerKnockbackPower = Skill.PlayerKB_Flat + (CurrentStat.Power * Skill.PlayerKB_Scale);
 	// 코어 넉백
 	Data.CoreKnockbackPower = Skill.CoreKB_Flat + (CurrentStat.Power * Skill.CoreKB_Scale);
+	
+	LOG_SR_W(TEXT("데미지 들어감!!"));
 	
 	return Data;
 }

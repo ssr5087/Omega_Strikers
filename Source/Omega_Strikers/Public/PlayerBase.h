@@ -139,6 +139,9 @@ public:
 	// Impact Data 처리 함수(인터페이스 함수)
 	virtual bool ReceiveImpact_Implementation(const FOSImpactData& ImpactData, AActor* InstigatorActor) override;
 	void ApplyKnockback(FVector2D KnockbackDir, float KnockbackPow);
+
+	// 같은 프레임/연쇄 충돌에서 ReceiveImpact가 재진입하는 것을 방지
+	bool bIsProcessingImpact = false;
 	
 	// 넉백 계수 관리 함수
 	void KnockbackIncrease();

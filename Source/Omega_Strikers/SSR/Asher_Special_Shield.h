@@ -44,7 +44,7 @@ public:
 	FTimerHandle LifeTimer;
 	
 	UPROPERTY(EditAnywhere)
-	float DamageInterval = 0.25f;
+	float DamageInterval = 0.33f;
 	
 	// 맞은 대상 기록
 	TSet<AActor*> HitActors;
