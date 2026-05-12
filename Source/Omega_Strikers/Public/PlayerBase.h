@@ -57,6 +57,12 @@ public:
 	TObjectPtr<class UHPComponent> HPComp;
 	
 	
+	// ==================== UI =====================
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="UI")
+	TSubclassOf<class UHPStatusWidget> HPUIFactory;
+	
+	
 	// =================== Input ===================
 	
 	// IMC
