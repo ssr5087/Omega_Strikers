@@ -135,8 +135,16 @@ void ALuna_PrimaryRocket::OnRocketOverlap(UPrimitiveComponent* OverlappedCompone
 				GetWorld()->GetTimerManager().ClearTimer(DestroyTimer);
 			}
 			
-			this->Destroy();
+			bool bs = this->Destroy();
+			LOG_SM_E(TEXT("파괴됨? : %d"), bs);
 		}
 	}
+}
+
+void ALuna_PrimaryRocket::Destroyed()
+{
+	
+	LOG_SM_E(TEXT("ALuna_PrimaryRocket::Destroyed 호출됨 / Name: %s"), *GetName());
+	Super::Destroyed();
 }
 

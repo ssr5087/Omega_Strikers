@@ -3,33 +3,37 @@
 
 #include "OSPlayerController.h"
 
+#include "PlayerBase.h"
+#include "PlayerHUDWidget.h"
 #include "Blueprint/UserWidget.h"
+#include "Kismet/GameplayStatics.h"
 
 void AOSPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 	
-
-	
 	bShowMouseCursor = true;
 	bEnableClickEvents = true;
 	bEnableMouseOverEvents = true;
 	
-	// // 로비 UI 생성
-	// if (LobbyWidgetClass)
-	// {
-	// 	LobbyWidget = CreateWidget<UUserWidget>(this, LobbyWidgetClass);
-	//
-	// 	if (LobbyWidget)
-	// 	{
-	// 		LobbyWidget->AddToViewport();
-	//
-	// 		// UI 입력 모드
-	// 		FInputModeUIOnly InputMode;
-	// 		InputMode.SetWidgetToFocus(LobbyWidget->TakeWidget());
-	// 		SetInputMode(InputMode);
-	// 	}
-	// }
+	if (!IsLocalController()) {return;}
+	
+	if (!PlayerHUDWidgetClass) {return;}
+	
+	PlayerHUDWidget = CreateWidget<UPlayerHUDWidget>(this, PlayerHUDWidgetClass);
+	
+	if (PlayerHUDWidget)
+	{
+		PlayerHUDWidget->AddToViewport();
+		
+		GetWorldTimerManager().SetTimer(
+					RegisterTimer,
+					this,
+					&AOSPlayerController::RegisterExistingPlayersToHUD,
+					0.3f,
+					true
+				);
+	}
 }
 
 bool AOSPlayerController::GetMousePointOnArenaPlane(FVector& OutPoint) const
@@ -57,4 +61,32 @@ bool AOSPlayerController::GetMousePointOnArenaPlane(FVector& OutPoint) const
 	// 마우스가 찍은 월드에서의 위치 값을 입력 값에 넣은 FVector에 반환
 	OutPoint = WorldLocation + (WorldDirection * T);
 	return true;
+}
+
+UPlayerHUDWidget* AOSPlayerController::GetPlayerHUDWidget() const
+{
+	return PlayerHUDWidget;
+}
+
+void AOSPlayerController::RegisterExistingPlayersToHUD()
+{
+	if (!IsValid(PlayerHUDWidget)) {return;}
+	
+	TArray<AActor*> FoundPlayers;
+
+	UGameplayStatics::GetAllActorsOfClass(
+		GetWorld(),
+		APlayerBase::StaticClass(),
+		FoundPlayers
+	);
+
+	for (AActor* Actor : FoundPlayers)
+	{
+		APlayerBase* TargetPlayer = Cast<APlayerBase>(Actor);
+
+		if (TargetPlayer)
+		{
+			PlayerHUDWidget->RegisterPlayer(TargetPlayer);
+		}
+	}
 }

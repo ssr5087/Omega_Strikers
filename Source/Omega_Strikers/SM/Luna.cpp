@@ -75,7 +75,7 @@ void ALuna::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	
-	GEngine->AddOnScreenDebugMessage(300000, 1, FColor::Magenta, FString::Printf(TEXT("%.2f, %.2f"), CurDir.X, CurDir.Y));
+	GEngine->AddOnScreenDebugMessage(300000, 1, FColor::Magenta, FString::Printf(TEXT("%.2f, %.2f"), HPComp->CurHP, HPComp->MaxHP));
 }
 
 // Called to bind functionality to input
