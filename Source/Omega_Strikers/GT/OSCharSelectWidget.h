@@ -167,5 +167,7 @@ private:
 
 	FTimerHandle BindTimerHandle;
 
-	void TryBindPlayerState();
+	void TryBindAll();
+	
+	bool bPlayerStateBound = false;
 };

@@ -62,7 +62,8 @@ void UOSCharSelectWidget::NativeConstruct()
 		CachedGameState->OnCharSelectListUpdated.AddDynamic(this, &UOSCharSelectWidget::OnCharSelectListUpdated);
 	}
 	
-	TryBindPlayerState();
+	// ★ GameState + PlayerState 모두 타이머로 바인딩
+	TryBindAll();
 	
 	// 초기 UI 반영
 	RefreshCardStates();
@@ -428,30 +429,62 @@ void UOSCharSelectWidget::OnMyConfirmChanged(AOSPlayerState* Player, bool bConfi
 	UpdateButtonStates();
 }
 
-void UOSCharSelectWidget::TryBindPlayerState()
+void UOSCharSelectWidget::TryBindAll()
 {
-	APlayerController* pc = GetOwningPlayer();
-	if (!pc) return;
-
-	AOSPlayerState* ps = Cast<AOSPlayerState>(pc->PlayerState);
-	if (!ps)
+	bool bNeedRetry = false;
+    
+	// ── GameState 바인딩 ──
+	if (!CachedGameState)
 	{
-		// PlayerState 아직 없음 → 0.1초 후 재시도
-		GetWorld()->GetTimerManager().SetTimer(
-			BindTimerHandle, this, 
-			&UOSCharSelectWidget::TryBindPlayerState, 0.1f, false);
+		CachedGameState = GetWorld()->GetGameState<AOSCharSelectGameState>();
+		if (CachedGameState)
+		{
+			CachedGameState->OnCharSelectListUpdated.AddDynamic(
+				this, &UOSCharSelectWidget::OnCharSelectListUpdated);
+			UE_LOG(LogTemp, Warning, TEXT("★ GameState 바인딩 완료"));
+		}
+		else
+		{
+			bNeedRetry = true;
+		}
+	}
+    
+	// ── PlayerState 바인딩 ──
+	if (!bPlayerStateBound)
+	{
+		if (APlayerController* pc = GetOwningPlayer())
+		{
+			AOSPlayerState* ps = Cast<AOSPlayerState>(pc->PlayerState);
+			if (ps)
+			{
+				ps->OnSelectRejected.AddDynamic(this, &UOSCharSelectWidget::OnMySelectRejected);
+				ps->OnPlayerConfirmChanged.AddDynamic(this, &UOSCharSelectWidget::OnMyConfirmChanged);
+				bPlayerStateBound = true;
+				UE_LOG(LogTemp, Warning, TEXT("★ PlayerState 바인딩 완료: %s"), *ps->GetPlayerName());
+			}
+			else
+			{
+				bNeedRetry = true;
+			}
+		}
+	}
+    
+	// 둘 다 완료되면 초기 UI 갱신
+	if (CachedGameState && bPlayerStateBound)
+	{
+		RefreshCardStates();
+		UpdateButtonStates();
+		UpdateStartGameButton();
 		return;
 	}
-
-	// 바인딩 성공
-	ps->OnSelectRejected.AddDynamic(this, &UOSCharSelectWidget::OnMySelectRejected);
-	ps->OnPlayerConfirmChanged.AddDynamic(this, &UOSCharSelectWidget::OnMyConfirmChanged);
     
-	// 혹시 이미 확정된 상태면 즉시 반영
-	UpdateButtonStates();
-	RefreshCardStates();
-    
-	LOG_GT_W(TEXT("★ PlayerState 바인딩 완료: %s"), *ps->GetPlayerName());
+	// 아직 미완 → 0.1초 후 재시도
+	if (bNeedRetry)
+	{
+		GetWorld()->GetTimerManager().SetTimer(
+			BindTimerHandle, this,
+			&UOSCharSelectWidget::TryBindAll, 0.1f, false);
+	}
 }
 
 // ═══════════════════════════════════════════

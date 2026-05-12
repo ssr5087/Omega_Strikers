@@ -87,12 +87,20 @@ void UOSGameInstance::CreateSession(FString roomName, int32 playerCount)
 
 void UOSGameInstance::OnCreateSessionComplete(FName SessionName, bool bWasSuccessful)
 {
-	LOG_SR_W(TEXT("Session Name : %s, bWasSuccessful : %d"), *mySessionName, bWasSuccessful);
+	LOG_GT_W(TEXT("Session Name : %s, bWasSuccessful : %d"), *mySessionName, bWasSuccessful);
 	if (bWasSuccessful)
 	{
-		// 잠시 아레나 맵으로 설정
-		UGameplayStatics::OpenLevel(GetWorld(), FName(TEXT("/Game/Maps/CharSelect")), true,
-			TEXT("listen?port=7777"));
+		UWorld* World = GetWorld();
+		if (!World) return;
+        
+		// ★ 서버(호스트)에서만 트래블 — 클라이언트는 자동으로 따라감
+		if (World->GetNetMode() == NM_Client)
+		{
+			LOG_GT_W(TEXT("클라이언트이므로 ServerTravel 스킵"));
+			return;
+		}
+        
+		World->ServerTravel(TEXT("/Game/Maps/CharSelect?listen"));
 	}
 }
 
