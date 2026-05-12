@@ -111,9 +111,6 @@ void APlayerBase::BeginPlay()
 	HPComp->OnHPBecomeNegative.BindUObject(this, &APlayerBase::KnockbackIncrease);
 	HPComp->OnHPBecomePositive.BindUObject(this, &APlayerBase::KnockbackDecrease);
 	
-	// 임시 팀사이드
-	TeamSide = EOSTeam::Blue;
-	
 	if (EXPComp)
 	{
 		EXPComp->OnLevelUp.AddDynamic(this, &APlayerBase::HandleLevelUp);
