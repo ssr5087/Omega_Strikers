@@ -15,6 +15,7 @@ void AOSCharSelectGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	
 	DOREPLIFETIME(AOSCharSelectGameState, CharSelectList);
+	DOREPLIFETIME(AOSCharSelectGameState, RequiredPlayerCount);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -63,7 +64,8 @@ FString AOSCharSelectGameState::GetLockerName(FName CharacterID) const
 
 bool AOSCharSelectGameState::AreAllPlayersConfirmed() const
 {
-	if (CharSelectList.Num() == 0) return false;
+	// ★ 최소 인원 미달이면 무조건 false
+	if (CharSelectList.Num() < RequiredPlayerCount) return false;
 	
 	for (const FOSCharSelectEntry& entry : CharSelectList)
 	{

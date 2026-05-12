@@ -4,6 +4,7 @@
 #include "OSCharSelectWidget.h"
 
 #include "OSCharCardWidget.h"
+#include "OSCharSelectGameMode.h"
 #include "OSCharSelectGameState.h"
 #include "OSPlayerState.h"
 #include "Components/Button.h"
@@ -42,6 +43,16 @@ void UOSCharSelectWidget::NativeConstruct()
 		CancelButton->SetVisibility(ESlateVisibility::Collapsed);
 	}
 	
+	// ★ 게임 시작 버튼 — 호스트(서버)에게만 표시
+	if (StartGameButton)
+	{
+		StartGameButton->OnClicked.AddDynamic(this, &UOSCharSelectWidget::OnStartGameClicked);
+		
+		bool bIsHost = (GetWorld()->GetAuthGameMode() != nullptr);
+		StartGameButton->SetVisibility(bIsHost ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+		StartGameButton->SetIsEnabled(false);
+	}
+	
 	BuildGrid();
 	
 	// GameState 구독
@@ -56,6 +67,7 @@ void UOSCharSelectWidget::NativeConstruct()
 	// 초기 UI 반영
 	RefreshCardStates();
 	UpdateButtonStates();
+	UpdateStartGameButton();
 }
 
 // ═══════════════════════════════════════════
@@ -275,6 +287,7 @@ void UOSCharSelectWidget::OnCharSelectListUpdated()
 	// GameState의 선택 목록이 변경됨 -> 카드 UI 갱신
 	RefreshCardStates();
 	UpdateButtonStates();
+	UpdateStartGameButton();
 }
 
 void UOSCharSelectWidget::RefreshCardStates()
@@ -439,4 +452,36 @@ void UOSCharSelectWidget::TryBindPlayerState()
 	RefreshCardStates();
     
 	LOG_GT_W(TEXT("★ PlayerState 바인딩 완료: %s"), *ps->GetPlayerName());
+}
+
+// ═══════════════════════════════════════════
+//  ★ 게임 시작 버튼 (호스트 전용)
+// ═══════════════════════════════════════════
+void UOSCharSelectWidget::OnStartGameClicked()
+{
+	AOSCharSelectGameMode* GM = Cast<AOSCharSelectGameMode>(GetWorld()->GetAuthGameMode());
+	if (GM)
+	{
+		GM->StartArenaTravel();
+	}
+}
+
+void UOSCharSelectWidget::UpdateStartGameButton()
+{
+	if (!StartGameButton) return;
+	
+	// 호스트가 아니면 숨김 유지
+	if (GetWorld()->GetAuthGameMode() == nullptr) return;
+	
+	bool bAllConfirmed = CachedGameState ? CachedGameState->AreAllPlayersConfirmed() : false;
+	StartGameButton->SetIsEnabled(bAllConfirmed);
+	
+	if (StartGameButtonText)
+	{
+		StartGameButtonText->SetText(
+			bAllConfirmed
+			? FText::FromString(TEXT("게임 시작"))
+			: FText::FromString(TEXT("전원 확정 대기 중..."))
+		);
+	}
 }

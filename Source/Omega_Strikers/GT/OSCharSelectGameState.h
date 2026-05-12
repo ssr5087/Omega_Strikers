@@ -43,6 +43,13 @@ public:
 	bool AreAllPlayersConfirmed() const;
 	void BroadcastCharSelectUpdate();
 	
+	// ═══════════════════════════════════════
+	//  필요 인원 (리플리케이트)
+	// ═══════════════════════════════════════
+
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "OS|CharSelect")
+	int32 RequiredPlayerCount = 2;
+	
 private:
 	UFUNCTION()
 	void OnRep_CharSelectList();

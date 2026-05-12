@@ -74,6 +74,13 @@ private:
 	UPROPERTY(meta = (BindWidget))
 	UButton* BackButton;
 	
+	// ★ 호스트 전용 — 게임 시작 버튼
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UButton> StartGameButton;
+	
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> StartGameButtonText;
+	
 	// 상태 표시
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UTextBlock> StatusText;
@@ -150,6 +157,11 @@ private:
 	// 확정/취소 버튼 상태 갱신
 	void UpdateButtonStates();
 
+	// ★ 게임 시작 버튼 (호스트 전용)
+	UFUNCTION()
+	void OnStartGameClicked();
+	void UpdateStartGameButton();
+	
 	UFUNCTION()
 	void OnMyConfirmChanged(AOSPlayerState* Player, bool bConfirmed);
 

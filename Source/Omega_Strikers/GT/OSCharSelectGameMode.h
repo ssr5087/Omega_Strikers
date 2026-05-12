@@ -33,6 +33,9 @@ public:
 	// 확정 취소
 	void CancelConfirmCharacter(AOSPlayerState* Player);
 	
+	// ★ 호스트가 게임 시작 버튼을 누를 때 호출
+	void StartArenaTravel();
+	
 protected:
 	virtual void PostLogin(APlayerController* NewPlayer) override;
 	
