@@ -68,9 +68,6 @@ void ALuna::BeginPlay()
 			skillUI->AddToViewport();
 		}
 	}
-	
-	// 임의 설정
-	TeamSide = EOSTeam::Red;
 }
 
 // Called every frame
