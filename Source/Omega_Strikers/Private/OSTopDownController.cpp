@@ -18,6 +18,13 @@ void AOSTopDownController::BeginPlay()
 	
 	if (IsLocalController())
 	{
+		// ★ 반드시 GameAndUI로 설정 — 마우스 커서 + 키보드 입력 둘 다 필요
+		FInputModeGameAndUI InputMode;
+		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		InputMode.SetHideCursorDuringCapture(false);
+		SetInputMode(InputMode);
+		bShowMouseCursor = true;
+		
 		GetWorldTimerManager().SetTimerForNextTick(this, &AOSTopDownController::BindTopDownCamera);
 	}
 }

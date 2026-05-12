@@ -16,6 +16,8 @@ AOSCharSelectGameMode::AOSCharSelectGameMode()
 	
 	// PlayerState는 기존 OSPlayerState 재사용
 	PlayerStateClass = AOSPlayerState::StaticClass();
+	
+	bUseSeamlessTravel = true;
 }
 
 // ═══════════════════════════════════════════════════════
@@ -195,7 +197,7 @@ void AOSCharSelectGameMode::OnAllPlayersConfirmed()
 		if ( ArenaGameModeClass )
 		{
 			const FString gmPath = ArenaGameModeClass->GetPathName();
-			url = FString::Printf(TEXT("%s?game=%s?listen"), *ArenaMapPath, *gmPath);
+			url = FString::Printf(TEXT("%s?listen?game=%s"), *ArenaMapPath, *gmPath);
 		}
     
 		LOG_GT(TEXT("ServerTravel URL: %s"), *url);

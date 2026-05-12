@@ -18,16 +18,33 @@ void UOSGameInstance::Init()
 		// 서브시스템으로부터 세션 인터페이스를 가져온다.
 		sessionInterface = subsys->GetSessionInterface();
 		
+		// ★ 기존 바인딩 제거 후 등록 — 중복 방지
+		sessionInterface->OnCreateSessionCompleteDelegates.RemoveAll(this);
+		sessionInterface->OnFindSessionsCompleteDelegates.RemoveAll(this);
+		sessionInterface->OnJoinSessionCompleteDelegates.RemoveAll(this);
+		
 		sessionInterface->OnCreateSessionCompleteDelegates.AddUObject(this, &UOSGameInstance::OnCreateSessionComplete);
-		
 		sessionInterface->OnFindSessionsCompleteDelegates.AddUObject(this, &UOSGameInstance::OnFindSesssionsComplete);
-		
 		sessionInterface->OnJoinSessionCompleteDelegates.AddUObject(this, &UOSGameInstance::OnJoinSessionComplete);
 	}
 }
 
 void UOSGameInstance::CreateSession(FString roomName, int32 playerCount)
 {
+	// ★ 기존 세션이 있으면 먼저 파괴
+	if (sessionInterface->GetNamedSession(FName(mySessionName)))
+	{
+		LOG_GT_W(TEXT("기존 세션 '%s' 파괴 후 재생성"), *mySessionName);
+		sessionInterface->DestroySession(FName(mySessionName),
+			FOnDestroySessionCompleteDelegate::CreateLambda(
+				[this, roomName, playerCount](FName SessionName, bool bSuccess)
+				{
+					LOG_GT_W(TEXT("세션 파괴 %s → 재생성"), bSuccess ? TEXT("성공") : TEXT("실패"));
+					CreateSession(roomName, playerCount);  // 재귀 호출로 다시 생성
+				}));
+		return;
+	}
+	
 	//세션설정변수
 	FOnlineSessionSettings sessionSettings;
 	
@@ -203,7 +220,13 @@ void UOSGameInstance::GameToStart()
 FString UOSGameInstance::GetPlayerKey(const APlayerState* PS)
 {
 	if ( !PS ) return FString();
-	return PS->GetPlayerName();
+	
+	FUniqueNetIdRepl netId = PS->GetUniqueId();
+	if (netId.IsValid()) return netId->ToString();
+	
+	// LAN 테스트 시 fallback: PlayerId
+	return FString::Printf(TEXT("PID_%d"), PS->GetPlayerId());
+
 }
 
 void UOSGameInstance::ClearCharacterSelections()
