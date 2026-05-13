@@ -3,6 +3,7 @@
 
 #include "Luna.h"
 
+#include "SkillIndicatorBase.h"
 #include "HPComponent.h"
 #include "InputActionValue.h"
 #include "Luna_PrimaryRocket.h"
@@ -49,6 +50,14 @@ ALuna::ALuna()
 	SecondaryHitBox->SetupAttachment(RootComponent);
 	SecondaryHitBox->SetBoxExtent(FVector(150.0f, 100.0f, 150.0f));
 	SecondaryHitBox->OnComponentBeginOverlap.AddDynamic(this, &ALuna::OnDashOverlap);
+
+	// ConstructorHelpers::FClassFinder<ASkillIndicatorBase> TempPrimaryIndi(TEXT("/Game/SM/Blueprints/Luna/SkillIndicator/BP_LunaIndiPrimary"));
+	// if (TempPrimaryIndi.Succeeded())
+	// {
+	// 	LunaPrimaryIndicatorClass = TempPrimaryIndi.Class;
+	// 	LunaSecondaryIndicatorClass = TempPrimaryIndi.Class;
+	// 	LunaSpecialIndicatorClass = TempPrimaryIndi.Class;
+	// }
 }
 
 // Called when the game starts or when spawned
@@ -82,6 +91,36 @@ void ALuna::Tick(float DeltaTime)
 void ALuna::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
+}
+
+void ALuna::ConfigureSkillIndicator(ESkillType SkillType, ASkillIndicatorBase* Indicator)
+{
+	Super::ConfigureSkillIndicator(SkillType, Indicator);
+
+	if (!Indicator)
+	{
+		return;
+	}
+
+	float IndicatorRange = 0.f;
+	TSubclassOf<ASkillIndicatorBase> IndicatorClass = nullptr;
+
+	switch (SkillType)
+	{
+	case ESkillType::Primary:
+		IndicatorRange = PrimaryRange;
+		break;
+	case ESkillType::Secondary:
+		IndicatorRange = 700.f;
+		break;
+	case ESkillType::Special:
+		IndicatorRange = 5000.f;
+		break;
+	default:
+		return;
+	}
+
+	Indicator->SetIndicatorRange(IndicatorRange);
 }
 
 void ALuna::PlayerMove(const struct FInputActionValue& InputActionValue)
@@ -123,7 +162,13 @@ void ALuna::Use_CoreHit()
 
 void ALuna::Ready_PrimarySkill()
 {
-	
+	if (bPrimarySkillCoolDown)
+	{
+		return;
+	}
+
+	Super::Ready_PrimarySkill();
+	ShowSkillIndicator(PrimaryIndicatorClass, ESkillType::Primary);
 }
 
 void ALuna::Use_PrimarySkill()
@@ -177,7 +222,13 @@ void ALuna::End_PrimarySkill()
 
 void ALuna::Ready_SecondarySkill()
 {
-	
+	if (bSecondarySkillCoolDown)
+	{
+		return;
+	}
+
+	Super::Ready_SecondarySkill();
+	ShowSkillIndicator(SecondaryIndicatorClass, ESkillType::Secondary);
 }
 
 void ALuna::Use_SecondarySkill()
@@ -324,7 +375,13 @@ void ALuna::OnDashHit(UPrimitiveComponent* HitComponent, AActor* OtherActor,
 
 void ALuna::Ready_SpecialSkill()
 {
-	
+	if (bSpecialSkillCoolDown)
+	{
+		return;
+	}
+
+	Super::Ready_SpecialSkill();
+	ShowSkillIndicator(SpecialIndicatorClass, ESkillType::Special);
 }
 
 void ALuna::Use_SpecialSkill()

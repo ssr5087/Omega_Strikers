@@ -7,6 +7,8 @@
 #include "Omega_Strikers/SSR/CharacterStat.h"
 #include "Luna.generated.h"
 
+class ASkillIndicatorBase;
+
 UCLASS()
 class OMEGA_STRIKERS_API ALuna : public APlayerBase
 {
@@ -26,6 +28,10 @@ public:
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+protected:
+	virtual void ConfigureSkillIndicator(ESkillType SkillType, ASkillIndicatorBase* Indicator) override;
+
 public:
 	// 데이터 테이블 (작성자 : SSR)
 // public:
@@ -63,6 +69,7 @@ public:
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TObjectPtr<class UBoxComponent> SecondaryHitBox;
+
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Component|Primary")
 	TSubclassOf<class ALuna_PrimaryRocket> PrimaryRocketFactory;
@@ -78,6 +85,16 @@ public:
 	
 	UPROPERTY()
 	class ULunaSkillCool* skillUI;
+	
+	// 사거리 컴포넌트
+	// UPROPERTY(EditDefaultsOnly, Category = "Indicator")
+	// TSubclassOf<ASkillIndicatorBase> LunaPrimaryIndicatorClass;
+	//
+	// UPROPERTY(EditDefaultsOnly, Category = "Indicator")
+	// TSubclassOf<ASkillIndicatorBase> LunaSecondaryIndicatorClass;
+	//
+	// UPROPERTY(EditDefaultsOnly, Category = "Indicator")
+	// TSubclassOf<ASkillIndicatorBase> LunaSpecialIndicatorClass;
 	
 	// =================== Skill ===================
 	

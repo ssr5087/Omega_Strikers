@@ -9,6 +9,13 @@
 class USceneComponent;
 class UStaticMeshComponent;
 
+UENUM(BlueprintType)
+enum class EIndicatorMode : uint8
+{
+	Directional		UMETA(DisplayName = "Directional"),
+	TargetLocation	UMETA(DisplayName = "Target Location")
+};
+
 UCLASS()
 class OMEGA_STRIKERS_API ASkillIndicatorBase : public AActor
 {
@@ -30,6 +37,10 @@ public:
 	// 루트 컴포넌트
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Indicator")
 	USceneComponent* SceneRoot;
+	
+	// 모드 설정
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Indicator")
+	EIndicatorMode IndicatorMode = EIndicatorMode::Directional;
 
 	// 범위 표시용 메시
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Indicator")
@@ -70,3 +81,5 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Indicator")
 	float RangeScaleBase = 500.f;
 };
+
+

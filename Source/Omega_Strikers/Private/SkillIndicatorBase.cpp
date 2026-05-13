@@ -36,6 +36,7 @@ void ASkillIndicatorBase::BeginPlay()
 	{
 		IndicatorMesh->SetRelativeLocation(IndicatorMeshLocation);
 		IndicatorMesh->SetRelativeRotation(IndicatorMeshRotation);
+		IndicatorMesh->SetRelativeScale3D(IndicatorMeshScale);
 	}
 }
 
@@ -47,6 +48,7 @@ void ASkillIndicatorBase::OnConstruction(const FTransform& Transform)
 	{
 		IndicatorMesh->SetRelativeLocation(IndicatorMeshLocation);
 		IndicatorMesh->SetRelativeRotation(IndicatorMeshRotation);
+		IndicatorMesh->SetRelativeScale3D(IndicatorMeshScale);
 	}
 }
 
@@ -65,6 +67,7 @@ void ASkillIndicatorBase::UpdateIndicator(class APlayerBase* OwnerPlayer)
 
 	const FVector OwnerLocation = OwnerPlayer->GetActorLocation();
 	const FVector MouseLocation = OwnerPlayer->MouseCursorLoc;
+	
 	FVector MouseOffset = MouseLocation - OwnerLocation;
 	MouseOffset.Z = 0.f;
 
@@ -74,20 +77,63 @@ void ASkillIndicatorBase::UpdateIndicator(class APlayerBase* OwnerPlayer)
 		AimDirection = OwnerPlayer->GetActorForwardVector().GetSafeNormal2D();
 	}
 
-	const FVector TargetLocation = OwnerLocation + IndicatorWorldOffset;
-	const FRotator TargetRotation = FRotator(
-		0,
-		AimDirection.Rotation().Yaw + IndicatorYawOffset,
-		0.f
-	);
+	// =========================
+	// Directional
+	// =========================
+	if (IndicatorMode == EIndicatorMode::Directional)
+	{
+		SetActorLocation(
+			OwnerLocation + IndicatorWorldOffset
+		);
 
-	SetActorLocation(TargetLocation);
-	SetActorRotation(TargetRotation);
+		SetActorRotation(
+			FRotator(
+				0.f,
+				AimDirection.Rotation().Yaw + IndicatorYawOffset,
+				0.f
+			)
+		);
+	}
+
+	// =========================
+	// TargetLocation
+	// =========================
+	else if (IndicatorMode == EIndicatorMode::TargetLocation)
+	{
+		// 최대 사거리 제한
+		MouseOffset = MouseOffset.GetClampedToMaxSize(Range);
+
+		FVector TargetLocation =
+			OwnerLocation + MouseOffset;
+
+		TargetLocation.Z += IndicatorWorldOffset.Z;
+
+		SetActorLocation(TargetLocation);
+
+		// 회전 필요하면 유지
+		SetActorRotation(
+			FRotator(
+				0.f,
+				AimDirection.Rotation().Yaw,
+				0.f
+			)
+		);
+	}
 }
 
 void ASkillIndicatorBase::SetIndicatorRange(float NewRange)
 {
 	Range = FMath::Max(0.f, NewRange);
+
+	float ScaleValue = Range / RangeScaleBase;
+
+	IndicatorMesh->SetRelativeScale3D(
+		FVector(
+			ScaleValue,
+			ScaleValue,
+			1.f
+		)
+	);
 }
 
 void ASkillIndicatorBase::SetIndicatorMesh(
