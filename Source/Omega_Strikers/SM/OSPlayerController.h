@@ -20,7 +20,6 @@ public:
 	bool GetMousePointOnArenaPlane(FVector& OutPoint) const;
 
 public:
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI")
 	TSubclassOf<class UPlayerHUDWidget> PlayerHUDWidgetClass;
 
@@ -31,4 +30,19 @@ public:
 	
 	FTimerHandle RegisterTimer;
 	void RegisterExistingPlayersToHUD();
+	
+public:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI")
+	TSubclassOf<class UScoreBoardWidget> ScoreBoardWidgetClass;
+	
+	UPROPERTY()
+	class UScoreBoardWidget* ScoreBoardWidget;
+	
+	int32 BlueScore = 0;
+	int32 RedScore = 0;
+	
+	FTimerHandle AddTimer;
+	void AddScoreBoard();
+	UFUNCTION()
+	void SetScoreBoard(int32 TeamIndex, int32 NewScore);
 };
