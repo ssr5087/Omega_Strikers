@@ -3,6 +3,7 @@
 
 #include "SkillIndicatorBase.h"
 
+#include "Components/SceneComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "PlayerBase.h"
 
@@ -12,15 +13,18 @@ ASkillIndicatorBase::ASkillIndicatorBase()
 {
 	PrimaryActorTick.bCanEverTick = true;
 
+	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
+	RootComponent = SceneRoot;
+
 	IndicatorMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("IndicatorMesh"));
-	RootComponent = IndicatorMesh;
+	IndicatorMesh->SetupAttachment(SceneRoot);
 
 	// 충돌 제거
 	IndicatorMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	IndicatorMesh->SetGenerateOverlapEvents(false);
 	IndicatorMesh->SetCastShadow(false);
-	IndicatorMesh->SetRelativeScale3D(IndicatorMeshScale);
 	IndicatorMesh->SetRelativeLocation(IndicatorMeshLocation);
+	IndicatorMesh->SetRelativeRotation(IndicatorMeshRotation);
 }
 
 // Called when the game starts or when spawned
@@ -30,8 +34,8 @@ void ASkillIndicatorBase::BeginPlay()
 
 	if (IndicatorMesh)
 	{
-		IndicatorMesh->SetRelativeScale3D(IndicatorMeshScale);
 		IndicatorMesh->SetRelativeLocation(IndicatorMeshLocation);
+		IndicatorMesh->SetRelativeRotation(IndicatorMeshRotation);
 	}
 }
 
@@ -41,8 +45,8 @@ void ASkillIndicatorBase::OnConstruction(const FTransform& Transform)
 
 	if (IndicatorMesh)
 	{
-		IndicatorMesh->SetRelativeScale3D(IndicatorMeshScale);
 		IndicatorMesh->SetRelativeLocation(IndicatorMeshLocation);
+		IndicatorMesh->SetRelativeRotation(IndicatorMeshRotation);
 	}
 }
 
@@ -60,7 +64,8 @@ void ASkillIndicatorBase::UpdateIndicator(class APlayerBase* OwnerPlayer)
 	}
 
 	const FVector OwnerLocation = OwnerPlayer->GetActorLocation();
-	FVector MouseOffset = OwnerPlayer->MouseCursorLoc - OwnerLocation;
+	const FVector MouseLocation = OwnerPlayer->MouseCursorLoc;
+	FVector MouseOffset = MouseLocation - OwnerLocation;
 	MouseOffset.Z = 0.f;
 
 	FVector AimDirection = MouseOffset.GetSafeNormal();
@@ -69,10 +74,15 @@ void ASkillIndicatorBase::UpdateIndicator(class APlayerBase* OwnerPlayer)
 		AimDirection = OwnerPlayer->GetActorForwardVector().GetSafeNormal2D();
 	}
 
-	FVector TargetLocation = OwnerLocation + FVector(0.f, 0.f, HeightOffset);
+	const FVector TargetLocation = OwnerLocation + IndicatorWorldOffset;
+	const FRotator TargetRotation = FRotator(
+		0,
+		AimDirection.Rotation().Yaw + IndicatorYawOffset,
+		0.f
+	);
 
 	SetActorLocation(TargetLocation);
-	SetActorRotation(FRotator(0.f, AimDirection.Rotation().Yaw, 0.f));
+	SetActorRotation(TargetRotation);
 }
 
 void ASkillIndicatorBase::SetIndicatorRange(float NewRange)
@@ -97,5 +107,5 @@ void ASkillIndicatorBase::SetIndicatorMesh(
 	IndicatorMesh->SetRelativeRotation(RelativeRotation);
 	IndicatorMeshScale = RelativeScale;
 	IndicatorMeshLocation = RelativeLocation;
+	IndicatorMeshRotation = RelativeRotation;
 }
-

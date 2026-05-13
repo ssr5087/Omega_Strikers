@@ -1,19 +1,24 @@
-﻿# 역할
-너는 언리얼 엔진 게임 개발자야
+﻿너는 언리얼 엔진 게임 개발자야
 
 ## 목표
 오메가 스트라이커스 모작게임을 만들고 있어
-Asher의 Special 스킬을 사용하는데 지금 오류가 나고있어
-Asher_Special_Shield가 나오고나서 이런거 같아
+스킬의 사거리 범위를 표시하는 기능을 구현하고 싶어
 
 ## 해야할 일
-1. 여기서 stack overflow가 일어나고 있어
-2. UnrealEditor_Omega_Strikers!APlayerBase::ApplyKnockback() [C:\Unreal Projects\Omega_Strikers\Omega_Strikers\Source\Omega_Strikers\Private\PlayerBase.cpp:378]
-   UnrealEditor_Omega_Strikers!APlayerBase::ReceiveImpact_Implementation() [C:\Unreal Projects\Omega_Strikers\Omega_Strikers\Source\Omega_Strikers\Private\PlayerBase.cpp:358]
-   UnrealEditor_Omega_Strikers!IOSImpactReceiver::execReceiveImpact() [C:\Unreal Projects\Omega_Strikers\Omega_Strikers\Intermediate\Build\Win64\UnrealEditor\Inc\Omega_Strikers\UHT\OSImpactReceiver.gen.cpp:127]
-3. PlayerBase에서도 충돌이 나는거같아
-4. 한번 확인하고 수정해줘
-5. 다하고 한글로 코드리뷰해줘
+1. SkillIndicator의 파일에 Primary, Secondary, Special 스킬의 사거리 범위를 넣는 기능을 넣고싶어
+2. 이걸 플레이어 베이스에서 가져와서 subclassof로 가져와서 각자 캐릭터 파일에다가 Mesh를 넣어 사거리 구현을 하고싶어
+3. Ready_Primary 같은 Ready 구현부에 넣어야 될거같아
+4. 마우스로 조준하는 게임이다보니 스킬을 꾹 누르고 있을때 마우스가 움직이면 사거리가 마우스를 따라 이동해야해
+5. 지금 기준으로 Z값 +100에서 표시할수 있게 해줘
+7. 지금 SkillIndicator의 생성자에는 Mesh만 있는데 Scenecompont를 루트 컴포넌트로 설정하고
+   그 아래에다가 staticmesh를 붙이자
+8. 붙힌 StaticMesh에서 사거리 표시하는걸 블루프린트로 transform을 수정하고싶어
+9. 지금은 transform이 수정이 안되고있어
+8. 일단 Asher 라는 이름이 있는 파일에다가 사용하면 돼
+9. 다하고 마지막에 한국어로 코드리뷰 해줘~~~~
+
+
+
 
 ## 봐야할 파일
 Asher라는 이름이 들아간 모든 파일을 사용하면 돼
