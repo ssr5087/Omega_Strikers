@@ -20,6 +20,24 @@ AOSCharSelectGameMode::AOSCharSelectGameMode()
 	bUseSeamlessTravel = true;
 }
 
+void AOSCharSelectGameMode::BeginPlay()
+{
+	Super::BeginPlay();
+	
+	LOG_GT(TEXT("★ CharSelectGameMode BeginPlay - NetMode: %d"), 
+		(int32)GetWorld()->GetNetMode());
+	
+	// 호스트(서버)에서만 실행
+	if (GetWorld()->GetNetMode() != NM_Client)
+	{
+		if (auto gi = Cast<UOSGameInstance>(GetGameInstance()))
+		{
+			LOG_GT(TEXT("★ Calling CreatePendingSession"));
+			gi->CreatePendingSession();
+		}
+	}
+}
+
 // ═══════════════════════════════════════════════════════
 //  선택 요청
 // ═══════════════════════════════════════════════════════

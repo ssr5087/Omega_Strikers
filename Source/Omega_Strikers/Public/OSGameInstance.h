@@ -60,6 +60,20 @@ public:
 	UFUNCTION()
 	void OnCreateSessionComplete(FName SessionName, bool bWasSuccessful);
 	
+	// 세션 생성 대기용 (ServerTravel 후 생성하기 위해)
+	FString PendingRoomName;
+	int32 PendingPlayerCount = 0;
+	bool bPendingSessionCreate = false;
+
+	// ServerTravel 먼저 하고, 맵 로드 후 세션 생성
+	void HostAndCreateSession(FString roomName, int32 playerCount);
+
+	// 맵 로드 완료 후 호출
+	void CreatePendingSession();
+	
+	// ★ 맵 로드 완료 콜백
+	void OnPostLoadMap(UWorld* LoadedWorld);
+	
 public:
 	// ------------------- 방 검색 --------------------------
 	TSharedPtr<FOnlineSessionSearch> sessionSearch;
@@ -73,6 +87,14 @@ public:
 	
 	void OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type result);
 	
+	// 세션 나가기 (호스트면 파괴, 클라이언트면 떠나기) → 메인메뉴로 이동
+	UFUNCTION(BlueprintCallable, Category = "OS|Session")
+	void LeaveSession();
+	
+	void OnLeaveSessionDestroyComplete(FName SessionName, bool bSuccess);
+	
+	void ReturnToMainMenu();
+	
 	// 게임 시작
 	void GameToStart();
 	
@@ -84,8 +106,6 @@ public:
 
 	// ═══════════════════════════════════════════════════════
 	//  ★ 캐릭터 선택 저장 (ServerTravel 시 PlayerState 소멸 대비)
-	//  Key: PlayerIndex (0, 1, 2, ...)
-	//  Value: CharacterID ("Aimi", "Zentaro", ...)
 	// ═══════════════════════════════════════════════════════
 
 	/** 캐릭터 선택 저장 */

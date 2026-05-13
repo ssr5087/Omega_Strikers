@@ -114,7 +114,7 @@ void APlayerBase::BeginPlay()
 	
 	if (EXPComp)
 	{
-		EXPComp->OnLevelUp.AddDynamic(this, &APlayerBase::HandleLevelUp);
+		EXPComp->OnLevelUp.AddUniqueDynamic(this, &APlayerBase::HandleLevelUp);
 	}
 }
 

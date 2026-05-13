@@ -6,6 +6,7 @@
 #include "OSCharCardWidget.h"
 #include "OSCharSelectGameMode.h"
 #include "OSCharSelectGameState.h"
+#include "OSGameInstance.h"
 #include "OSPlayerState.h"
 #include "Components/Button.h"
 #include "Components/Image.h"
@@ -265,6 +266,13 @@ void UOSCharSelectWidget::OnCardClicked(FName CharacterID)
 // ═══════════════════════════════════════════
 void UOSCharSelectWidget::OnBackClicked()
 {
+	// 세션에서 나가기 (호스트면 세션 파괴 포함)
+	UOSGameInstance* gi = Cast<UOSGameInstance>(GetGameInstance());
+	if ( gi )
+	{
+		gi->LeaveSession();
+	}
+	
 	RemoveFromParent();
 }
 

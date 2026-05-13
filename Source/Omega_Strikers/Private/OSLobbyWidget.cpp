@@ -102,7 +102,7 @@ void UOSLobbyWidget::CreateRoom()
 	{
 		FString roomName = edit_roomName->GetText().ToString();
 		int32 playerCount = slider_playerCount->GetValue();
-		gi->CreateSession(roomName, playerCount);
+		gi->HostAndCreateSession(roomName, playerCount);
 	}
 }
 

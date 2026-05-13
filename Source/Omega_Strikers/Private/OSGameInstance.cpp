@@ -5,6 +5,7 @@
 #include "Omega_Strikers/Omega_Strikers.h"
 #include "OnlineSubsystem.h"
 #include "OnlineSessionSettings.h"
+#include "GameFramework/GameModeBase.h"
 #include "GameFramework/PlayerState.h"
 #include "Kismet/GameplayStatics.h"
 #include "Online/OnlineSessionNames.h"
@@ -27,6 +28,9 @@ void UOSGameInstance::Init()
 		sessionInterface->OnFindSessionsCompleteDelegates.AddUObject(this, &UOSGameInstance::OnFindSesssionsComplete);
 		sessionInterface->OnJoinSessionCompleteDelegates.AddUObject(this, &UOSGameInstance::OnJoinSessionComplete);
 	}
+	
+	// ★ 맵 로드 완료 콜백 — CharSelect 맵 로드 후 세션 생성용
+	FCoreUObjectDelegates::PostLoadMapWithWorld.AddUObject(this, &UOSGameInstance::OnPostLoadMap);
 }
 
 void UOSGameInstance::CreateSession(FString roomName, int32 playerCount)
@@ -61,8 +65,8 @@ void UOSGameInstance::CreateSession(FString roomName, int32 playerCount)
 	sessionSettings.bShouldAdvertise = true;
 	
 	// 4. 온라인 상태(Presence) 정보를 활용할지 여부
-	sessionSettings.bUsesPresence = true;
-	sessionSettings.bUseLobbiesIfAvailable = true;
+	sessionSettings.bUsesPresence = !sessionSettings.bIsLANMatch;
+	sessionSettings.bUseLobbiesIfAvailable = !sessionSettings.bIsLANMatch;
 	
 	// 5. 게임진행중에 참여를 허가할지 여부
 	sessionSettings.bAllowJoinViaPresence = true;
@@ -88,19 +92,57 @@ void UOSGameInstance::CreateSession(FString roomName, int32 playerCount)
 void UOSGameInstance::OnCreateSessionComplete(FName SessionName, bool bWasSuccessful)
 {
 	LOG_GT_W(TEXT("Session Name : %s, bWasSuccessful : %d"), *mySessionName, bWasSuccessful);
-	if (bWasSuccessful)
+	// ★ ServerTravel은 HostAndCreateSession에서 이미 완료됨 — 여기서는 하지 않음
+}
+
+void UOSGameInstance::HostAndCreateSession(FString roomName, int32 playerCount)
+{
+	// 방 정보를 저장해두고
+	PendingRoomName = roomName;
+	PendingPlayerCount = playerCount;
+	bPendingSessionCreate = true;
+
+	LOG_GT_W(TEXT("★ HostAndCreateSession: ServerTravel 시작, 세션은 맵 로드 후 생성 예정"));
+	
+	// ★ 심리스 트래블 강제 비활성화 — ?listen이 동작하려면 Hard Travel 필수
+	if (AGameModeBase* GM = GetWorld()->GetAuthGameMode())
 	{
-		UWorld* World = GetWorld();
-		if (!World) return;
-        
-		// ★ 서버(호스트)에서만 트래블 — 클라이언트는 자동으로 따라감
-		if (World->GetNetMode() == NM_Client)
+		GM->bUseSeamlessTravel = false;
+	}
+	
+	// 먼저 listen 서버로 맵 이동
+	GetWorld()->ServerTravel(TEXT("/Game/Maps/CharSelect?listen"), true);
+}
+
+void UOSGameInstance::CreatePendingSession()
+{
+	if (bPendingSessionCreate)
+	{
+		bPendingSessionCreate = false;
+		LOG_GT_W(TEXT("★ CreatePendingSession: 세션 생성 시작 (Room=%s, Count=%d)"), *PendingRoomName, PendingPlayerCount);
+		CreateSession(PendingRoomName, PendingPlayerCount);
+	}
+}
+
+void UOSGameInstance::OnPostLoadMap(UWorld* LoadedWorld)
+{
+	if (!LoadedWorld || !bPendingSessionCreate) return;
+
+	FString MapName = LoadedWorld->GetMapName();
+	MapName.RemoveFromStart(LoadedWorld->StreamingLevelsPrefix);
+	
+	LOG_GT_W(TEXT("★ OnPostLoadMap: %s, bPendingSessionCreate: %d"), *MapName, bPendingSessionCreate);
+
+	if (MapName.Contains(TEXT("CharSelect")))
+	{
+		// ★ 월드가 완전히 초기화된 후 세션 생성 (0.5초 지연)
+		FTimerHandle TimerHandle;
+		LoadedWorld->GetTimerManager().SetTimer(TimerHandle, [this]()
 		{
-			LOG_GT_W(TEXT("클라이언트이므로 ServerTravel 스킵"));
-			return;
-		}
-        
-		World->ServerTravel(TEXT("/Game/Maps/CharSelect?listen"));
+			LOG_GT_W(TEXT("★ Timer fired → CreatePendingSession"));
+			// ★ Listen 서버가 이미 올라온 상태 — 포트가 정상 할당됨
+			CreatePendingSession();
+		}, 0.5f, false);
 	}
 }
 
@@ -111,8 +153,12 @@ void UOSGameInstance::FindOtherSession()
 	
 	sessionSearch = MakeShareable(new FOnlineSessionSearch());
 	
-	// 1. 세션 검색 조건 설정
-	sessionSearch->QuerySettings.Set(SEARCH_LOBBIES, true, EOnlineComparisonOp::Equals);
+	// 1. 세션 검색 조건 설정 (LAN이면 SEARCH_LOBBIES 사용하지 않음)
+	FName subsysName = IOnlineSubsystem::Get()->GetSubsystemName();
+	if (subsysName != "NULL")
+	{
+		sessionSearch->QuerySettings.Set(SEARCH_LOBBIES, true, EOnlineComparisonOp::Equals);
+	}
 	
 	// 2. Lan 여부
 	sessionSearch->bIsLanQuery = IOnlineSubsystem::Get()->GetSubsystemName() == FName("NULL");
@@ -140,9 +186,6 @@ void UOSGameInstance::OnFindSesssionsComplete(bool bWasSuccessful)
 	
 	// 유효성 체크
 	for (int i=0; i<results.Num(); i++)
-	
-	
-		// for (auto sr: results)
 	{
 		auto sr = results[i];
 		if (sr.IsValid() == false)
@@ -181,7 +224,7 @@ void UOSGameInstance::OnFindSesssionsComplete(bool bWasSuccessful)
 		onSearchCompleted.Broadcast(sessionInfo);
 		
 	}
-		onSearchState.Broadcast(false);
+	onSearchState.Broadcast(false);
 }
 
 void UOSGameInstance::JoinSelectedSession(int32 index)
@@ -189,6 +232,20 @@ void UOSGameInstance::JoinSelectedSession(int32 index)
 	if (!sessionSearch.IsValid() || !sessionSearch->SearchResults.IsValidIndex(index))
 	{
 		LOG_GT_W(TEXT("JoinSelectedSession: invalid sessionSearch or index %d"), index);
+		return;
+	}
+	
+	// ★ 기존 세션이 남아있으면 먼저 파괴 후 Join
+	if (sessionInterface->GetNamedSession(FName(mySessionName)))
+	{
+		LOG_GT_W(TEXT("기존 세션 '%s' 파괴 후 Join 시도"), *mySessionName);
+		sessionInterface->DestroySession(FName(mySessionName), FOnDestroySessionCompleteDelegate::CreateLambda(
+			[this, index](FName SessionName, bool bSuccess)
+				{
+					LOG_GT_W(TEXT("세션 파괴 %s → Join 재시도"), bSuccess ? TEXT("성공") : TEXT("실패"));
+					auto sr = sessionSearch->SearchResults;
+					sessionInterface->JoinSession(0, FName(mySessionName), sr[index]);
+				}));
 		return;
 	}
 	
@@ -206,6 +263,11 @@ void UOSGameInstance::OnJoinSessionComplete(FName SessionName, EOnJoinSessionCom
 		
 		LOG_SR_W(TEXT("Join URL : %s"), *url);
 		
+		// ★ NULL 서브시스템에서 포트 0 문제 강제 수정
+		url.ReplaceInline(TEXT(":0"), TEXT(":7777"));
+		
+		LOG_GT_W(TEXT("Join URL (fixed): %s"), *url);
+		
 		if (url.IsEmpty() == false)
 		{
 			pc->ClientTravel(url, TRAVEL_Absolute);
@@ -214,12 +276,89 @@ void UOSGameInstance::OnJoinSessionComplete(FName SessionName, EOnJoinSessionCom
 	else
 	{
 		LOG_SR_W(TEXT("Join Session Failed : %d"), result);
+		// ★ 실패 시 세션 정리 — 다음 시도가 가능하도록
+		sessionInterface->DestroySession(SessionName);
+	}
+}
+
+void UOSGameInstance::LeaveSession()
+{
+	IOnlineSubsystem* onlineSub = IOnlineSubsystem::Get();
+	if ( !onlineSub ) return;
+
+	IOnlineSessionPtr sessions = onlineSub->GetSessionInterface();
+	if ( !sessions.IsValid() ) return;
+
+	FNamedOnlineSession* existingSession = sessions->GetNamedSession(FName(mySessionName));
+	if (!existingSession)
+	{
+		// 세션 자체가 없으면 바로 메인메뉴로
+		ReturnToMainMenu();
+		return;
+	}
+
+	// ★ 호스트인지 판별: bHosting 플래그 또는 세션의 bHosting 상태
+	if (existingSession->bHosting)
+	{
+		// 호스트 → 세션 파괴 (연결된 클라이언트도 자동으로 끊김)
+		LOG_GT(TEXT("OS: Host leaving → DestroySession '%s'"), *mySessionName);
+
+		sessions->AddOnDestroySessionCompleteDelegate_Handle(
+			FOnDestroySessionCompleteDelegate::CreateUObject(
+				this, &UOSGameInstance::OnLeaveSessionDestroyComplete));
+
+		sessions->DestroySession(FName(mySessionName));
+	}
+	else
+	{
+		// 클라이언트 → 세션에서 나가기
+		LOG_GT(TEXT("OS: Client leaving session '%s'"), *mySessionName);
+
+		sessions->DestroySession(FName(mySessionName));
+
+		// 서버와의 연결 끊기
+		APlayerController* pc = GetFirstLocalPlayerController();
+		if ( pc )
+		{
+			pc->ClientTravel(TEXT("/Game/Maps/Lobby"), ETravelType::TRAVEL_Absolute);
+		}
+	}
+}
+
+void UOSGameInstance::OnLeaveSessionDestroyComplete(FName SessionName, bool bSuccess)
+{
+	LOG_GT(TEXT("OS: Session '%s' destroyed (Success=%d) → Lobby"),
+		*SessionName.ToString(), bSuccess);
+
+	// 델리게이트 해제
+	IOnlineSubsystem* onlineSub = IOnlineSubsystem::Get();
+	if (onlineSub)
+	{
+		onlineSub->GetSessionInterface()->ClearOnDestroySessionCompleteDelegates(this);
+	}
+
+	ReturnToMainMenu();
+}
+
+void UOSGameInstance::ReturnToMainMenu()
+{
+	// 메인메뉴 맵으로 이동
+	UWorld* world = GetWorld();
+	if ( world )
+	{
+		// 호스트는 ServerTravel이 아닌 클라이언트 트래블로 이동
+		APlayerController* pc = GetFirstLocalPlayerController();
+		if ( pc )
+		{
+			pc->ClientTravel(TEXT("/Game/Maps/Lobby"), ETravelType::TRAVEL_Absolute);
+		}
 	}
 }
 
 void UOSGameInstance::GameToStart()
 {
-	GetWorld()->ServerTravel(TEXT("/Game/Maps/CharSelect?listen?port=7777"));
+	//GetWorld()->ServerTravel(TEXT("/Game/Maps/CharSelect?listen?port=7777"));
+	GetWorld()->ServerTravel(TEXT("/Game/Maps/Arena"));
 }
 
 // ═══════════════════════════════════════════════════════

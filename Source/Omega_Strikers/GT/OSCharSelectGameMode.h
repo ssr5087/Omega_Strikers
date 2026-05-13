@@ -20,6 +20,8 @@ class OMEGA_STRIKERS_API AOSCharSelectGameMode : public AGameModeBase
 public:
 	AOSCharSelectGameMode();
 	
+	virtual void BeginPlay() override;
+	
 	// ══════════════════════════════════════
 	//  캐릭터 선택 검증 (PlayerState RPC에서 호출)
 	// ══════════════════════════════════════
