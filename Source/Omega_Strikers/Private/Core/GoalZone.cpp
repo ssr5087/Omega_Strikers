@@ -10,7 +10,7 @@ AGoalZone::AGoalZone()
 	PrimaryActorTick.bCanEverTick = false;
 
 	GoalTrigger = CreateDefaultSubobject<UBoxComponent>(TEXT("GoalTrigger"));
-	GoalTrigger->SetBoxExtent(FVector(100.0f, 200.0f, 200.0f));
+	GoalTrigger->SetBoxExtent(FVector(1150.0f, 200.0f, 200.0f));
 	GoalTrigger->SetCollisionProfileName(TEXT("OverlapAllDynamic"));
 	GoalTrigger->SetGenerateOverlapEvents(true);
 	SetRootComponent(GoalTrigger);
