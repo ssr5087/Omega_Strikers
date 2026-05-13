@@ -3,9 +3,12 @@
 
 #include "OSPlayerController.h"
 
+#include "OSGameState.h"
 #include "PlayerBase.h"
 #include "PlayerHUDWidget.h"
+#include "ScoreBoardWidget.h"
 #include "Blueprint/UserWidget.h"
+#include "Components/TextBlock.h"
 #include "Kismet/GameplayStatics.h"
 
 void AOSPlayerController::BeginPlay()
@@ -34,6 +37,13 @@ void AOSPlayerController::BeginPlay()
 					true
 				);
 	}
+	
+	auto gs = Cast<AOSGameState>(GetWorld()->GetGameState());
+	
+	if (!gs) {return;}
+	gs->OnScoreChanged.AddDynamic(this, &AOSPlayerController::SetScoreBoard);
+	
+	AddScoreBoard();
 }
 
 bool AOSPlayerController::GetMousePointOnArenaPlane(FVector& OutPoint) const
@@ -88,5 +98,29 @@ void AOSPlayerController::RegisterExistingPlayersToHUD()
 		{
 			PlayerHUDWidget->RegisterPlayer(TargetPlayer);
 		}
+	}
+}
+
+void AOSPlayerController::AddScoreBoard()
+{
+	// 자기 화면에만 붙이면 됨
+	if (!IsLocalController()) {return;}
+	
+	ScoreBoardWidget = CreateWidget<UScoreBoardWidget>(this, ScoreBoardWidgetClass);
+	if (ScoreBoardWidget)
+	{
+		ScoreBoardWidget->AddToViewport();
+		ScoreBoardWidget->SetScore(0, 0);
+	}
+}
+
+void AOSPlayerController::SetScoreBoard(int32 TeamIndex, int32 NewScore)
+{
+	if (TeamIndex == 0) {BlueScore = NewScore;}
+	else {RedScore = NewScore;}
+	
+	if (ScoreBoardWidget)
+	{
+		ScoreBoardWidget->SetScore(BlueScore, RedScore);
 	}
 }
