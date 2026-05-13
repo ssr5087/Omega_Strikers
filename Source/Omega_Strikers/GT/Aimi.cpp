@@ -589,8 +589,8 @@ void AAimi::DrawAimIndicator()
 	}*/
 	
 	// Ready() 에서 켠 플래그에 따라 해당 스킬만
-	if (bAimingSecondary) DrawCyberSwipeAim();
-	if (bAimingSpecial) DrawSentryAim();
+	//if (bAimingSecondary) DrawCyberSwipeAim();
+	//if (bAimingSpecial) DrawSentryAim();
 #endif
 	if (bAimingPrimary) UpdateAimIndicator();
 }
