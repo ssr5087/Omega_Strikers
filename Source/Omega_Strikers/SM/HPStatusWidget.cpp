@@ -5,6 +5,7 @@
 
 #include "OSType.h"
 #include "Components/Image.h"
+#include "Components/TextBlock.h"
 
 void UHPStatusWidget::NativeConstruct()
 {
@@ -36,4 +37,9 @@ void UHPStatusWidget::SetStaggerPercent(float Percent)
 	{
 		CurrentStaggerBar->SetScalarParameterValue("Gauge", Percent);
 	}
+}
+
+void UHPStatusWidget::SetLevel(int32 level)
+{
+	txt_level->SetText(FText::AsNumber(level));
 }
