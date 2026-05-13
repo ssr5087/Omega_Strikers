@@ -3,6 +3,7 @@
 
 #include "AimiGlitchOrb.h"
 
+#include "NiagaraComponent.h"
 #include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Omega_Strikers/Omega_Strikers.h"
@@ -22,12 +23,17 @@ AAimiGlitchOrb::AAimiGlitchOrb()
 	CollisionSphere->SetCollisionProfileName(TEXT("OverlapAllDynamic"));
 	CollisionSphere->SetGenerateOverlapEvents(false); // 폭발 시에만 수동 체크
 	RootComponent = CollisionSphere;
-
+	
 	// Visual (BP에서 Niagara/Mesh 교체 가능)
 	OrbMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("OrbMesh"));
 	OrbMesh->SetupAttachment(RootComponent);
 	OrbMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
+	// ★ VFX 컴포넌트 — 오브에 직접 부착
+	TrailFXComp = CreateDefaultSubobject<UNiagaraComponent>(TEXT("TrailFX"));
+	TrailFXComp->SetupAttachment(RootComponent);
+	TrailFXComp->SetAutoActivate(false);
+	
 	// Projectile Movement
 	ProjectileMovement = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovement"));
 	ProjectileMovement->InitialSpeed = 0.f;
@@ -45,6 +51,26 @@ void AAimiGlitchOrb::BeginPlay()
 	Super::BeginPlay();
 	CurrentRadius = InitRadius;
 	UpdateRadius(CurrentRadius);
+	
+	// ★ 다이나믹 머티리얼 생성
+	if (GlitchMaterial && OrbMesh)
+	{
+		OrbMID = UMaterialInstanceDynamic::Create(GlitchMaterial, this);
+		OrbMesh->SetMaterial(0, OrbMID);
+	}
+
+	// ★ 나이아가라 에셋 할당 + 활성화
+	if (TrailVFX && TrailFXComp)
+	{
+		TrailFXComp->SetAsset(TrailVFX);
+		// Launch() 때 켜기
+	}
+
+	if (AuraVFX && AuraFXComp)
+	{
+		AuraFXComp->SetAsset(AuraVFX);
+		// Launch() 때 켜기
+	}
 }
 
 // ════════════════════════════════════════════════════════════
@@ -61,6 +87,17 @@ void AAimiGlitchOrb::Launch(AActor* InOwner, const FVector& Direction)
 	// ProjectileMovement에 속도 설정
 	ProjectileMovement->Velocity = MoveDirection * OrbSpeed;
 
+	// ★ VFX 활성화
+	if (TrailFXComp && TrailFXComp->GetAsset())
+	{
+		TrailFXComp->Activate();
+	}
+	if (AuraFXComp && AuraFXComp->GetAsset())
+	{
+		AuraFXComp->Activate();
+		AuraFXComp->SetNiagaraVariableFloat(FString("User.OrbRadius"), CurrentRadius);
+	}
+	
 	LOG_GT(TEXT("Launched - Dir: %s, Speed: %.0f"), *MoveDirection.ToString(), OrbSpeed);
 }
 
@@ -102,6 +139,22 @@ void AAimiGlitchOrb::Detonate()
 	// 이동 정지
 	ProjectileMovement->StopMovementImmediately();
 
+	// ★ VFX 정리
+	if (TrailFXComp && TrailFXComp->IsActive())
+	{
+		TrailFXComp->Deactivate();
+	}
+	if (AuraFXComp && AuraFXComp->IsActive())
+	{
+		AuraFXComp->Deactivate();
+	}
+
+	// 메시 숨기기 (폭발 VFX가 대체)
+	if (OrbMesh)
+	{
+		OrbMesh->SetVisibility(false);
+	}
+	
 	// VFX
 	if (DetonateVFX)
 	{
@@ -231,6 +284,55 @@ void AAimiGlitchOrb::UpdateRadius(float NewRadius)
 	{
 		const float scaleFactor = NewRadius / FMath::Max(InitRadius, 1.f);
 		OrbMesh->SetWorldScale3D(FVector(scaleFactor));
+	}
+}
+
+// ════════════════════════════════════════════════════════════
+//  ★ UpdateVisualEffects — 매 틱 호출 (신규)
+// ════════════════════════════════════════════════════════════
+void AAimiGlitchOrb::UpdateVisualEffects()
+{
+	// 성장 비율 (0~1)
+	const float GrowthRatio = FMath::Clamp(
+		(CurrentRadius - InitRadius) / FMath::Max(MaxRadius - InitRadius, 1.f),
+		0.f, 1.f);
+
+	// ── 다이나믹 머티리얼 ─────────────────────────
+	if (OrbMID)
+	{
+		// 글로우: 커질수록 밝아짐
+		OrbMID->SetScalarParameterValue(TEXT("EmissiveIntensity"),
+			FMath::Lerp(3.f, 12.f, GrowthRatio));
+
+		// 색상: 시안 → 마젠타 (성장에 따라)
+		const FLinearColor OrbColor = FLinearColor::LerpUsingHSV(
+			FLinearColor(0.f, 0.9f, 1.f),    // 시안
+			FLinearColor(0.8f, 0.2f, 1.f),    // 마젠타
+			GrowthRatio);
+		OrbMID->SetVectorParameterValue(TEXT("EmissiveColor"), OrbColor);
+
+		// 프레넬: 커질수록 가장자리 글로우 강해짐
+		OrbMID->SetScalarParameterValue(TEXT("FresnelPower"),
+			FMath::Lerp(3.f, 1.5f, GrowthRatio));
+
+		// 글리치 노이즈 속도: 커질수록 빨라짐
+		OrbMID->SetScalarParameterValue(TEXT("NoiseSpeed"),
+			FMath::Lerp(1.f, 4.f, GrowthRatio));
+	}
+
+	// ── 나이아가라 오라 반지름 ────────────────────
+	if (AuraFXComp && AuraFXComp->IsActive())
+	{
+		AuraFXComp->SetNiagaraVariableFloat(
+			FString("User.OrbRadius"), CurrentRadius);
+
+		// 오라 색상도 성장에 따라
+		const FLinearColor AuraColor = FLinearColor::LerpUsingHSV(
+			FLinearColor(0.f, 0.6f, 1.f, 0.7f),
+			FLinearColor(0.6f, 0.1f, 1.f, 0.9f),
+			GrowthRatio);
+		AuraFXComp->SetNiagaraVariableLinearColor(
+			FString("User.AuraColor"), AuraColor);
 	}
 }
 
