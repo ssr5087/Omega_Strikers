@@ -289,22 +289,12 @@ void AOSGameMode::StartRound()
 {
 	AOSGameState* gs = GetGameState<AOSGameState>();
 	if (!gs) return;
-	
-	const bool bIsFreshMatchStart =
-		gs->GetMatchPhase() == EOSMatchPhase::Countdown &&
-		gs->GetTeamRoundScore(0) == 0 &&
-		gs->GetTeamRoundScore(1) == 0 &&
-		gs->GetMatchWinner() < 0;
 
 	gs->SetMatchPhase(EOSMatchPhase::InProgress);
 	gs->ClearGoalSequence();
-
-	if (bIsFreshMatchStart)
-	{
-		gs->ResetRoundScores();
-	}
+	bGoalScoredThisSequence = false;
 	
-	LOG_GT(TEXT("Round %d Started!"), gs->GetCurrentRound());
+	LOG_GT(TEXT("Match started or resumed after goal"));
 	
 	// Core 스폰 또는 리셋
 	if (!ActiveCoreBall)
@@ -359,6 +349,7 @@ void AOSGameMode::SpawnCoreBall()
 		ActiveCoreBall->SetHomeLocation(spawnLocation);
 
 		// 골 이벤트 바인딩
+		ActiveCoreBall->OnGoalScored.Clear();
 		ActiveCoreBall->OnGoalScored.AddDynamic(this, &AOSGameMode::OnGoalScored);
 
 		// ★ 모든 플레이어에게 CoreBall 등록
@@ -381,18 +372,26 @@ void AOSGameMode::OnGoalScored(int32 ScoringTeam)
 	if (!gs) return;
 
 	if (gs->GetMatchPhase() != EOSMatchPhase::InProgress) return;
+	if (gs->IsGoalSequenceActive()) return;
 
 	// 점수 추가
+	if (bGoalScoredThisSequence) return;
+	bGoalScoredThisSequence = true;
+	gs->StartGoalSequence(ScoringTeam, GetWorld()->GetTimeSeconds() + RoundEndDelay);
 	gs->AddScore(ScoringTeam);
 
-	int32 score = gs->GetTeamRoundScore(ScoringTeam);
-	LOG_GT(TEXT("Team %d scored! (%d / %d)"), ScoringTeam, score, ScoresToWinRound);
+	if (IsValid(ActiveCoreBall))
+	{
+		ActiveCoreBall->Destroy();
+		ActiveCoreBall = nullptr;
+	}
 
-	const float GoalSequenceEndTime = GetWorld()->GetTimeSeconds() + RoundEndDelay;
-	gs->StartGoalSequence(ScoringTeam, GoalSequenceEndTime);
+	int32 score = gs->GetTeamRoundScore(ScoringTeam);
+	LOG_SR_W(TEXT("Team %d scored! (%d / %d)"), ScoringTeam, score, ScoresToWinRound);
 
 	if (score >= ScoresToWinRound)
 	{
+		GetWorldTimerManager().ClearTimer(RoundEndTimer);
 		EndMatch(ScoringTeam);
 	}
 	else
@@ -413,6 +412,7 @@ void AOSGameMode::RestartPlayAfterGoal()
 		return;
 	}
 
+	bGoalScoredThisSequence = false;
 	StartRound();
 }
 
@@ -428,6 +428,7 @@ void AOSGameMode::EndMatch(int32 WinningTeam)
 
 	GetWorldTimerManager().ClearTimer(CountdownTimer);
 	GetWorldTimerManager().ClearTimer(RoundEndTimer);
+	bGoalScoredThisSequence = false;
 	gs->SetMatchPhase(EOSMatchPhase::MatchEnd);
 	gs->SetMatchWinner(WinningTeam);
 

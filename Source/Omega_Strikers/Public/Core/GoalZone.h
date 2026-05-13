@@ -5,6 +5,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Omega_Strikers/SM/OSType.h"
 #include "GoalZone.generated.h"
 
 UCLASS()
@@ -15,13 +16,20 @@ class OMEGA_STRIKERS_API AGoalZone : public AActor
 public:
 	AGoalZone();
 
-	// 0 = Red 팀 골대 (Blue팀이 여기에 넣으면 Blue팀 득점)
-	// 1 = Blue 팀 골대 (Red팀이 여기에 넣으면 Red팀 득점)
+	// 골대 소유 팀
+	// 왼쪽 골대 = Blue, 오른쪽 골대 = Red 로 배치
 	UPROPERTY(EditAnywhere, Category="Goal")
-	int32 ScoringTeam = 0;
+	EOSTeam GoalTeam = EOSTeam::Red;
 
 	UFUNCTION(BlueprintCallable, Category="Goal")
-	int32 GetScoringTeam() const { return ScoringTeam; }
+	int32 GetScoringTeam() const
+	{
+		// 골대 소유 팀의 반대 팀이 득점한다.
+		return GoalTeam == EOSTeam::Blue ? 1 : 0;
+	}
+
+	UFUNCTION(BlueprintCallable, Category="Goal")
+	EOSTeam GetGoalTeam() const { return GoalTeam; }
 	
 protected:
 	UPROPERTY(VisibleAnywhere, Category="Goal")

@@ -17,9 +17,6 @@ void AOSGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 	DOREPLIFETIME(AOSGameState, MatchPhase);
 	DOREPLIFETIME(AOSGameState, TeamARoundScore);
 	DOREPLIFETIME(AOSGameState, TeamBRoundScore);
-	DOREPLIFETIME(AOSGameState, TeamARoundWins);
-	DOREPLIFETIME(AOSGameState, TeamBRoundWins);
-	DOREPLIFETIME(AOSGameState, CurrentRound);
 	DOREPLIFETIME(AOSGameState, MatchWinner);
 	DOREPLIFETIME(AOSGameState, bGoalSequenceActive);
 	DOREPLIFETIME(AOSGameState, LastScoringTeam);
@@ -86,28 +83,6 @@ void AOSGameState::OnRep_Score()
 	// 클라에서 점수 변경 시 UI 갱신
 	OnScoreChanged.Broadcast(0, TeamARoundScore);
 	OnScoreChanged.Broadcast(1, TeamBRoundScore);
-}
-
-// ═══════════════════════════════════════════════════════
-// 라운드 승수
-// ═══════════════════════════════════════════════════════
-int32 AOSGameState::GetTeamRoundWins(int32 TeamID) const
-{
-	return TeamID == 0 ? TeamARoundWins : TeamBRoundWins;
-}
-
-void AOSGameState::AddRoundWin(int32 TeamID)
-{
-	if (!HasAuthority()) return;
-	
-	if (TeamID == 0) TeamARoundWins++;
-	else TeamBRoundWins++;
-}
-
-void AOSGameState::AdvanceRound()
-{
-	if (!HasAuthority()) return;
-	CurrentRound++;
 }
 
 // ═══════════════════════════════════════════════════════

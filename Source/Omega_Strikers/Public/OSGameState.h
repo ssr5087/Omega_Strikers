@@ -43,22 +43,6 @@ public:
 	void ResetRoundScores();
 	
 	// ═══════════════════════════════════════════
-	// 라운드 승수 (3판 2선승 중 몇 판 이겼는지)
-	// ═══════════════════════════════════════════
-	UFUNCTION(BlueprintCallable, Category="OS|State")
-	int32 GetTeamRoundWins(int32 TeamID) const;
-	
-	void AddRoundWin(int32 TeamID);
-	
-	// ═══════════════════════════════════════════
-	// 라운드 번호
-	// ═══════════════════════════════════════════
-	UFUNCTION(BlueprintCallable, Category="OS|State")
-	int32 GetCurrentRound() const { return CurrentRound; }
-	
-	void AdvanceRound();
-	
-	// ═══════════════════════════════════════════
 	// 매치 승자
 	// ═══════════════════════════════════════════
 	UFUNCTION(BlueprintCallable, Category="OS|State")
@@ -103,15 +87,6 @@ private:
 	
 	UPROPERTY(ReplicatedUsing = OnRep_Score)
 	int32 TeamBRoundScore = 0;
-	
-	UPROPERTY(Replicated)
-	int32 TeamARoundWins = 0;
-	
-	UPROPERTY(Replicated)
-	int32 TeamBRoundWins = 0;
-	
-	UPROPERTY(Replicated)
-	int32 CurrentRound = 1;
 	
 	UPROPERTY(ReplicatedUsing = OnRep_MatchWinner)
 	int32 MatchWinner = -1; // -1 : 미정

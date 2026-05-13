@@ -138,6 +138,8 @@ public:
 	// 타이머 핸들
 	FTimerHandle CountdownTimer;
 	FTimerHandle RoundEndTimer;
+	bool bGoalScoredThisSequence = false;
+	void ClearActiveCoreBall();
 
 public:
 	// 경험치오브 스폰액터 관리
