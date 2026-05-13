@@ -4,6 +4,7 @@
 #include "OSCharSelectWidget.h"
 
 #include "OSCharCardWidget.h"
+#include "OSCharSelectGameMode.h"
 #include "OSCharSelectGameState.h"
 #include "OSPlayerState.h"
 #include "Components/Button.h"
@@ -42,6 +43,16 @@ void UOSCharSelectWidget::NativeConstruct()
 		CancelButton->SetVisibility(ESlateVisibility::Collapsed);
 	}
 	
+	// ★ 게임 시작 버튼 — 호스트(서버)에게만 표시
+	if (StartGameButton)
+	{
+		StartGameButton->OnClicked.AddDynamic(this, &UOSCharSelectWidget::OnStartGameClicked);
+		
+		bool bIsHost = (GetWorld()->GetAuthGameMode() != nullptr);
+		StartGameButton->SetVisibility(bIsHost ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+		StartGameButton->SetIsEnabled(false);
+	}
+	
 	BuildGrid();
 	
 	// GameState 구독
@@ -51,11 +62,13 @@ void UOSCharSelectWidget::NativeConstruct()
 		CachedGameState->OnCharSelectListUpdated.AddDynamic(this, &UOSCharSelectWidget::OnCharSelectListUpdated);
 	}
 	
-	TryBindPlayerState();
+	// ★ GameState + PlayerState 모두 타이머로 바인딩
+	TryBindAll();
 	
 	// 초기 UI 반영
 	RefreshCardStates();
 	UpdateButtonStates();
+	UpdateStartGameButton();
 }
 
 // ═══════════════════════════════════════════
@@ -275,6 +288,7 @@ void UOSCharSelectWidget::OnCharSelectListUpdated()
 	// GameState의 선택 목록이 변경됨 -> 카드 UI 갱신
 	RefreshCardStates();
 	UpdateButtonStates();
+	UpdateStartGameButton();
 }
 
 void UOSCharSelectWidget::RefreshCardStates()
@@ -415,28 +429,92 @@ void UOSCharSelectWidget::OnMyConfirmChanged(AOSPlayerState* Player, bool bConfi
 	UpdateButtonStates();
 }
 
-void UOSCharSelectWidget::TryBindPlayerState()
+void UOSCharSelectWidget::TryBindAll()
 {
-	APlayerController* pc = GetOwningPlayer();
-	if (!pc) return;
-
-	AOSPlayerState* ps = Cast<AOSPlayerState>(pc->PlayerState);
-	if (!ps)
+	bool bNeedRetry = false;
+    
+	// ── GameState 바인딩 ──
+	if (!CachedGameState)
 	{
-		// PlayerState 아직 없음 → 0.1초 후 재시도
-		GetWorld()->GetTimerManager().SetTimer(
-			BindTimerHandle, this, 
-			&UOSCharSelectWidget::TryBindPlayerState, 0.1f, false);
+		CachedGameState = GetWorld()->GetGameState<AOSCharSelectGameState>();
+		if (CachedGameState)
+		{
+			CachedGameState->OnCharSelectListUpdated.AddDynamic(
+				this, &UOSCharSelectWidget::OnCharSelectListUpdated);
+			UE_LOG(LogTemp, Warning, TEXT("★ GameState 바인딩 완료"));
+		}
+		else
+		{
+			bNeedRetry = true;
+		}
+	}
+    
+	// ── PlayerState 바인딩 ──
+	if (!bPlayerStateBound)
+	{
+		if (APlayerController* pc = GetOwningPlayer())
+		{
+			AOSPlayerState* ps = Cast<AOSPlayerState>(pc->PlayerState);
+			if (ps)
+			{
+				ps->OnSelectRejected.AddDynamic(this, &UOSCharSelectWidget::OnMySelectRejected);
+				ps->OnPlayerConfirmChanged.AddDynamic(this, &UOSCharSelectWidget::OnMyConfirmChanged);
+				bPlayerStateBound = true;
+				UE_LOG(LogTemp, Warning, TEXT("★ PlayerState 바인딩 완료: %s"), *ps->GetPlayerName());
+			}
+			else
+			{
+				bNeedRetry = true;
+			}
+		}
+	}
+    
+	// 둘 다 완료되면 초기 UI 갱신
+	if (CachedGameState && bPlayerStateBound)
+	{
+		RefreshCardStates();
+		UpdateButtonStates();
+		UpdateStartGameButton();
 		return;
 	}
+    
+	// 아직 미완 → 0.1초 후 재시도
+	if (bNeedRetry)
+	{
+		GetWorld()->GetTimerManager().SetTimer(
+			BindTimerHandle, this,
+			&UOSCharSelectWidget::TryBindAll, 0.1f, false);
+	}
+}
 
-	// 바인딩 성공
-	ps->OnSelectRejected.AddDynamic(this, &UOSCharSelectWidget::OnMySelectRejected);
-	ps->OnPlayerConfirmChanged.AddDynamic(this, &UOSCharSelectWidget::OnMyConfirmChanged);
-    
-	// 혹시 이미 확정된 상태면 즉시 반영
-	UpdateButtonStates();
-	RefreshCardStates();
-    
-	LOG_GT_W(TEXT("★ PlayerState 바인딩 완료: %s"), *ps->GetPlayerName());
+// ═══════════════════════════════════════════
+//  ★ 게임 시작 버튼 (호스트 전용)
+// ═══════════════════════════════════════════
+void UOSCharSelectWidget::OnStartGameClicked()
+{
+	AOSCharSelectGameMode* GM = Cast<AOSCharSelectGameMode>(GetWorld()->GetAuthGameMode());
+	if (GM)
+	{
+		GM->StartArenaTravel();
+	}
+}
+
+void UOSCharSelectWidget::UpdateStartGameButton()
+{
+	if (!StartGameButton) return;
+	
+	// 호스트가 아니면 숨김 유지
+	if (GetWorld()->GetAuthGameMode() == nullptr) return;
+	
+	bool bAllConfirmed = CachedGameState ? CachedGameState->AreAllPlayersConfirmed() : false;
+	StartGameButton->SetIsEnabled(bAllConfirmed);
+	
+	if (StartGameButtonText)
+	{
+		StartGameButtonText->SetText(
+			bAllConfirmed
+			? FText::FromString(TEXT("게임 시작"))
+			: FText::FromString(TEXT("전원 확정 대기 중..."))
+		);
+	}
 }
