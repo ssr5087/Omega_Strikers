@@ -136,7 +136,7 @@ void ALuna::SpawnPrimaryRocket()
 {
 	// 서버 & 클라 둘 다 노티파이를 타고 옴. but 서버에서만 실행
 	if (!HasAuthority()) {return;}
-
+	
 	// 스폰 트랜스폼 만들기
 	FTransform LauncherTransform;
 	
@@ -147,8 +147,6 @@ void ALuna::SpawnPrimaryRocket()
 	
 	LauncherTransform.SetLocation(PlayerLoc);
 	LauncherTransform.SetRotation(SpawnRot.Quaternion());
-	
-	GetWorld()->SpawnActor<ALuna_PrimaryRocket>(PrimaryRocketFactory, LauncherTransform);
 	
 	// 소환할 로켓을 변수에 담아두고 잠시 소환을 보류
 	ALuna_PrimaryRocket* Rocket = GetWorld()->SpawnActorDeferred<ALuna_PrimaryRocket>(PrimaryRocketFactory, LauncherTransform);

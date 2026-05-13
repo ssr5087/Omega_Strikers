@@ -16,6 +16,7 @@ class OMEGA_STRIKERS_API UHPStatusWidget : public UUserWidget
 	GENERATED_BODY()
 
 	virtual void NativeConstruct() override;
+	
 public:
 	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
 	class UImage* img_StaggerBar_Teamside;
@@ -31,4 +32,10 @@ public:
 	
 	void SetTeamSide(EOSTeam teamSide);
 	void SetStaggerPercent(float Percent);
+	
+public:
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+	class UTextBlock* txt_level;
+	
+	void SetLevel(int32 level);
 };

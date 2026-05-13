@@ -140,9 +140,6 @@ void UOSGameInstance::OnFindSesssionsComplete(bool bWasSuccessful)
 	
 	// 유효성 체크
 	for (int i=0; i<results.Num(); i++)
-	
-	
-		// for (auto sr: results)
 	{
 		auto sr = results[i];
 		if (sr.IsValid() == false)
