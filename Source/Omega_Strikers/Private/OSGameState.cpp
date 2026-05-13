@@ -21,6 +21,9 @@ void AOSGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 	DOREPLIFETIME(AOSGameState, TeamBRoundWins);
 	DOREPLIFETIME(AOSGameState, CurrentRound);
 	DOREPLIFETIME(AOSGameState, MatchWinner);
+	DOREPLIFETIME(AOSGameState, bGoalSequenceActive);
+	DOREPLIFETIME(AOSGameState, LastScoringTeam);
+	DOREPLIFETIME(AOSGameState, GoalSequenceEndTime);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -74,6 +77,8 @@ void AOSGameState::ResetRoundScores()
 	
 	TeamARoundScore = 0;
 	TeamBRoundScore = 0;
+	OnScoreChanged.Broadcast(0, TeamARoundScore);
+	OnScoreChanged.Broadcast(1, TeamBRoundScore);
 }
 
 void AOSGameState::OnRep_Score()
@@ -121,4 +126,29 @@ void AOSGameState::OnRep_MatchWinner()
 	{
 		OnMatchWinnerDeclared.Broadcast(MatchWinner);
 	}
+}
+
+void AOSGameState::StartGoalSequence(int32 ScoringTeam, float InGoalSequenceEndTime)
+{
+	if (!HasAuthority()) return;
+
+	bGoalSequenceActive = true;
+	LastScoringTeam = ScoringTeam;
+	GoalSequenceEndTime = InGoalSequenceEndTime;
+	OnGoalSequenceChanged.Broadcast(true, ScoringTeam);
+}
+
+void AOSGameState::ClearGoalSequence()
+{
+	if (!HasAuthority()) return;
+
+	bGoalSequenceActive = false;
+	LastScoringTeam = -1;
+	GoalSequenceEndTime = 0.f;
+	OnGoalSequenceChanged.Broadcast(false, -1);
+}
+
+void AOSGameState::OnRep_GoalSequenceState()
+{
+	OnGoalSequenceChanged.Broadcast(bGoalSequenceActive, LastScoringTeam);
 }

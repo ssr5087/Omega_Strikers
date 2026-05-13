@@ -280,6 +280,7 @@ void AOSGameMode::StartCountdown()
 	AOSGameState* gs = GetGameState<AOSGameState>();
 	if (!gs) return;
 	
+	GetWorldTimerManager().ClearTimer(RoundEndTimer);
 	gs->SetMatchPhase(EOSMatchPhase::Countdown);
 	
 	// 카운트 다운 후 라운드 시작
@@ -292,8 +293,19 @@ void AOSGameMode::StartRound()
 	AOSGameState* gs = GetGameState<AOSGameState>();
 	if (!gs) return;
 	
+	const bool bIsFreshMatchStart =
+		gs->GetMatchPhase() == EOSMatchPhase::Countdown &&
+		gs->GetTeamRoundScore(0) == 0 &&
+		gs->GetTeamRoundScore(1) == 0 &&
+		gs->GetMatchWinner() < 0;
+
 	gs->SetMatchPhase(EOSMatchPhase::InProgress);
-	gs->ResetRoundScores();
+	gs->ClearGoalSequence();
+
+	if (bIsFreshMatchStart)
+	{
+		gs->ResetRoundScores();
+	}
 	
 	LOG_GT(TEXT("Round %d Started!"), gs->GetCurrentRound());
 	
@@ -304,15 +316,18 @@ void AOSGameMode::StartRound()
 	}
 	else
 	{
-		// 아레나 중앙으로 리셋
 		FVector resetLocation = CoreSpawnLocation;
 		if (ArenaRef)
 		{
 			resetLocation = ArenaRef->GetActorLocation();
 			resetLocation.Z += CoreSpawnZOffset;
 		}
-		ActiveCoreBall->SetActorLocation(resetLocation);
-		//ActiveCoreBall->ResetVelocity();
+		ActiveCoreBall->SetHomeLocation(resetLocation);
+		ActiveCoreBall->ResetToCenter();
+		if (ArenaRef)
+		{
+			ArenaRef->ResetForNewRound();
+		}
 		LOG_GT(TEXT("CoreBall reset to center (%.0f, %.0f, %.0f)"),
 			resetLocation.X, resetLocation.Y, resetLocation.Z);
 	}
@@ -344,6 +359,8 @@ void AOSGameMode::SpawnCoreBall()
 	
 	if (ActiveCoreBall)
 	{
+		ActiveCoreBall->SetHomeLocation(spawnLocation);
+
 		// 골 이벤트 바인딩
 		ActiveCoreBall->OnGoalScored.AddDynamic(this, &AOSGameMode::OnGoalScored);
 
@@ -374,40 +391,37 @@ void AOSGameMode::OnGoalScored(int32 ScoringTeam)
 	int32 score = gs->GetTeamRoundScore(ScoringTeam);
 	LOG_GT(TEXT("Team %d scored! (%d / %d)"), ScoringTeam, score, ScoresToWinRound);
 
-	// 라운드 승리 체크
+	const float GoalSequenceEndTime = GetWorld()->GetTimeSeconds() + RoundEndDelay;
+	gs->StartGoalSequence(ScoringTeam, GoalSequenceEndTime);
+
 	if (score >= ScoresToWinRound)
 	{
-		EndRound(ScoringTeam);
+		EndMatch(ScoringTeam);
 	}
 	else
 	{
-		// TODO: Core 리셋 후 이어서 진행 (3초 후 - CoreBall 내부 타이머)
+		gs->SetMatchPhase(EOSMatchPhase::RoundEnd);
+		GetWorldTimerManager().SetTimer(
+			RoundEndTimer, this, &AOSGameMode::RestartPlayAfterGoal, RoundEndDelay, false);
 	}
 }
 
-void AOSGameMode::EndRound(int32 WinningTeam)
+void AOSGameMode::RestartPlayAfterGoal()
 {
 	AOSGameState* gs = GetGameState<AOSGameState>();
 	if (!gs) return;
 
-	gs->SetMatchPhase(EOSMatchPhase::RoundEnd);
-	gs->AddRoundWin(WinningTeam);
-
-	int32 roundWins = gs->GetTeamRoundWins(WinningTeam);
-	LOG_GT(TEXT("Team %d wins round! (%d / %d rounds)"), WinningTeam, roundWins, RoundsToWinMatch);
-
-	// 매치 승리 체크
-	if (roundWins >= RoundsToWinMatch)
+	if (gs->GetMatchPhase() == EOSMatchPhase::MatchEnd)
 	{
-		EndMatch(WinningTeam);
 		return;
 	}
 
-	// 다음 라운드 준비
-	gs->AdvanceRound();
+	StartRound();
+}
 
-	GetWorldTimerManager().SetTimer(
-		RoundEndTimer, this, &AOSGameMode::StartCountdown, RoundEndDelay, false);
+void AOSGameMode::EndRound(int32 WinningTeam)
+{
+	EndMatch(WinningTeam);
 }
 
 void AOSGameMode::EndMatch(int32 WinningTeam)
@@ -415,6 +429,8 @@ void AOSGameMode::EndMatch(int32 WinningTeam)
 	AOSGameState* gs = GetGameState<AOSGameState>();
 	if (!gs) return;
 
+	GetWorldTimerManager().ClearTimer(CountdownTimer);
+	GetWorldTimerManager().ClearTimer(RoundEndTimer);
 	gs->SetMatchPhase(EOSMatchPhase::MatchEnd);
 	gs->SetMatchWinner(WinningTeam);
 

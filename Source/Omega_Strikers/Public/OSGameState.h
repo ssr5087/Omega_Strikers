@@ -12,6 +12,7 @@
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMatchPhaseChanged, EOSMatchPhase, NewPhase);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnScoreChanged, int32, TeamIndex, int32, NewScore);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMatchWinner, int32, WinningTeam);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnGoalSequenceChanged, bool, bIsActive, int32, ScoringTeam);
 
 UCLASS()
 class OMEGA_STRIKERS_API AOSGameState : public AGameStateBase
@@ -64,6 +65,18 @@ public:
 	int32 GetMatchWinner() const { return MatchWinner; }
 	
 	void SetMatchWinner(int32 TeamID);
+
+	UFUNCTION(BlueprintCallable, Category="OS|State")
+	bool IsGoalSequenceActive() const { return bGoalSequenceActive; }
+
+	UFUNCTION(BlueprintCallable, Category="OS|State")
+	int32 GetLastScoringTeam() const { return LastScoringTeam; }
+
+	UFUNCTION(BlueprintCallable, Category="OS|State")
+	float GetGoalSequenceEndTime() const { return GoalSequenceEndTime; }
+
+	void StartGoalSequence(int32 ScoringTeam, float InGoalSequenceEndTime);
+	void ClearGoalSequence();
 	
 	// ═══════════════════════════════════════════
 	// 델리게이트 (UI 바인딩용)
@@ -76,6 +89,9 @@ public:
 	
 	UPROPERTY(BlueprintAssignable, Category="OS|Events")
 	FOnMatchWinner OnMatchWinnerDeclared;
+
+	UPROPERTY(BlueprintAssignable, Category="OS|Events")
+	FOnGoalSequenceChanged OnGoalSequenceChanged;
 	
 private:
 	// ** Replicated 변수
@@ -99,6 +115,15 @@ private:
 	
 	UPROPERTY(ReplicatedUsing = OnRep_MatchWinner)
 	int32 MatchWinner = -1; // -1 : 미정
+
+	UPROPERTY(ReplicatedUsing = OnRep_GoalSequenceState)
+	bool bGoalSequenceActive = false;
+
+	UPROPERTY(ReplicatedUsing = OnRep_GoalSequenceState)
+	int32 LastScoringTeam = -1;
+
+	UPROPERTY(Replicated)
+	float GoalSequenceEndTime = 0.f;
 	
 	// ** OnRep 콜백
 	UFUNCTION()
@@ -109,4 +134,7 @@ private:
 	
 	UFUNCTION()
 	void OnRep_MatchWinner();
+
+	UFUNCTION()
+	void OnRep_GoalSequenceState();
 };

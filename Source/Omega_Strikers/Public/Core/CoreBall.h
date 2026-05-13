@@ -177,6 +177,7 @@ public:
 	// 서버에서만 호출. 검증 없이 바로 힘 적용
 	void ApplyHitForce(FVector Direction, float Power);
 	void ResetToCenter();
+	void SetHomeLocation(const FVector& NewHomeLocation);
  
 	// ═══════════════════════════════════════════
 	// 델리게이트
@@ -206,6 +207,7 @@ private:
 	// 서버 전용 내부 상태
 	// ═══════════════════════════════════════════
 	FVector ServerVelocity = FVector::ZeroVector;
+	FVector HomeLocation = FVector::ZeroVector;
 	float LastHitTime = -999.f; // 히트 쿨다운 체크용
 	float HitCountResetTimer = 0.f; // 연속 타격 리셋 타이머
  

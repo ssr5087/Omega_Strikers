@@ -24,7 +24,7 @@ void UPlayerHUDWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime
 		
 		if (!Player || !HPWidget) {continue;}
 		
-		const FVector WorldLocation = Player->GetActorLocation() + FVector(0.0f, 0.0f, 100.0f);
+		const FVector WorldLocation = Player->GetActorLocation() + FVector(0.0f, 0.0f, 50.0f);
 		FVector2D ScreenPosition;
 		const bool bProjected = pc->ProjectWorldLocationToScreen(WorldLocation, ScreenPosition, true);
 		
@@ -42,10 +42,11 @@ void UPlayerHUDWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime
 		UCanvasPanelSlot* CanvasSlot = Cast<UCanvasPanelSlot>(HPWidget->Slot);
 		if (CanvasSlot)
 		{
-			ScreenPosition.X += 30;
-			ScreenPosition.Y -= 70;
+			ScreenPosition.X -= 50;
+			ScreenPosition.Y -= 50;
 			CanvasSlot->SetPosition(ScreenPosition);
 			HPWidget->SetStaggerPercent(Player->HPComp->CurHP / Player->HPComp->MaxHP);
+			HPWidget->SetLevel(Player->Level);
 		}
 	}
 }
@@ -65,14 +66,14 @@ void UPlayerHUDWidget::RegisterPlayer(class APlayerBase* TargetPlayer)
 		UCanvasPanelSlot* slot = Cast<UCanvasPanelSlot>(Canvas_Whole->Slot);
 		if (slot)
 		{
-			slot->SetAutoSize(false);
-			slot->SetSize(FVector2D(200.0f, 40.0f));
+			slot->SetAutoSize(true);
 			slot->SetAlignment(FVector2D(0.5f, 0.5f));
 		}
 		
 		HPWidgetMap.Add(TargetPlayer, HPWidget);
 		HPWidget->SetTeamSide(TargetPlayer->TeamSide);
 		HPWidget->SetStaggerPercent(TargetPlayer->HPComp->CurHP / TargetPlayer->HPComp->MaxHP);
+		HPWidget->SetLevel(TargetPlayer->Level);
 	}
 }
 

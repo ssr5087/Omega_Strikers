@@ -76,6 +76,7 @@ void ACoreBall::BeginPlay()
 	
 	// 초기 위치 저장
 	Rep_Location = GetActorLocation();
+	HomeLocation = GetActorLocation();
 	ClientTargetLocation = GetActorLocation();
 }
 
@@ -115,18 +116,26 @@ void ACoreBall::OnRep_CoreState()
 	switch (Rep_CoreState)
 	{
 	case ECoreState::Idle:
+		SetActorHiddenInGame(false);
+		SetActorEnableCollision(true);
 		// 대기 상태 비주얼 (글로우 끄기 등)
 		break;
  
 	case ECoreState::InPlay:
+		SetActorHiddenInGame(false);
+		SetActorEnableCollision(true);
 		// 이동 중 비주얼 (트레일 활성화)
 		break;
  
 	case ECoreState::Stunned:
+		SetActorHiddenInGame(false);
+		SetActorEnableCollision(true);
 		// 스턴 VFX 재생
 		break;
  
 	case ECoreState::Scored:
+		SetActorHiddenInGame(true);
+		SetActorEnableCollision(false);
 		// 골 연출 VFX
 		break;
 	}
@@ -272,11 +281,20 @@ void ACoreBall::ResetToCenter()
 	Rep_HitCount = 0;
 	Rep_SpeedRatio = 0.f;
 	Rep_CoreState = ECoreState::Idle;
- 
-	// 초기 위치로 복귀 (Z만 유지)
-	FVector Center = FVector(0.f, 0.f, GetActorLocation().Z);
-	SetActorLocation(Center);
-	Rep_Location = Center;
+	SetActorHiddenInGame(false);
+	SetActorEnableCollision(true);
+
+	SetActorLocation(HomeLocation);
+	Rep_Location = HomeLocation;
+	Rep_Velocity = FVector::ZeroVector;
+	ClientTargetLocation = HomeLocation;
+}
+
+void ACoreBall::SetHomeLocation(const FVector& NewHomeLocation)
+{
+	if (!HasAuthority()) return;
+
+	HomeLocation = NewHomeLocation;
 }
 
 // ═══════════════════════════════════════════════════════
@@ -446,6 +464,8 @@ void ACoreBall::OnSphereOverlap(UPrimitiveComponent* OverlappedComp, AActor* Oth
 	// ─── 골 처리 ───
 	Rep_CoreState = ECoreState::Scored;
 	ServerVelocity = FVector::ZeroVector;
+	SetActorHiddenInGame(true);
+	SetActorEnableCollision(false);
  
 	// 골 이벤트 갱신 (OnRep 트리거)
 	Rep_GoalEvent.ScoringTeam = Team;
@@ -458,11 +478,6 @@ void ACoreBall::OnSphereOverlap(UPrimitiveComponent* OverlappedComp, AActor* Oth
 	OnGoalScored.Broadcast(Team);
  
 	UE_LOG(LogTemp, Log, TEXT("CoreBall: GOAL! Team %d scored"), Team);
- 
-	// ─── 리셋 타이머 (3초 후 중앙 복귀) ───
-	FTimerHandle ResetTimer;
-	GetWorldTimerManager().SetTimer(ResetTimer, this,
-		&ACoreBall::ResetToCenter, 3.0f, false);
 }
 
 bool ACoreBall::ReceiveImpact_Implementation(const FOSImpactData& ImpactData, AActor* InstigatorActor)

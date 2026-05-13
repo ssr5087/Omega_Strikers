@@ -35,16 +35,16 @@ public:
 	int32 PlayersPerTeam = 3; // 3vs3
 	
 	UPROPERTY(EditAnywhere, Category="OS|Match")
-	int32 ScoresToWinRound = 3; // 3골 -> 라운드 승리
+	int32 ScoresToWinRound = 5; // 5골 선취 시 승리
 	
 	UPROPERTY(EditAnywhere, Category="OS|Match")
-	int32 RoundsToWinMatch = 2; // 3판2선승
+	int32 RoundsToWinMatch = 1; // 단판 매치 유지용 호환값
 	
 	UPROPERTY(EditAnywhere, Category="OS|Match")
 	float CountdownDuration = 3.0f;
 	
 	UPROPERTY(EditAnywhere, Category="OS|Match")
-	float RoundEndDelay = 3.0f; // 라운드 종료 후 딜레이
+	float RoundEndDelay = 10.0f; // 골 연출 후 다음 플레이까지 대기 시간
 
 	// ═══════════════════════════════════════════
 	// ★ 캐릭터 → Pawn 매핑
@@ -90,6 +90,9 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category="OS|Match")
 	void EndMatch(int32 WinningTeam);
+
+	UFUNCTION(BlueprintCallable, Category="OS|Match")
+	void RestartPlayAfterGoal();
 	
 	// ═══════════════════════════════════════════
 	// 상태 조회
