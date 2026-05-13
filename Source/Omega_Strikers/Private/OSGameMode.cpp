@@ -31,7 +31,7 @@ AOSGameMode::AOSGameMode()
 void AOSGameMode::BeginPlay()
 {
 	Super::BeginPlay();
-	
+	LOG_GT(TEXT("★★★ AOSGameMode::BeginPlay 실행됨 ★★★"));
 	// 레벨에 배치된 CoreArena 찾기
 	TArray<AActor*> foundArenas;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ACoreArena::StaticClass(), foundArenas);
@@ -71,6 +71,9 @@ void AOSGameMode::BeginPlay()
 			SpawnPoints.Add(SpawnPoint);
 		}
 	}
+	
+	// 최초 CoreBall 스폰
+	SpawnCoreBall();
 	
 	// 시작 즉시 한번 생성
 	SpawnAllEXPOrbs();
@@ -142,7 +145,7 @@ UClass* AOSGameMode::GetDefaultPawnClassForController_Implementation(AController
 void AOSGameMode::PostLogin(APlayerController* NewPlayer)
 {
 	if (!NewPlayer) return;
-	
+	LOG_GT(TEXT("★ PostLogin 호출됨: %s"), *NewPlayer->GetName());
 	// ** 팀 배정
 	int32 assignedTeam = AssignTeam(NewPlayer);
 	AOSPlayerState* ps = NewPlayer->GetPlayerState<AOSPlayerState>();
