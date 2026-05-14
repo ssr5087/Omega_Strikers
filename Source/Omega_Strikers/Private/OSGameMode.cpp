@@ -13,6 +13,8 @@
 #include "Omega_Strikers/Omega_Strikers.h"
 #include "OSTopDownController.h"
 #include "PlayerBase.h"
+#include "TeamPlayerStart.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 AOSGameMode::AOSGameMode()
 {
@@ -26,6 +28,9 @@ AOSGameMode::AOSGameMode()
 	
 	// ★ 기본 폰도 PlayerBase로 — DefaultPawn 스폰 방지
 	DefaultPawnClass = APlayerBase::StaticClass();
+	
+	// ★ 자동 스폰 막기
+	bStartPlayersAsSpectators = true;
 }
 
 void AOSGameMode::BeginPlay()
@@ -150,6 +155,7 @@ void AOSGameMode::PostLogin(APlayerController* NewPlayer)
 	int32 assignedTeam = AssignTeam(NewPlayer);
 	AOSPlayerState* ps = NewPlayer->GetPlayerState<AOSPlayerState>();
 	
+	LOG_SR_W(TEXT("Assigned Team : %d"), assignedTeam);
 	if ( ps )
 	{
 		ps->SetTeamID(assignedTeam);
@@ -169,6 +175,9 @@ void AOSGameMode::PostLogin(APlayerController* NewPlayer)
 	}
 
 	Super::PostLogin(NewPlayer);
+	
+	// ★ 여기서 처음 스폰
+	RestartPlayer(NewPlayer);
 	
 	// ** 인원 체크 -> 자동 시작
 	int32 totalPlayers = GetTeamPlayerCount(0) + GetTeamPlayerCount(1);
@@ -224,21 +233,32 @@ int32 AOSGameMode::GetTeamPlayerCount(int32 TeamID) const
 // ═══════════════════════════════════════════════════════
 AActor* AOSGameMode::ChoosePlayerStart_Implementation(AController* Player)
 {
+	
 	AOSPlayerState* ps = Player ? Player->GetPlayerState<AOSPlayerState>() : nullptr;
 	int32 teamID = ps ? ps->GetTeamID() : 0;
 	
+	LOG_SR_W(TEXT("ChoosePlayerStart TeamID : %d"), teamID);
 	// PlayerStart의 Tag로 팀 구분
 	// Tag TeamA (0) -> Red, TeamB (1) -> Blue
-	FString desiredTag = FString::Printf(TEXT("Team%d"), teamID);
+	// FString desiredTag = FString::Printf(TEXT("Team%d"), teamID);
 	
-	TArray<AActor*> starts;
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(), APlayerStart::StaticClass(), starts);
+	
+	TArray<AActor*> FoundStarts;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ATeamPlayerStart::StaticClass(), FoundStarts);
 	
 	// 태그 매칭되는 것 중 랜덤 선택
 	TArray<AActor*> teamStarts;
-	for (AActor* start : starts)
+	for (AActor* Actor : FoundStarts)
 	{
-		if (start->ActorHasTag(FName(*desiredTag))) teamStarts.Add(start);
+		ATeamPlayerStart* Start = Cast<ATeamPlayerStart>(Actor);
+		
+		if (!Start)
+			continue;
+		
+		if (Start->TeamID == teamID)
+		{
+			teamStarts.Add(Start);
+		}
 	}
 	
 	if (teamStarts.Num() > 0) return teamStarts[FMath::RandRange(0, teamStarts.Num() - 1)];
@@ -416,7 +436,92 @@ void AOSGameMode::RestartPlayAfterGoal()
 	}
 
 	bGoalScoredThisSequence = false;
+	
+	// 플레이어 위치 리셋
+	ResetPlayersToStart();
+	
 	StartRound();
+}
+
+void AOSGameMode::ResetPlayersToStart()
+{
+	TArray<AActor*> FoundStarts;
+
+	UGameplayStatics::GetAllActorsOfClass(
+		GetWorld(),
+		ATeamPlayerStart::StaticClass(),
+		FoundStarts
+	);
+
+	TArray<ATeamPlayerStart*> Team0Starts;
+	TArray<ATeamPlayerStart*> Team1Starts;
+
+	for (AActor* Actor : FoundStarts)
+	{
+		ATeamPlayerStart* Start = Cast<ATeamPlayerStart>(Actor);
+
+		if (!Start)
+			continue;
+
+		if (Start->TeamID == 0)
+		{
+			Team0Starts.Add(Start);
+		}
+		else
+		{
+			Team1Starts.Add(Start);
+		}
+	}
+
+	int32 Team0Index = 0;
+	int32 Team1Index = 0;
+
+	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+	{
+		APlayerController* PC = It->Get();
+
+		if (!PC)
+			continue;
+
+		APlayerBase* Player = Cast<APlayerBase>(PC->GetPawn());
+
+		if (!Player)
+			continue;
+
+		AOSPlayerState* PS = Player->GetPlayerState<AOSPlayerState>();
+
+		if (!PS)
+			continue;
+
+		// 이동 멈춤
+		Player->GetCharacterMovement()->StopMovementImmediately();
+
+		// 팀별 위치 이동
+		if (PS->GetTeamID() == 0)
+		{
+			if (Team0Starts.IsValidIndex(Team0Index))
+			{
+				Player->TeleportTo(
+					Team0Starts[Team0Index]->GetActorLocation(),
+					Team0Starts[Team0Index]->GetActorRotation()
+				);
+
+				Team0Index++;
+			}
+		}
+		else
+		{
+			if (Team1Starts.IsValidIndex(Team1Index))
+			{
+				Player->TeleportTo(
+					Team1Starts[Team1Index]->GetActorLocation(),
+					Team1Starts[Team1Index]->GetActorRotation()
+				);
+
+				Team1Index++;
+			}
+		}
+	}
 }
 
 void AOSGameMode::EndRound(int32 WinningTeam)

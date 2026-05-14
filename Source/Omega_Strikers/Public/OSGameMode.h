@@ -9,6 +9,7 @@
 #include "OSGameMode.generated.h"
 
 class APlayerBase;
+class ATeamPlayerStart;
 // 매치 진행 단계
 UENUM(BlueprintType)
 enum class EOSMatchPhase : uint8
@@ -93,6 +94,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="OS|Match")
 	void RestartPlayAfterGoal();
+	
+	UFUNCTION(BlueprintCallable, Category="OS|Match")
+	void ResetPlayersToStart();
 	
 	// ═══════════════════════════════════════════
 	// 상태 조회
