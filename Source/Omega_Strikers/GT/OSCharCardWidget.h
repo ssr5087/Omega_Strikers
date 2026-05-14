@@ -56,7 +56,11 @@ private:
 	UPROPERTY(meta = (BindWidget))
 	UTextBlock* NameText;
 	
-	// 다른 팀 확정자 이름 표시용 (WBP에 추가 필요)
+	// 같은 팀 확정자 이름 표시용
+	UPROPERTY(meta = (BindWidgetOptional))
+	UTextBlock* SameTeamNameText;
+	
+	// 다른 팀 확정자 이름 표시용
 	UPROPERTY(meta = (BindWidgetOptional))
 	UTextBlock* OtherTeamNameText;
 	
