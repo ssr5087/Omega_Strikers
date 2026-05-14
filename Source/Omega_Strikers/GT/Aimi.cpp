@@ -31,10 +31,10 @@ void AAimi::BeginPlay()
 {
 	Super::BeginPlay();
 
-	CoreHitCool = 0.f;
-	PrimarySkillCool = 0.f;
-	SecondaryCool = 0.f;
-	SpecialCool = 0.f;
+	//CoreHitCool = 0.f;
+	//PrimarySkillCool = 0.f;
+	//SecondaryCool = 0.f;
+	//SpecialCool = 0.f;
 
 	Energy = 0.f;
 	ActiveOrb = nullptr;
@@ -111,7 +111,7 @@ UAimiAnimInstance* AAimi::GetAimiAnim() const
 // ════════════════════════════════════════════════════════════
 void AAimi::TickCooldowns(float DeltaTime)
 {
-	if (CoreHitCool	 > 0.f) CoreHitCool	 = FMath::Max(0.f, CoreHitCool	 - DeltaTime);
+	//if (CoreHitCool	 > 0.f) CoreHitCool	 = FMath::Max(0.f, CoreHitCool	 - DeltaTime);
 	if (PrimarySkillCool   > 0.f) PrimarySkillCool	 = FMath::Max(0.f, PrimarySkillCool	 - DeltaTime);
 	if (SecondaryCool > 0.f) SecondaryCool = FMath::Max(0.f, SecondaryCool - DeltaTime);
 	if (SpecialCool	 > 0.f) SpecialCool	 = FMath::Max(0.f, SpecialCool   - DeltaTime);
