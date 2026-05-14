@@ -66,7 +66,8 @@ bool AOSCharSelectGameMode::TrySelectCharacter(AOSPlayerState* Player, FName Cha
 	}
 	
 	// 중복 체크: 다른 플레이어가 확정한 캐릭터
-	if (gs->IsCharacterLocked(CharacterID))
+	const int32 myTeam = Player->GetTeamID();
+	if (gs->IsCharacterLocked(CharacterID, myTeam))
 	{
 		LOG_GT_W(TEXT("'%s' 이미 다른 플레이어가 확정"), *CharacterID.ToString());
 		return false;
@@ -107,11 +108,13 @@ bool AOSCharSelectGameMode::TryConfirmCharacter(AOSPlayerState* Player)
 	}
 	
 	// 레이스 컨디션 방어 - 최종 중복 체크
-	// 다른 플레이어가 '같은' 캐릭터를 이미 확정했는지 확인
+	// 팀내 다른 플레이어가 '같은' 캐릭터를 이미 확정했는지 확인
+	const int32 myTeam = Player->GetTeamID();
 	for (const FOSCharSelectEntry& entry : gs->CharSelectList)
 	{
 		if (entry.PlayerIndex != myEntry.PlayerIndex &&
 			entry.CharacterID == myEntry.CharacterID &&
+			entry.TeamID == myTeam &&
 			entry.bConfirmed)
 		{
 			myEntry.CharacterID = NAME_None;
