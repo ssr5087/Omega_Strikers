@@ -382,6 +382,24 @@ void UOSGameInstance::ClearCharacterSelections()
 	LOG_GT(TEXT("캐릭터 선택 초기화"));
 }
 
+void UOSGameInstance::SaveTeamSelection(const FString& PlayerKey, int32 TeamID)
+{
+	TeamSelections.Add(PlayerKey, TeamID);
+	LOG_GT(TEXT("팀 저장 [%s] -> %d"), *PlayerKey, TeamID);
+}
+
+int32 UOSGameInstance::GetTeamSelection(const FString& PlayerKey) const
+{
+	const int32* found = TeamSelections.Find(PlayerKey);
+	return found ? *found : -1;
+}
+
+void UOSGameInstance::ClearTeamSelections()
+{
+	TeamSelections.Empty();
+	LOG_GT(TEXT("팀 선택 초기화"));
+}
+
 void UOSGameInstance::SaveCharacterSelection(const FString& PlayerKey, FName CharacterID)
 {
 	CharacterSelections.Add(PlayerKey, CharacterID);

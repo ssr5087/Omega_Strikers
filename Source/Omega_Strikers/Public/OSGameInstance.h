@@ -117,6 +117,15 @@ public:
 	/** 전체 선택 초기화 (새 매치 시작 시) */
 	void ClearCharacterSelections();
 
+	/** 팀 선택 저장 */
+	void SaveTeamSelection(const FString& PlayerKey, int32 TeamID);
+
+	/** 저장된 팀 ID 조회 (없으면 -1) */
+	int32 GetTeamSelection(const FString& PlayerKey) const;
+
+	/** 전체 팀 선택 초기화 */
+	void ClearTeamSelections();
+
 	/** 전체 선택 맵 (디버그/로그용) */
 	const TMap<FString, FName>& GetAllSelections() const { return CharacterSelections; }
 
@@ -125,4 +134,7 @@ public:
 private:
 	UPROPERTY()
 	TMap<FString, FName> CharacterSelections;
+
+	UPROPERTY()
+	TMap<FString, int32> TeamSelections;
 };
