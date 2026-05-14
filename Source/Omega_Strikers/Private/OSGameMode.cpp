@@ -369,19 +369,20 @@ void AOSGameMode::SpawnCoreBall()
 	}
 }
 
-void AOSGameMode::OnGoalScored(int32 ScoringTeam)
+void AOSGameMode::OnGoalScored(int32 ScoringTeam, int32 ScorerIndex)
 {
 	AOSGameState* gs = GetGameState<AOSGameState>();
 	if (!gs) return;
-
+	LOG_SM_E(TEXT("확인1"));
 	if (gs->GetMatchPhase() != EOSMatchPhase::InProgress) return;
+	LOG_SM_E(TEXT("확인2"));
 	if (gs->IsGoalSequenceActive()) return;
-
+	LOG_SM_E(TEXT("확인3"));
 	// 점수 추가
 	if (bGoalScoredThisSequence) return;
 	bGoalScoredThisSequence = true;
 	gs->StartGoalSequence(ScoringTeam, GetWorld()->GetTimeSeconds() + RoundEndDelay);
-	gs->AddScore(ScoringTeam);
+	gs->AddScore(ScoringTeam, ScorerIndex);
 
 	if (IsValid(ActiveCoreBall))
 	{

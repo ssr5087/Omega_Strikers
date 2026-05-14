@@ -11,6 +11,8 @@
 #include "Blueprint/UserWidget.h"
 #include "Components/TextBlock.h"
 #include "Kismet/GameplayStatics.h"
+#include "Net/UnrealNetwork.h"
+#include "Omega_Strikers/Omega_Strikers.h"
 
 void AOSPlayerController::BeginPlay()
 {
@@ -115,10 +117,12 @@ void AOSPlayerController::AddScoreBoard()
 	}
 }
 
-void AOSPlayerController::SetScoreBoard(int32 TeamIndex, int32 NewScore)
+void AOSPlayerController::SetScoreBoard(int32 TeamIndex, int32 NewScore, int32 ScorerID)
 {
 	if (TeamIndex == 0) {BlueScore = NewScore;}
 	else {RedScore = NewScore;}
+	
+	ScorerIndex = ScorerID;
 	
 	if (ScoreBoardWidget)
 	{
@@ -128,14 +132,21 @@ void AOSPlayerController::SetScoreBoard(int32 TeamIndex, int32 NewScore)
 	GetWorldTimerManager().SetTimer(AddWidgetTimer, this, &AOSPlayerController::AddWidget, 2.0f, false);
 }
 
+void AOSPlayerController::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	
+	DOREPLIFETIME(AOSPlayerController, ScorerIndex);
+}
+
 void AOSPlayerController::AddWidget()
 {
 	GoalWidget = CreateWidget<UGoalWidget>(GetWorld(), GoalWidgetClass);
 	if (GoalWidget)
 	{
 		GoalWidget->AddToViewport();
-		GoalWidget->PlayGoalAnimation(0);
-		
+		GoalWidget->PlayGoalAnimation(ScorerIndex);
+		LOG_SM_E(TEXT("ScorerIndex : %d"), ScorerIndex);
 		GetWorldTimerManager().SetTimer(GoalAnimTimer, this, &AOSPlayerController::RemoveWidget, 3.0f, false);
 	}
 }

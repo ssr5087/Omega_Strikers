@@ -515,16 +515,17 @@ void APlayerBase::ServerRPC_CoreHit_Implementation(FVector2D HitDir)
 	float CoreDist = FVector::Distance(CachedCoreBall->GetActorLocation(), GetActorLocation());
 	if (CoreDist > 700.f) {return;}
 
-	// ✅ CoreBall은 Server RPC로 처리
-	if ( CachedCoreBall )
-	{
-		FVector KnockDir = FVector(HitDir.X, HitDir.Y, 0.f).GetSafeNormal();
-		CachedCoreBall->Server_HitCore(GetActorLocation(), KnockDir, CoreImpactData.CoreKnockbackPower);
-	}
-	else
-	{
-		Execute_ReceiveImpact(CachedCoreBall, CoreImpactData, this);
-	}
+	Execute_ReceiveImpact(CachedCoreBall, CoreImpactData, this);
+	// // ✅ CoreBall은 Server RPC로 처리 -> 이미 값 전달 후 물리는 서버에서만 적용되도록 CoreBall 내부 로직이 짜여 있음
+	// if ( CachedCoreBall )
+	// {
+	// 	FVector KnockDir = FVector(HitDir.X, HitDir.Y, 0.f).GetSafeNormal();
+	// 	CachedCoreBall->Server_HitCore(GetActorLocation(), KnockDir, CoreImpactData.CoreKnockbackPower);
+	// }
+	// else
+	// {
+	// 	Execute_ReceiveImpact(CachedCoreBall, CoreImpactData, this);
+	// }
 }
 
 void APlayerBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

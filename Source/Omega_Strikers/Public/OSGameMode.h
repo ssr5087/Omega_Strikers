@@ -83,7 +83,7 @@ public:
 	void StartRound();
 	
 	UFUNCTION(BlueprintCallable, Category="OS|Match")
-	void OnGoalScored(int32 ScoringTeam);
+	void OnGoalScored(int32 ScoringTeam, int32 ScorerIndex);
 	
 	UFUNCTION(BlueprintCallable, Category="OS|Match")
 	void EndRound(int32 WinningTeam);
