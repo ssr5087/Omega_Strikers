@@ -38,7 +38,7 @@ public:
 	// ═══════════════════════════════════════
 	
 	FOSCharSelectEntry& FindOrAddEntry(AOSPlayerState* PS);
-	bool IsCharacterLocked(FName CharacterID) const;
+	bool IsCharacterLocked(FName CharacterID, int32 TeamID) const;
 	FString GetLockerName(FName CharacterID) const;
 	bool AreAllPlayersConfirmed() const;
 	void BroadcastCharSelectUpdate();

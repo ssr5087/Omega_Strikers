@@ -42,13 +42,13 @@ FOSCharSelectEntry& AOSCharSelectGameState::FindOrAddEntry(AOSPlayerState* PS)
 // ═══════════════════════════════════════════════════════
 //  잠금 체크
 // ═══════════════════════════════════════════════════════
-bool AOSCharSelectGameState::IsCharacterLocked(FName CharacterID) const
+bool AOSCharSelectGameState::IsCharacterLocked(FName CharacterID, int32 TeamID) const
 {
 	if (CharacterID == NAME_None) return false;
 	
 	for (const FOSCharSelectEntry& entry : CharSelectList)
 	{
-		if (entry.CharacterID == CharacterID && entry.bConfirmed) return true;
+		if (entry.CharacterID == CharacterID && entry.bConfirmed && entry.TeamID == TeamID) return true;
 	}
 	return false;
 }

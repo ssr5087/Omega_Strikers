@@ -256,7 +256,8 @@ void UOSCharSelectWidget::OnCardClicked(FName CharacterID)
 	if (ps->IsCharacterConfirmed()) return;
 	
 	// ── 잠긴 캐릭터 무시 ──
-	if (CachedGameState && CachedGameState->IsCharacterLocked(CharacterID)) return;
+	int32 myTeam = ps->GetTeamID();
+	if (CachedGameState && CachedGameState->IsCharacterLocked(CharacterID, myTeam)) return;
 
 	// ── 로컬 UI 갱신 (낙관적) ── 
 	SelectedID = CharacterID;
