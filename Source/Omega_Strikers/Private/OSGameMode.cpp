@@ -291,6 +291,7 @@ bool AOSGameMode::IsReadyToStart() const
 {
 	int32 teamA = GetTeamPlayerCount(0);
 	int32 teamB = GetTeamPlayerCount(1);
+	LOG_SM_E(TEXT("IsReadyToStart : %d"),teamA >= PlayersPerTeam && teamB >= PlayersPerTeam);
 	return teamA >= PlayersPerTeam && teamB >= PlayersPerTeam;
 }
 
@@ -411,7 +412,7 @@ void AOSGameMode::OnGoalScored(int32 ScoringTeam, int32 ScorerIndex)
 	AOSGameState* gs = GetGameState<AOSGameState>();
 	if (!gs) return;
 	LOG_SM_E(TEXT("확인1"));
-	if (gs->GetMatchPhase() != EOSMatchPhase::InProgress) return;
+	// if (gs->GetMatchPhase() != EOSMatchPhase::InProgress) return;
 	LOG_SM_E(TEXT("확인2"));
 	if (gs->IsGoalSequenceActive()) return;
 	LOG_SM_E(TEXT("확인3"));

@@ -470,14 +470,24 @@ FOSImpactData APlayerBase:: MakeImpactData(const FCharacterSkill& Skill)
 
 void APlayerBase::ServerRPC_CoreHit_Implementation(FVector2D HitDir)
 {
+	LOG_GT(TEXT("[CoreHit] 서버 RPC 진입! SkillTable=%s"), SkillTable ? *SkillTable->GetName() : TEXT("NULL"));
+	
 	// 서버에서 쿨타임 체크, 사용 가능할 때만 사용
-	if (bCoreHitCoolDown) {return;}
+	if (bCoreHitCoolDown)
+	{
+		LOG_GT_E(TEXT("[CoreHit] 쿨다운 중"));
+		return;
+	}
 	
 	// 데이터 셋 불러오기
 	FCharacterSkill* Skill = GetSkillData(FName(TEXT("Aimi_Strike")));
 	
 	// 데이터 셋 로드 실패 시 리턴
-	if (!Skill) {return;}
+	if (!Skill)
+	{
+		LOG_GT_E(TEXT("[CoreHit] Aimi_Strike 행 못 찾음!"));
+		return;
+	}
 			
 	// ImpactData를 데이터 셋으로부터 계산하여 설정
 	// 단, 방향 값은 서버의 마우스 커서가 아닌 클라이언트의 마우스 커서로 계산
@@ -506,14 +516,21 @@ void APlayerBase::ServerRPC_CoreHit_Implementation(FVector2D HitDir)
 		[this]()->void
 		{
 			bCoreHitCoolDown = false;
+			LOG_GT(TEXT("쿨다운 해제"));
 		},
 		CoreHitCool,
 		false
 		);
+	LOG_GT(TEXT("쿨다운 타이머 : %1f초 시작"), CoreHitCool);
 	
 	// 거리가 멀면 못 차요
 	float CoreDist = FVector::Distance(CachedCoreBall->GetActorLocation(), GetActorLocation());
-	if (CoreDist > 700.f) {return;}
+	LOG_GT(TEXT("[CoreHit] 거리=%.1f"), CoreDist);
+	if (CoreDist > 700.f)
+	{
+		LOG_GT_E(TEXT("[CoreHit] 거리 초과!"));
+		return;
+	}
 
 	Execute_ReceiveImpact(CachedCoreBall, CoreImpactData, this);
 	// // ✅ CoreBall은 Server RPC로 처리 -> 이미 값 전달 후 물리는 서버에서만 적용되도록 CoreBall 내부 로직이 짜여 있음
