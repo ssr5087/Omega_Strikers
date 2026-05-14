@@ -25,12 +25,15 @@ public:
 	UMaterialInstanceDynamic* CurrentStaggerBar;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	class UMaterialInterface* MyPlayer;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	class UMaterialInterface* BlueTeam;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	class UMaterialInterface* RedTeam;
 	
-	void SetTeamSide(EOSTeam teamSide);
+	void SetTeamSide(bool bIsMyPlayer, EOSTeam teamSide);
 	void SetStaggerPercent(float Percent);
 	
 public:
