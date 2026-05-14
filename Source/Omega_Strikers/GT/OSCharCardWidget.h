@@ -30,7 +30,15 @@ public:
 	UFUNCTION(BlueprintPure)
 	FName GetCharacterID() const { return CharacterID; }
 
-	void SetLocked(bool bLocked, const FString& Name = FString(""));
+	/**
+	 * 잠금 처리 + 양팀 이름 표시
+	 * @param bLocked         잠금 여부 (true면 회색 + 클릭 불가)
+	 * @param SameTeamName    같은 팀 확정자 이름 (잠금 시 메인 이름에 표시)
+	 * @param OtherTeamName   다른 팀 확정자 이름 (있으면 별도 표시)
+	 */
+	void SetLocked(bool bLocked,
+				   const FString& SameTeamName = FString(),
+				   const FString& OtherTeamName = FString());
 	
 	UPROPERTY(BlueprintAssignable)
 	FOnCardClicked OnClicked;
@@ -47,6 +55,10 @@ private:
 	
 	UPROPERTY(meta = (BindWidget))
 	UTextBlock* NameText;
+	
+	// 다른 팀 확정자 이름 표시용 (WBP에 추가 필요)
+	UPROPERTY(meta = (BindWidgetOptional))
+	UTextBlock* OtherTeamNameText;
 	
 	UPROPERTY(meta = (BindWidget))
 	UBorder* SelectBorder;

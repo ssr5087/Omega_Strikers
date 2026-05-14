@@ -31,6 +31,17 @@ AOSGameMode::AOSGameMode()
 void AOSGameMode::BeginPlay()
 {
 	Super::BeginPlay();
+	
+	// GameInstance에서 인원 수 가져와 팀당 인원 설정
+	if (UOSGameInstance* gi = Cast<UOSGameInstance>(GetGameInstance()))
+	{
+		if (gi->PendingPlayerCount > 0)
+		{
+			SetPlayerPerTeam(gi->PendingPlayerCount);
+			LOG_GT(TEXT("팀당 인원 설정 완료: %d (총 %d명)"), PlayersPerTeam, gi->PendingPlayerCount);
+		}
+	}
+	
 	LOG_GT(TEXT("★★★ AOSGameMode::BeginPlay 실행됨 ★★★"));
 	// 레벨에 배치된 CoreArena 찾기
 	TArray<AActor*> foundArenas;
@@ -140,6 +151,12 @@ UClass* AOSGameMode::GetDefaultPawnClassForController_Implementation(AController
 	LOG_GT_E(TEXT("[%s]: '%s' CharacterPawnMap에 매핑 없음 → DefaultPawn"),
 		*playerKey, *characterID.ToString());
 	return DefaultPawnClass;
+}
+
+void AOSGameMode::SetPlayerPerTeam(int32 ToTalPlayerCount)
+{
+	ToTalPlayerCount = FMath::Clamp(ToTalPlayerCount, 2, 6);
+	PlayersPerTeam = ToTalPlayerCount / 2;
 }
 
 void AOSGameMode::PostLogin(APlayerController* NewPlayer)

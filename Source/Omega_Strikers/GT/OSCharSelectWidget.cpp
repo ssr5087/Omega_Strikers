@@ -336,7 +336,12 @@ void UOSCharSelectWidget::RefreshCardStates()
 	if ( !pc ) return;
 	
 	int32 myPID = -1;
-	if (AOSPlayerState* ps = Cast<AOSPlayerState>(pc->PlayerState)) myPID = ps->GetPlayerId();
+	int32 myTeam = -1;
+	if (AOSPlayerState* ps = Cast<AOSPlayerState>(pc->PlayerState))
+	{
+		myPID = ps->GetPlayerId();
+		myTeam = ps->GetTeamID();
+	}
 	
 	for (UOSCharCardWidget* card : CardWidgets)
 	{
@@ -347,42 +352,55 @@ void UOSCharSelectWidget::RefreshCardStates()
 		bool bLockedByOther = false;
 		bool bLockedByMe = false;
 		bool bSelectedByMe = (cid == SelectedID);
-		FString LockerName;
 		
+		// 팀별 확정자 이름 수집 (break 안 함!)
+		FString sameTeamLockerName;   // 같은 팀에서 확정한 사람 이름
+		FString otherTeamLockerName;  // 다른 팀에서 확정한 사람 이름
+		        
 		for (const FOSCharSelectEntry& entry : CachedGameState->CharSelectList)
 		{
 			if (entry.CharacterID == cid && entry.bConfirmed)
 			{
+				if (entry.CharacterID != cid || !entry.bConfirmed) continue;
 				if (entry.PlayerIndex == myPID) bLockedByMe = true;
+				else if (entry.TeamID == myTeam) // 같은 팀일 경우만 중복 벤
+				{
+					// 같은 팀 다른 플레이어 -> 잠금 (선택 불가)
+					bLockedByOther = true;
+					sameTeamLockerName = entry.PlayerName;
+				}
 				else
 				{
-					bLockedByOther = true;
-					LockerName = entry.PlayerName;
+					// 다른 팀 플레이어 -> 잠금 안 함, 이름만 수집
+					otherTeamLockerName = entry.PlayerName;
 				}
-				break;
 			}
 		}
 		
 		// 카드 비주얼 업데이트
 		if ( bLockedByOther )
 		{
+			// 같은 팀 다른 플레이어가 확정 → 회색 잠금 + 클릭 불가
 			card->SetSelected(false);
-			card->SetLocked(true, LockerName);
+			card->SetLocked(true, sameTeamLockerName, otherTeamLockerName);
 		}
 		else if ( bLockedByMe )
 		{
+			// 내가 확정 — 하이라이트 + 다른 팀 이름 표시
 			card->SetSelected(true);
-			card->SetLocked(false);  // 내가 확정 — 골드 하이라이트
+			card->SetLocked(false, FString(), otherTeamLockerName);
 		}
 		else if ( bSelectedByMe )
 		{
+			// 아직 확정 전, 내가 선택 중
 			card->SetSelected(true);
-			card->SetLocked(false);
+			card->SetLocked(false, FString(), otherTeamLockerName);
 		}
 		else
 		{
+			// 아무도 안 골랐거나, 다른 팀만 골랐을 때
 			card->SetSelected(false);
-			card->SetLocked(false);
+			card->SetLocked(false, FString(), otherTeamLockerName);
 		}
 	}
 }
@@ -492,7 +510,7 @@ void UOSCharSelectWidget::TryBindAll()
 		{
 			CachedGameState->OnCharSelectListUpdated.AddDynamic(
 				this, &UOSCharSelectWidget::OnCharSelectListUpdated);
-			UE_LOG(LogTemp, Warning, TEXT("★ GameState 바인딩 완료"));
+			LOG_GT_W(TEXT("★ GameState 바인딩 완료"));
 		}
 		else
 		{
@@ -515,7 +533,7 @@ void UOSCharSelectWidget::TryBindAll()
 				
 				bPlayerStateBound = true;
 				
-				UE_LOG(LogTemp, Warning, TEXT("★ PlayerState 바인딩 완료: %s"), *ps->GetPlayerName());
+				LOG_GT_W(TEXT("★ PlayerState 바인딩 완료: %s"), *ps->GetPlayerName());
 			}
 			else
 			{
@@ -616,7 +634,7 @@ void UOSCharSelectWidget::UpdateTeamUI()
 	UWorld* world = GetWorld();
 	if (!world) return;
 
-	// ★ GameMode에서 MaxPlayersPerTeam 가져오기 (서버만)
+	// GameMode에서 MaxPlayersPerTeam 가져오기 (서버만)
 	AOSCharSelectGameMode* gm = Cast<AOSCharSelectGameMode>(world->GetAuthGameMode());
 	if (gm)
 	{
@@ -624,7 +642,7 @@ void UOSCharSelectWidget::UpdateTeamUI()
 		// MaxPerTeam은 PostLogin에서 세션 기반으로 자동 계산됨
 	}
 
-	// ★ RequiredPlayerCount 기반으로 계산 (클라이언트도 가능)
+	// RequiredPlayerCount 기반으로 계산 (클라이언트도 가능)
 	if (CachedGameState && CachedGameState->RequiredPlayerCount > 0)
 	{
 		maxPerTeam = FMath::CeilToInt(CachedGameState->RequiredPlayerCount / 2.0f);
@@ -711,8 +729,8 @@ void UOSCharSelectWidget::OnAnyTeamChanged(AOSPlayerState* Player, int32 NewTeam
 				FString::Printf(TEXT("%s팀에 참가했습니다."), *TeamName)));
 			StatusText->SetColorAndOpacity(FSlateColor(
 				(NewTeamID == 0)
-					? FLinearColor(0.9f, 0.3f, 0.3f, 1.f)   // A팀 빨강
-					: FLinearColor(0.3f, 0.5f, 0.9f, 1.f))); // B팀 파랑
+					? FLinearColor(0.3f, 0.5f, 0.9f, 1.f)
+					: FLinearColor(0.9f, 0.3f, 0.3f, 1.f)));
 			StatusText->SetVisibility(ESlateVisibility::Visible);
 		}
 	}
