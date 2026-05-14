@@ -381,7 +381,7 @@ void ACoreBall::ServerPhysicsTick(float DeltaTime)
 		if (bHit && hit.bBlockingHit)
 		{
 			// 충돌 지점까지 이동
-			SetActorLocation(hit.Location);
+			// SetActorLocation(hit.Location); 요놈 때문에 벽에 먹히는 듯?
 			HandleWallBounce(hit);
 		}
 		else
