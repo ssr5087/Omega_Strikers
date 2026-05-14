@@ -44,7 +44,7 @@ public:
 	FTimerHandle AddTimer;
 	void AddScoreBoard();
 	UFUNCTION()
-	void SetScoreBoard(int32 TeamIndex, int32 NewScore);
+	void SetScoreBoard(int32 TeamIndex, int32 NewScore, int32 PlayerIndex);
 	
 public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI")
@@ -55,6 +55,12 @@ public:
 	
 	FTimerHandle AddWidgetTimer;
 	FTimerHandle GoalAnimTimer;
+	
+	UPROPERTY(Replicated)
+	int32 ScorerIndex = -1;
+	
+	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
+	
 	void AddWidget();
 	void RemoveWidget();
 };

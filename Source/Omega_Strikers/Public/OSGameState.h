@@ -10,7 +10,7 @@
 #include "OSGameState.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMatchPhaseChanged, EOSMatchPhase, NewPhase);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnScoreChanged, int32, TeamIndex, int32, NewScore);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnScoreChanged, int32, TeamIndex, int32, NewScore, int32, ScorerID);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMatchWinner, int32, WinningTeam);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnGoalSequenceChanged, bool, bIsActive, int32, ScoringTeam);
 
@@ -39,7 +39,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category="OS|State")
 	int32 GetTeamRoundScore(int32 TeamID) const;
 	
-	void AddScore(int32 TeamID);
+	UPROPERTY(Replicated)
+	int32 ScorerIndex = -1; // GM에서 델리게이트로 전달된 변수 저장
+	void AddScore(int32 TeamID, int32 ScorerID);
 	void ResetRoundScores();
 	
 	// ═══════════════════════════════════════════

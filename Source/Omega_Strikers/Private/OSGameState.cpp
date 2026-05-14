@@ -21,6 +21,7 @@ void AOSGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 	DOREPLIFETIME(AOSGameState, bGoalSequenceActive);
 	DOREPLIFETIME(AOSGameState, LastScoringTeam);
 	DOREPLIFETIME(AOSGameState, GoalSequenceEndTime);
+	DOREPLIFETIME(AOSGameState, ScorerIndex);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -52,19 +53,20 @@ int32 AOSGameState::GetTeamRoundScore(int32 TeamID) const
 	return TeamID == 0 ? TeamARoundScore : TeamBRoundScore;
 }
 
-void AOSGameState::AddScore(int32 TeamID)
+void AOSGameState::AddScore(int32 TeamID, int32 ScorerID)
 {
 	if (!HasAuthority()) return;
 	
+	ScorerIndex = ScorerID;
 	if (TeamID == 0)
 	{
 		TeamARoundScore++;
-		OnScoreChanged.Broadcast(0, TeamARoundScore);
+		OnScoreChanged.Broadcast(0, TeamARoundScore, ScorerID);
 	}
 	else
 	{
 		TeamBRoundScore++;
-		OnScoreChanged.Broadcast(1, TeamBRoundScore);
+		OnScoreChanged.Broadcast(1, TeamBRoundScore, ScorerID);
 	}
 }
 
@@ -74,15 +76,15 @@ void AOSGameState::ResetRoundScores()
 	
 	TeamARoundScore = 0;
 	TeamBRoundScore = 0;
-	OnScoreChanged.Broadcast(0, TeamARoundScore);
-	OnScoreChanged.Broadcast(1, TeamBRoundScore);
+	OnScoreChanged.Broadcast(0, TeamARoundScore, ScorerIndex);
+	OnScoreChanged.Broadcast(1, TeamBRoundScore, ScorerIndex);
 }
 
 void AOSGameState::OnRep_Score()
 {
 	// 클라에서 점수 변경 시 UI 갱신
-	OnScoreChanged.Broadcast(0, TeamARoundScore);
-	OnScoreChanged.Broadcast(1, TeamBRoundScore);
+	OnScoreChanged.Broadcast(0, TeamARoundScore, ScorerIndex);
+	OnScoreChanged.Broadcast(1, TeamBRoundScore, ScorerIndex);
 }
 
 // ═══════════════════════════════════════════════════════
