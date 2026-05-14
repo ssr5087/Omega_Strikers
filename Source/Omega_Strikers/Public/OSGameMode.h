@@ -46,6 +46,10 @@ public:
 	UPROPERTY(EditAnywhere, Category="OS|Match")
 	float RoundEndDelay = 10.0f; // 골 연출 후 다음 플레이까지 대기 시간
 
+	// PlayersPerTeam 설정 총 인원 수 기입 -> n / 2 -> PlayersPerTeam에 할당
+	UFUNCTION(BlueprintCallable, Category="OS|Match")
+	void SetPlayerPerTeam(int32 ToTalPlayerCount);
+	
 	// ═══════════════════════════════════════════
 	// ★ 캐릭터 → Pawn 매핑
 	// ═══════════════════════════════════════════

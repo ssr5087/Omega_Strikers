@@ -17,6 +17,18 @@ void UOSCharCardWidget::Setup(FName InCharacterID, UTexture2D* InPortrait)
 		NameText->SetText(FText::FromName(CharacterID));
 	}
 	
+	if (SameTeamNameText)
+	{
+		SameTeamNameText->SetText(FText::FromString(""));
+		SameTeamNameText->SetVisibility(ESlateVisibility::Collapsed);
+	}
+	
+	if (OtherTeamNameText)
+	{
+		OtherTeamNameText->SetText(FText::FromString(""));
+		OtherTeamNameText->SetVisibility(ESlateVisibility::Collapsed);
+	}
+	
 	// 초상화 텍스처 적용
 	if (PortraitImage != nullptr && InPortrait != nullptr)
 	{
@@ -36,7 +48,7 @@ void UOSCharCardWidget::SetSelected(bool bSelected)
 	SelectBorder->SetBrushColor(bSelected ? FLinearColor(0.95f, 0.2f, 0.48f, 1.f) : FLinearColor(0.f, 0.f, 0.f, 0.f));
 }
 
-void UOSCharCardWidget::SetLocked(bool bLocked, const FString& Name)
+void UOSCharCardWidget::SetLocked(bool bLocked, const FString& SameTeamName, const FString& OtherTeamName)
 {
 	if (!CardButton || !SelectBorder) return;
 
@@ -45,19 +57,38 @@ void UOSCharCardWidget::SetLocked(bool bLocked, const FString& Name)
 		// 회색 테두리 + 반투명 + 클릭 불가
 		SelectBorder->SetBrushColor(FLinearColor(0.4f, 0.4f, 0.4f, 0.8f));
 		CardButton->SetIsEnabled(false);
-		if (PortraitImage)
-			PortraitImage->SetColorAndOpacity(FLinearColor(0.3f, 0.3f, 0.3f, 0.6f));
-		if (NameText && !Name.IsEmpty())
-			NameText->SetText(FText::FromString(Name));
+		if (PortraitImage) PortraitImage->SetColorAndOpacity(FLinearColor(0.3f, 0.3f, 0.3f, 0.6f));
+		// 같은 팀 확정자 이름 -> 메인 NameText에 표시
+		if (SameTeamNameText && !SameTeamName.IsEmpty())
+		{
+			SameTeamNameText->SetText(FText::FromString(SameTeamName));
+			SameTeamNameText->SetVisibility(ESlateVisibility::Visible);
+		}
 	}
 	else
 	{
 		// 원복
 		CardButton->SetIsEnabled(true);
-		if (PortraitImage)
-			PortraitImage->SetColorAndOpacity(FLinearColor::White);
-		if (NameText)
-			NameText->SetText(FText::FromName(CharacterID));
+		if (PortraitImage) PortraitImage->SetColorAndOpacity(FLinearColor::White);
+		if (SameTeamNameText)
+		{
+			SameTeamNameText->SetText(FText::FromString(""));
+			SameTeamNameText->SetVisibility(ESlateVisibility::Collapsed);
+		}
+	}
+	
+	// 다른 팀 확정자 이름 → OtherTeamNameText에 표시 (잠금 여부 무관)
+	if (OtherTeamNameText)
+	{
+		if (!OtherTeamName.IsEmpty())
+		{
+			OtherTeamNameText->SetText(FText::FromString(OtherTeamName));
+			OtherTeamNameText->SetVisibility(ESlateVisibility::Visible);
+		}
+		else
+		{
+			OtherTeamNameText->SetVisibility(ESlateVisibility::Collapsed);
+		}
 	}
 }
 
