@@ -71,7 +71,7 @@ void UPlayerHUDWidget::RegisterPlayer(class APlayerBase* TargetPlayer)
 		}
 		
 		HPWidgetMap.Add(TargetPlayer, HPWidget);
-		HPWidget->SetTeamSide(TargetPlayer->TeamSide);
+		HPWidget->SetTeamSide(TargetPlayer->IsLocallyControlled(), TargetPlayer->TeamSide);
 		HPWidget->SetStaggerPercent(TargetPlayer->HPComp->CurHP / TargetPlayer->HPComp->MaxHP);
 		HPWidget->SetLevel(TargetPlayer->Level);
 	}

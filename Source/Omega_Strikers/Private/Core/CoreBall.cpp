@@ -9,6 +9,9 @@
 #include "Core/GoalZone.h"
 #include "Net/UnrealNetwork.h"
 #include "Omega_Strikers/Omega_Strikers.h"
+#include "Omega_Strikers/GT/Aimi.h"
+#include "Omega_Strikers/SM/Luna.h"
+#include "Omega_Strikers/SSR/Asher.h"
 
 
 class AGoalZone;
@@ -66,6 +69,7 @@ void ACoreBall::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutL
 	DOREPLIFETIME(ACoreBall, Rep_GoalEvent);
 	DOREPLIFETIME(ACoreBall, Rep_HitCount);
 	DOREPLIFETIME(ACoreBall, Rep_SpeedRatio);
+	DOREPLIFETIME(ACoreBall, ScorerIndex);
 }
 
 void ACoreBall::BeginPlay()
@@ -154,7 +158,7 @@ void ACoreBall::OnRep_GoalEvent()
 {
 	if (Rep_GoalEvent.ScoringTeam >= 0)
 	{
-		OnGoalScored.Broadcast(Rep_GoalEvent.ScoringTeam);
+		OnGoalScored.Broadcast(Rep_GoalEvent.ScoringTeam, ScorerIndex);
 	}
 }
 
@@ -254,20 +258,20 @@ void ACoreBall::Multicast_PlayGoalFX_Implementation(int32 ScoringTeam)
 		GoalVFXScale
 	);
 	
-	GetWorldTimerManager().SetTimer(GoalTimer,
-	[this]()->void
-	{
-		UNiagaraFunctionLibrary::SpawnSystemAtLocation(
-		GetWorld(),
-		GoalVFX,
-		GetActorLocation(),
-		FRotator::ZeroRotator,
-		GoalVFXScale
-	);
-	}, 
-	1.0f,
-	false
-	);
+	// GetWorldTimerManager().SetTimer(GoalTimer,
+	// [this]()->void
+	// {
+	// 	UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+	// 	GetWorld(),
+	// 	GoalVFX,
+	// 	GetActorLocation(),
+	// 	FRotator::ZeroRotator,
+	// 	GoalVFXScale
+	// );
+	// }, 
+	// 1.0f,
+	// false
+	// );
 }
 
 // ═══════════════════════════════════════════════════════
@@ -381,7 +385,7 @@ void ACoreBall::ServerPhysicsTick(float DeltaTime)
 		if (bHit && hit.bBlockingHit)
 		{
 			// 충돌 지점까지 이동
-			SetActorLocation(hit.Location);
+			// SetActorLocation(hit.Location); 요놈 때문에 벽에 먹히는 듯?
 			HandleWallBounce(hit);
 		}
 		else
@@ -511,7 +515,7 @@ void ACoreBall::OnSphereOverlap(UPrimitiveComponent* OverlappedComp, AActor* Oth
 		LOG_SR_W(TEXT("중복 골 체크해서 블락함"))
 		return;
 	}
- 
+	
 	// 이미 득점 상태면 무시
 	if (Rep_CoreState == ECoreState::Scored) return;
  
@@ -531,9 +535,25 @@ void ACoreBall::OnSphereOverlap(UPrimitiveComponent* OverlappedComp, AActor* Oth
 	// Multicast VFX
 	Multicast_PlayGoalFX(Team);
  
+	// 득점자 캐릭터 인덱스 지정
+	if (FinalHitActor)
+	{
+		if (Cast<ALuna>(FinalHitActor))
+		{
+			ScorerIndex = 0;
+		}
+		if (Cast<AAsher>(FinalHitActor))
+		{
+			ScorerIndex = 1;
+		}
+		if (Cast<AAimi>(FinalHitActor))
+		{
+			ScorerIndex = 2;
+		}
+	}
+	
 	// 델리게이트 (서버)
-	OnGoalScored.Broadcast(Team);
- 
+	OnGoalScored.Broadcast(Team, ScorerIndex);
 	UE_LOG(LogTemp, Log, TEXT("CoreBall: GOAL! Team %d scored"), Team);
 }
 
@@ -541,6 +561,7 @@ bool ACoreBall::ReceiveImpact_Implementation(const FOSImpactData& ImpactData, AA
 {
 	LOG_GT(TEXT("ReceiveImpact - TeamSide: %s, Direction: (%.0f, %.0f), CoreKB: %.0f, PlayerKB: %.0f, PlayerDamage: %.0f"), *StaticEnum<EOSTeam>()->GetValueAsString(ImpactData.TeamSide), ImpactData.Direction.X, ImpactData.Direction.Y, ImpactData.CoreKnockbackPower, ImpactData.PlayerKnockbackPower, ImpactData.PlayerDamage);
 	LOG_GT(TEXT("ReceiveImpact - HasAuth: %d, Power: %.0f, State: %s"), HasAuthority(), ImpactData.CoreKnockbackPower, *UEnum::GetValueAsString(Rep_CoreState));
+	
 	// ImpactData의 넉백 방향, 충격량 사용
 	// 서버에서만 물리 적용
 	if (!HasAuthority()) return false;
@@ -553,6 +574,9 @@ bool ACoreBall::ReceiveImpact_Implementation(const FOSImpactData& ImpactData, AA
 	
 	// 유효성 체크
 	if (knockbackDir.IsNearlyZero() || ImpactData.CoreKnockbackPower <= 0.f) return false;
+	
+	// 최종 타격자 갱신
+	FinalHitActor = InstigatorActor;
 	
 	// 기존 ApplyHitForce 재사용 - 연속 타격 보너스, 상태 전이, 히트 이벤트 리플리케이션 모두 포함
 	ApplyHitForce(knockbackDir, ImpactData.CoreKnockbackPower);

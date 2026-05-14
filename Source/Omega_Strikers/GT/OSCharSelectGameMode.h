@@ -4,6 +4,14 @@
 //
 // L_CharSelect 레벨의 GameMode.
 // 서버에서만 동작 — 중복 검증, 확정 관리, 전원 확정 시 아레나 이동
+// =====================================================
+// OSCharSelectGameMode.h — 팀 선택 기능 추가 버전
+// =====================================================
+// 추가된 함수:
+//   TryChangeTeam()     — 팀 변경 검증
+//   GetTeamCount()      — 특정 팀 인원 수
+//   GetMaxPlayersPerTeam() — 팀당 최대 인원 getter
+// =====================================================
 
 #pragma once
 
@@ -35,7 +43,13 @@ public:
 	// 확정 취소
 	void CancelConfirmCharacter(AOSPlayerState* Player);
 	
-	// ★ 호스트가 게임 시작 버튼을 누를 때 호출
+	// 팀 변경 검증
+	bool TryChangeTeam(AOSPlayerState* Player, int32 NewTeamID);
+
+	// 팀 인원 수 (위젯에서 표시용)
+	int32 GetTeamCount(int32 TeamID) const;
+	
+	// 호스트가 게임 시작 버튼을 누를 때 호출
 	void StartArenaTravel();
 	
 protected:
@@ -45,11 +59,18 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category= "OS|Map")
 	FString ArenaMapPath = TEXT("/Game/Maps/Arena");
 
-	// ★ 추가: 아레나 GameMode 클래스
+	// 아레나 GameMode 클래스
 	UPROPERTY(EditDefaultsOnly, Category= "OS|Map")
 	TSubclassOf<AGameModeBase> ArenaGameModeClass;
+	
+	// 팀당 최대 인원 (에디터에서 조절 가능, 기본 3)
+	UPROPERTY(EditDefaultsOnly, Category= "OS|Team")
+	int32 MaxPlayersPerTeam = 3;
 	
 private:
 	// 전원 확정 -> 아레나 이동
 	void OnAllPlayersConfirmed();
+	
+	// 접속 시 인원 적은 팀에 자동 배정
+	void AssignDefaultTeam(AOSPlayerState* PS);
 };

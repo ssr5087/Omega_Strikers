@@ -74,7 +74,7 @@ struct FCoreNetSnapshot
 // ═══════════════════════════════════════════════════════
 // 델리게이트 선언
 // ═══════════════════════════════════════════════════════
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCoreGoalScored, int32, ScoringTeam);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnCoreGoalScored, int32, ScoringTeam, int32, ScoringCharacter);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnCoreHit, FVector, Direction, float, Power);
 
 UCLASS()
@@ -238,13 +238,17 @@ private:
 		int32 OtherBodyIndex, bool bFromSweep,
 		const FHitResult& SweepResult);
 	
-	
-	
 	// ═══════════════════════════════════════════
 	// 임팩트 리시버 인터페이스 재정의
 	// ═══════════════════════════════════════════
 public:
 	virtual bool ReceiveImpact_Implementation(const FOSImpactData& ImpactData, AActor* InstigatorActor) override;
+	
+	// 득점자 (최종 코어 타격자) 캐릭터 저장
+	UPROPERTY(EditAnywhere)
+	AActor* FinalHitActor = nullptr;
+	UPROPERTY(Replicated)
+	int32 ScorerIndex = -1;
 	
 	// 충돌 VFX
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "VFX")

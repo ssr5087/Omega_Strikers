@@ -6,6 +6,8 @@
 
 #include "AimiFirewallSentry.generated.h"
 
+class UNiagaraComponent;
+class UNiagaraSystem;
 class UStaticMeshComponent;
 
 /**
@@ -73,10 +75,42 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category="Sentry")
 	float SentryHP = 300.f;
 
+	// ──────────────────────────────────────────
+	//  ★ VFX 에셋 (신규)
+	// ──────────────────────────────────────────
+
+	/** 포탑 소환 이펙트 */
+	UPROPERTY(EditDefaultsOnly, Category="VFX")
+	TObjectPtr<UNiagaraSystem> SpawnVFX;
+
+	/** 포탑 감지 범위 링 (루프) */
+	UPROPERTY(EditDefaultsOnly, Category="VFX")
+	TObjectPtr<UNiagaraSystem> DetectRingVFX;
+
+	/** 발사 머즐플래시 */
+	UPROPERTY(EditDefaultsOnly, Category="VFX")
+	TObjectPtr<UNiagaraSystem> MuzzleFlashVFX;
+
+	/** 라인트레이스 히트 임팩트 */
+	UPROPERTY(EditDefaultsOnly, Category="VFX")
+	TObjectPtr<UNiagaraSystem> HitImpactVFX;
+
+	/** 발사 궤적 빔 (라인트레이스 시각화) */
+	UPROPERTY(EditDefaultsOnly, Category="VFX")
+	TObjectPtr<UNiagaraSystem> BeamTrailVFX;
+
+	/** 소멸 이펙트 */
+	UPROPERTY(EditDefaultsOnly, Category="VFX")
+	TObjectPtr<UNiagaraSystem> DestroyVFX;
+
 protected:
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UStaticMeshComponent> SentryMesh;
 
+	// ★ VFX 컴포넌트
+	UPROPERTY(VisibleAnywhere, Category="VFX")
+	TObjectPtr<UNiagaraComponent> DetectRingComp;
+	
 private:
 	FVector FireDir;
 	float ElapsedTime = 0.f;
@@ -89,4 +123,7 @@ private:
 
 	// 투사체 발사 or 라인트레이스 히트
 	void FireProjectile();
+	
+	/** ★ 발사 시 VFX 스폰 (신규) */
+	void SpawnFireVFX(const FVector& Start, const FVector& End, bool bHit, const FVector& HitPoint);
 };

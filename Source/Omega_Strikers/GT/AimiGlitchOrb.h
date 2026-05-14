@@ -10,6 +10,9 @@
 class UProjectileMovementComponent;
 class UStaticMeshComponent;
 class USphereComponent;
+class UNiagaraComponent;
+class UMaterialInstanceDynamic;
+
 /**
  * 글리치.팝 오브 (Glitch.Pop Orb)
  *
@@ -98,6 +101,22 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category="Explosion")
 	TObjectPtr<UNiagaraSystem> DetonateVFX;
 
+	// ──────────────────────────────────────────
+	//  ★ VFX 에셋 (신규)
+	// ──────────────────────────────────────────
+
+	/** 오브 이동 궤적 트레일 (리본 파티클) */
+	UPROPERTY(EditDefaultsOnly, Category="VFX")
+	TObjectPtr<UNiagaraSystem> TrailVFX;
+
+	/** 오브 주변 글리치 오라 (루프 파티클) */
+	UPROPERTY(EditDefaultsOnly, Category="VFX")
+	TObjectPtr<UNiagaraSystem> AuraVFX;
+
+	/** 오브 글리치 머티리얼 (MID용 — Fresnel+Noise) */
+	UPROPERTY(EditDefaultsOnly, Category="VFX")
+	TObjectPtr<UMaterialInterface> GlitchMaterial;
+	
 protected:
 	// ──────────────────────────────────────────
 	//  Components
@@ -112,6 +131,14 @@ protected:
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UProjectileMovementComponent> ProjectileMovement;
 
+	// ★ VFX 컴포넌트 (신규)
+
+	UPROPERTY(VisibleAnywhere, Category="VFX")
+	TObjectPtr<UNiagaraComponent> TrailFXComp;
+
+	UPROPERTY(VisibleAnywhere, Category="VFX")
+	TObjectPtr<UNiagaraComponent> AuraFXComp;
+	
 private:
 	// 발사 원점 (최대 거리 판정용)
 	FVector LaunchOrigin;
@@ -132,6 +159,10 @@ private:
 	// 현재까지 이동 거리
 	float TraveledDistance = 0.f;
 
+	// ★ 다이나믹 머티리얼 (신규)
+	UPROPERTY()
+	TObjectPtr<UMaterialInstanceDynamic> OrbMID;
+	
 	/**
 	 * ★ 폭발 로직 — Push Vector 계산
 	 *   PushDir = normalize(TargetPos - OrbCenter)
@@ -141,4 +172,7 @@ private:
 
 	// 반지름 업데이트 ( 콜리전 + 메쉬 스케일 )
 	void UpdateRadius(float NewRadius);
+	
+	/** ★ VFX 비주얼 갱신 — 매 틱 호출 (신규) */
+	void UpdateVisualEffects();
 }; 

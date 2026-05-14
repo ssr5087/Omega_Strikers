@@ -13,20 +13,25 @@ void UHPStatusWidget::NativeConstruct()
 	
 }
 
-void UHPStatusWidget::SetTeamSide(EOSTeam teamSide)
+void UHPStatusWidget::SetTeamSide(bool bIsMyPlayer, EOSTeam teamSide)
 {
-	if (img_StaggerBar_Teamside)
+	if (!img_StaggerBar_Teamside) {return;}
+	if (bIsMyPlayer)
 	{
-		if (teamSide == EOSTeam::Blue)
-		{
-			img_StaggerBar_Teamside->SetBrushFromMaterial(BlueTeam);
-		}
-		else
-		{
-			img_StaggerBar_Teamside->SetBrushFromMaterial(RedTeam);
-		}
+		img_StaggerBar_Teamside->SetBrushFromMaterial(MyPlayer);
 		CurrentStaggerBar = img_StaggerBar_Teamside->GetDynamicMaterial();
+		return;
 	}
+	
+	if (teamSide == EOSTeam::Blue)
+	{
+		img_StaggerBar_Teamside->SetBrushFromMaterial(BlueTeam);
+	}
+	else
+	{
+		img_StaggerBar_Teamside->SetBrushFromMaterial(RedTeam);
+	}
+	CurrentStaggerBar = img_StaggerBar_Teamside->GetDynamicMaterial();
 }
 
 void UHPStatusWidget::SetStaggerPercent(float Percent)

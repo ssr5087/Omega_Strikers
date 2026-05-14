@@ -1,6 +1,14 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 // 플레이어별 상태 ( 모든 클라이언트에 리플리케이트 )
 // 팀, 선택한 캐릭터, 개인 스탯 등
+// =====================================================
+// OSPlayerState.h — 팀 선택 기능 추가 버전
+// =====================================================
+// 변경점:
+//   1) Server_RequestTeamChange RPC 추가
+//   2) Client_OnTeamChangeRejected RPC 추가
+//   3) FOnTeamChangeRejected 델리게이트 추가
+// =====================================================
 
 #pragma once
 
@@ -10,7 +18,7 @@
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnTeamAssigned, AOSPlayerState*, Player, int32, TeamID);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnSelectRejected, FName, CharacterID, const FString&, Reason);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPlayerConfirmChanged, AOSPlayerState*, Player, bool, bConfirmed);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnTeamChangeRejected, const FString&, Reason);
 
 UCLASS()
 class OMEGA_STRIKERS_API AOSPlayerState : public APlayerState
@@ -29,6 +37,18 @@ public:
 	int32 GetTeamID() const { return TeamID; }
 	
 	void SetTeamID(int32 NewTeam);
+	
+	// ★ 신규 — 플레이어가 직접 팀 선택
+	UFUNCTION(Server, Reliable)
+	void Server_RequestTeamChange(int32 NewTeamID);
+
+	// ★ 신규 — 팀 변경 거부 알림 (서버 → 클라이언트)
+	UFUNCTION(Client, Reliable)
+	void Client_OnTeamChangeRejected(const FString& Reason);
+
+	// ★ 신규 — 위젯에서 바인딩
+	UPROPERTY(BlueprintAssignable, Category = "OS|Events")
+	FOnTeamChangeRejected OnTeamChangeRejected;
 	
 	// ═══════════════════════════════════════════
 	// 캐릭터 선택 (아이미, 젠타로, 나오, 에스텔, 루나 등)
@@ -95,11 +115,8 @@ public:
 	// ═══════════════════════════════════════════
 	// 델리게이트
 	// ═══════════════════════════════════════════
-	UPROPERTY(BlueprintAssignable, Category="OS|Events")
-	FOnTeamAssigned OnTeamAssigned;
-
 	UPROPERTY(BlueprintAssignable, Category = "OS|Events")
-	FOnPlayerConfirmChanged OnPlayerConfirmChanged;
+	FOnTeamAssigned OnTeamAssigned;
 	
 private:
 	UPROPERTY(ReplicatedUsing = OnRep_TeamID)
@@ -124,9 +141,6 @@ private:
 	UFUNCTION()
 	void OnRep_TeamID();
 
-	UPROPERTY(ReplicatedUsing=OnRep_bCharacterConfirmed)
+	UPROPERTY(Replicated)
 	bool bCharacterConfirmed = false;
-
-	UFUNCTION()
-	void OnRep_bCharacterConfirmed();
 };

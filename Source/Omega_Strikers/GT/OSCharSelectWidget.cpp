@@ -44,7 +44,7 @@ void UOSCharSelectWidget::NativeConstruct()
 		CancelButton->SetVisibility(ESlateVisibility::Collapsed);
 	}
 	
-	// ★ 게임 시작 버튼 — 호스트(서버)에게만 표시
+	// 게임 시작 버튼 — 호스트(서버)에게만 표시
 	if (StartGameButton)
 	{
 		StartGameButton->OnClicked.AddDynamic(this, &UOSCharSelectWidget::OnStartGameClicked);
@@ -52,6 +52,18 @@ void UOSCharSelectWidget::NativeConstruct()
 		bool bIsHost = (GetWorld()->GetAuthGameMode() != nullptr);
 		StartGameButton->SetVisibility(bIsHost ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
 		StartGameButton->SetIsEnabled(false);
+	}
+	
+	// ══════════════════════════════════════
+	// 팀 선택 버튼 바인딩
+	// ══════════════════════════════════════
+	if (TeamBlueButton)
+	{
+		TeamBlueButton->OnClicked.AddDynamic(this, &UOSCharSelectWidget::OnTeamBlueClicked);
+	}
+	if (TeamRedButton)
+	{
+		TeamRedButton->OnClicked.AddDynamic(this, &UOSCharSelectWidget::OnTeamRedClicked);
 	}
 	
 	BuildGrid();
@@ -63,13 +75,17 @@ void UOSCharSelectWidget::NativeConstruct()
 		CachedGameState->OnCharSelectListUpdated.AddDynamic(this, &UOSCharSelectWidget::OnCharSelectListUpdated);
 	}
 	
-	// ★ GameState + PlayerState 모두 타이머로 바인딩
+	// GameState + PlayerState 모두 타이머로 바인딩
 	TryBindAll();
 	
 	// 초기 UI 반영
 	RefreshCardStates();
 	UpdateButtonStates();
 	UpdateStartGameButton();
+	UpdateTeamUI(); // 팀 UI 초기화
+	
+	// 0.5초마다 팀 UI 갱신 (타 플레이어 팀 변경 반영)
+	GetWorld()->GetTimerManager().SetTimer(TeamUITimerHandle, this, &UOSCharSelectWidget::UpdateTeamUI, 0.5f, true);
 }
 
 // ═══════════════════════════════════════════
@@ -165,7 +181,7 @@ void UOSCharSelectWidget::BuildGrid()
 		UOSCharCardWidget* card = CreateWidget<UOSCharCardWidget>(GetOwningPlayer(), CardWidgetClass);
 		if ( !card ) continue;
 		
-		// ★ 초상화 자동 로드
+		// 초상화 자동 로드
 		UTexture2D* portrait = LoadCharIconTexture(name, TEXT("Portrait"));
 		
 		card->Setup(name, portrait);
@@ -188,7 +204,7 @@ void UOSCharSelectWidget::BuildGrid()
 // ═══════════════════════════════════════════
 void UOSCharSelectWidget::UpdatePreview(FName CharacterID)
 {
-	// ★ 전신 이미지 자동 로드
+	// 전신 이미지 자동 로드
 	if (PreviewImage != nullptr)
 	{
 		UTexture2D* fullBody = LoadCharIconTexture(CharacterID, TEXT("FullBody"));
@@ -240,7 +256,8 @@ void UOSCharSelectWidget::OnCardClicked(FName CharacterID)
 	if (ps->IsCharacterConfirmed()) return;
 	
 	// ── 잠긴 캐릭터 무시 ──
-	if (CachedGameState && CachedGameState->IsCharacterLocked(CharacterID)) return;
+	int32 myTeam = ps->GetTeamID();
+	if (CachedGameState && CachedGameState->IsCharacterLocked(CharacterID, myTeam)) return;
 
 	// ── 로컬 UI 갱신 (낙관적) ── 
 	SelectedID = CharacterID;
@@ -285,6 +302,17 @@ void UOSCharSelectWidget::NativeDestruct()
 		CachedGameState->OnCharSelectListUpdated.RemoveDynamic(this, &UOSCharSelectWidget::OnCharSelectListUpdated);
 	}
 	
+	// 팀 관련 델리게이트 정리
+	if (APlayerController* pc = GetOwningPlayer())
+	{
+		AOSPlayerState* ps = Cast<AOSPlayerState>(pc->PlayerState);
+		if (ps)
+		{
+			ps->OnTeamAssigned.RemoveDynamic(this, &UOSCharSelectWidget::OnAnyTeamChanged);
+			ps->OnTeamChangeRejected.RemoveDynamic(this, &UOSCharSelectWidget::OnMyTeamChangeRejected);
+		}
+	}
+	
 	Super::NativeDestruct();
 }
 
@@ -297,6 +325,7 @@ void UOSCharSelectWidget::OnCharSelectListUpdated()
 	RefreshCardStates();
 	UpdateButtonStates();
 	UpdateStartGameButton();
+	UpdateTeamUI();
 }
 
 void UOSCharSelectWidget::RefreshCardStates()
@@ -307,7 +336,12 @@ void UOSCharSelectWidget::RefreshCardStates()
 	if ( !pc ) return;
 	
 	int32 myPID = -1;
-	if (AOSPlayerState* ps = Cast<AOSPlayerState>(pc->PlayerState)) myPID = ps->GetPlayerId();
+	int32 myTeam = -1;
+	if (AOSPlayerState* ps = Cast<AOSPlayerState>(pc->PlayerState))
+	{
+		myPID = ps->GetPlayerId();
+		myTeam = ps->GetTeamID();
+	}
 	
 	for (UOSCharCardWidget* card : CardWidgets)
 	{
@@ -318,42 +352,55 @@ void UOSCharSelectWidget::RefreshCardStates()
 		bool bLockedByOther = false;
 		bool bLockedByMe = false;
 		bool bSelectedByMe = (cid == SelectedID);
-		FString LockerName;
 		
+		// 팀별 확정자 이름 수집 (break 안 함!)
+		FString sameTeamLockerName;   // 같은 팀에서 확정한 사람 이름
+		FString otherTeamLockerName;  // 다른 팀에서 확정한 사람 이름
+		        
 		for (const FOSCharSelectEntry& entry : CachedGameState->CharSelectList)
 		{
 			if (entry.CharacterID == cid && entry.bConfirmed)
 			{
+				if (entry.CharacterID != cid || !entry.bConfirmed) continue;
 				if (entry.PlayerIndex == myPID) bLockedByMe = true;
+				else if (entry.TeamID == myTeam) // 같은 팀일 경우만 중복 벤
+				{
+					// 같은 팀 다른 플레이어 -> 잠금 (선택 불가)
+					bLockedByOther = true;
+					sameTeamLockerName = entry.PlayerName;
+				}
 				else
 				{
-					bLockedByOther = true;
-					LockerName = entry.PlayerName;
+					// 다른 팀 플레이어 -> 잠금 안 함, 이름만 수집
+					otherTeamLockerName = entry.PlayerName;
 				}
-				break;
 			}
 		}
 		
 		// 카드 비주얼 업데이트
 		if ( bLockedByOther )
 		{
+			// 같은 팀 다른 플레이어가 확정 → 회색 잠금 + 클릭 불가
 			card->SetSelected(false);
-			card->SetLocked(true, LockerName);
+			card->SetLocked(true, sameTeamLockerName, otherTeamLockerName);
 		}
 		else if ( bLockedByMe )
 		{
+			// 내가 확정 — 하이라이트 + 다른 팀 이름 표시
 			card->SetSelected(true);
-			card->SetLocked(false);  // 내가 확정 — 골드 하이라이트
+			card->SetLocked(false, FString(), otherTeamLockerName);
 		}
 		else if ( bSelectedByMe )
 		{
+			// 아직 확정 전, 내가 선택 중
 			card->SetSelected(true);
-			card->SetLocked(false);
+			card->SetLocked(false, FString(), otherTeamLockerName);
 		}
 		else
 		{
+			// 아무도 안 골랐거나, 다른 팀만 골랐을 때
 			card->SetSelected(false);
-			card->SetLocked(false);
+			card->SetLocked(false, FString(), otherTeamLockerName);
 		}
 	}
 }
@@ -384,6 +431,20 @@ void UOSCharSelectWidget::OnConfirmClicked()
 	if (!PC) return;
 	AOSPlayerState* PS = Cast<AOSPlayerState>(PC->PlayerState);
 	if (!PS) return;
+	
+	// 팀 미배정이면 확정 불가
+	if (PS->GetTeamID() == -1)
+	{
+		if (StatusText)
+		{
+			StatusText->SetText(FText::FromString(TEXT("먼저 팀을 선택해주세요.")));
+			StatusText->SetColorAndOpacity(FSlateColor(FLinearColor(0.9f, 0.2f, 0.2f, 1.f)));
+			StatusText->SetVisibility(ESlateVisibility::Visible);
+		}
+		return;
+	}
+
+	
 	PS->Server_RequestConfirmCharacter();
 	OnConfirmed.Broadcast(SelectedID);
 
@@ -421,20 +482,20 @@ void UOSCharSelectWidget::UpdateButtonStates()
 		if (ConfirmButton) ConfirmButton->SetIsEnabled(false);
 		if (ConfirmButtonText) ConfirmButtonText->SetText(FText::FromString(TEXT("확정")));
 		if (CancelButton) CancelButton->SetVisibility(ESlateVisibility::Visible);
+		
+		// 확정 후 팀 교체 불가
+		if (TeamBlueButton) TeamBlueButton->SetIsEnabled(false);
+		if (TeamRedButton) TeamRedButton->SetIsEnabled(false);
 	}
 	else
 	{
 		if (ConfirmButton) ConfirmButton->SetIsEnabled(!SelectedID.IsNone());
 		if (ConfirmButtonText) ConfirmButtonText->SetText(FText::FromString(TEXT("선택")));
 		if (CancelButton) CancelButton->SetVisibility(ESlateVisibility::Collapsed);
+		
+		// 확정 취소 시 팀 버튼 재활성화
+		UpdateTeamUI();
 	}
-}
-
-void UOSCharSelectWidget::OnMyConfirmChanged(AOSPlayerState* Player, bool bConfirmed)
-{
-	LOG_GT_W(TEXT("★★ Widget: OnMyConfirmChanged bConfirmed=%d"), bConfirmed);
-	RefreshCardStates();
-	UpdateButtonStates();
 }
 
 void UOSCharSelectWidget::TryBindAll()
@@ -449,7 +510,7 @@ void UOSCharSelectWidget::TryBindAll()
 		{
 			CachedGameState->OnCharSelectListUpdated.AddDynamic(
 				this, &UOSCharSelectWidget::OnCharSelectListUpdated);
-			UE_LOG(LogTemp, Warning, TEXT("★ GameState 바인딩 완료"));
+			LOG_GT_W(TEXT("★ GameState 바인딩 완료"));
 		}
 		else
 		{
@@ -466,9 +527,13 @@ void UOSCharSelectWidget::TryBindAll()
 			if (ps)
 			{
 				ps->OnSelectRejected.AddDynamic(this, &UOSCharSelectWidget::OnMySelectRejected);
-				ps->OnPlayerConfirmChanged.AddDynamic(this, &UOSCharSelectWidget::OnMyConfirmChanged);
+				// 팀 관련 델리게이트 바인딩
+				ps->OnTeamAssigned.AddDynamic(this, &UOSCharSelectWidget::OnAnyTeamChanged);
+				ps->OnTeamChangeRejected.AddDynamic(this, &UOSCharSelectWidget::OnMyTeamChangeRejected);
+				
 				bPlayerStateBound = true;
-				UE_LOG(LogTemp, Warning, TEXT("★ PlayerState 바인딩 완료: %s"), *ps->GetPlayerName());
+				
+				LOG_GT_W(TEXT("★ PlayerState 바인딩 완료: %s"), *ps->GetPlayerName());
 			}
 			else
 			{
@@ -483,6 +548,7 @@ void UOSCharSelectWidget::TryBindAll()
 		RefreshCardStates();
 		UpdateButtonStates();
 		UpdateStartGameButton();
+		UpdateTeamUI();
 		return;
 	}
     
@@ -496,7 +562,7 @@ void UOSCharSelectWidget::TryBindAll()
 }
 
 // ═══════════════════════════════════════════
-//  ★ 게임 시작 버튼 (호스트 전용)
+//  게임 시작 버튼 (호스트 전용)
 // ═══════════════════════════════════════════
 void UOSCharSelectWidget::OnStartGameClicked()
 {
@@ -524,5 +590,158 @@ void UOSCharSelectWidget::UpdateStartGameButton()
 			? FText::FromString(TEXT("게임 시작"))
 			: FText::FromString(TEXT("전원 확정 대기 중..."))
 		);
+	}
+}
+
+// ═══════════════════════════════════════════════════════
+// 팀 선택
+// ═══════════════════════════════════════════════════════
+void UOSCharSelectWidget::OnTeamBlueClicked()
+{
+	RequestTeamChange(0);
+}
+
+void UOSCharSelectWidget::OnTeamRedClicked()
+{
+	RequestTeamChange(1);
+}
+
+void UOSCharSelectWidget::RequestTeamChange(int32 NewTeamID)
+{
+	APlayerController* PC = GetOwningPlayer();
+	if (!PC) return;
+
+	AOSPlayerState* PS = Cast<AOSPlayerState>(PC->PlayerState);
+	if (!PS) return;
+
+	// 이미 같은 팀이면 무시
+	if (PS->GetTeamID() == NewTeamID) return;
+
+	// 확정 상태면 팀 변경 불가
+	if (PS->IsCharacterConfirmed()) return;
+
+	// 서버에 팀 변경 요청
+	PS->Server_RequestTeamChange(NewTeamID);
+}
+
+void UOSCharSelectWidget::UpdateTeamUI()
+{
+	// 모든 PlayerState 순회 → 팀별 인원 수
+	int32 teamBlueCount = 0;
+	int32 teamRedCount = 0;
+	int32 maxPerTeam = 3;
+
+	UWorld* world = GetWorld();
+	if (!world) return;
+
+	// GameMode에서 MaxPlayersPerTeam 가져오기 (서버만)
+	AOSCharSelectGameMode* gm = Cast<AOSCharSelectGameMode>(world->GetAuthGameMode());
+	if (gm)
+	{
+		// 서버에서만 접근 가능
+		// MaxPerTeam은 PostLogin에서 세션 기반으로 자동 계산됨
+	}
+
+	// RequiredPlayerCount 기반으로 계산 (클라이언트도 가능)
+	if (CachedGameState && CachedGameState->RequiredPlayerCount > 0)
+	{
+		maxPerTeam = FMath::CeilToInt(CachedGameState->RequiredPlayerCount / 2.0f);
+	}
+
+	AGameStateBase* gs = world->GetGameState<AGameStateBase>();
+	if (gs)
+	{
+		for (APlayerState* BasePS : gs->PlayerArray)
+		{
+			AOSPlayerState* ps = Cast<AOSPlayerState>(BasePS);
+			if (!ps) continue;
+
+			if (ps->GetTeamID() == 0) teamBlueCount++;
+			else if (ps->GetTeamID() == 1) teamRedCount++;
+		}
+	}
+
+	// ─── 팀 인원 텍스트 갱신 ───
+	if (TeamBlueText)
+	{
+		TeamBlueText->SetText(FText::FromString(
+			FString::Printf(TEXT("블루팀 (%d/%d)"), teamBlueCount, maxPerTeam)));
+	}
+	if (TeamRedText)
+	{
+		TeamRedText->SetText(FText::FromString(
+			FString::Printf(TEXT("레드팀 (%d/%d)"), teamRedCount, maxPerTeam)));
+	}
+
+	// ─── 내 팀 표시 ───
+	APlayerController* pc = GetOwningPlayer();
+	AOSPlayerState* myPs = pc ? Cast<AOSPlayerState>(pc->PlayerState) : nullptr;
+	int32 MyTeam = myPs ? myPs->GetTeamID() : -1;
+
+	if (MyTeamText)
+	{
+		if (MyTeam == -1)
+		{
+			MyTeamText->SetText(FText::FromString(TEXT("미정")));
+			MyTeamText->SetColorAndOpacity(FSlateColor(FLinearColor(0.5f, 0.5f, 0.5f, 1.f)));
+		}
+		else
+		{
+			FString TeamName = (MyTeam == 0) ? TEXT("블루팀") : TEXT("레드팀");
+			MyTeamText->SetText(FText::FromString(
+				FString::Printf(TEXT("현재 팀: %s"), *TeamName)));
+
+			FLinearColor TeamColor = (MyTeam == 0)
+				? FLinearColor(0.3f, 0.5f, 0.9f, 1.f)
+				: FLinearColor(0.9f, 0.3f, 0.3f, 1.f);  
+			MyTeamText->SetColorAndOpacity(FSlateColor(TeamColor));
+		}
+	}
+
+	// ─── 팀 버튼 상태 ───
+	// 내가 속한 팀 버튼은 비활성 (이미 그 팀)
+	// 확정 상태면 둘 다 비활성
+	bool bConfirmed = myPs ? myPs->IsCharacterConfirmed() : false;
+
+	if (TeamBlueButton)
+	{
+		TeamBlueButton->SetIsEnabled(!bConfirmed && MyTeam != 0);
+	}
+	if (TeamRedButton)
+	{
+		TeamRedButton->SetIsEnabled(!bConfirmed && MyTeam != 1);
+	}
+}
+
+void UOSCharSelectWidget::OnAnyTeamChanged(AOSPlayerState* Player, int32 NewTeamID)
+{
+	// 내 팀이 변경됐을 때 UI 즉시 갱신
+	UpdateTeamUI();
+
+	// 상태 메시지
+	APlayerController* PC = GetOwningPlayer();
+	if (PC && Player == Cast<AOSPlayerState>(PC->PlayerState))
+	{
+		if (StatusText)
+		{
+			FString TeamName = (NewTeamID == 0) ? TEXT("A") : TEXT("B");
+			StatusText->SetText(FText::FromString(
+				FString::Printf(TEXT("%s팀에 참가했습니다."), *TeamName)));
+			StatusText->SetColorAndOpacity(FSlateColor(
+				(NewTeamID == 0)
+					? FLinearColor(0.3f, 0.5f, 0.9f, 1.f)
+					: FLinearColor(0.9f, 0.3f, 0.3f, 1.f)));
+			StatusText->SetVisibility(ESlateVisibility::Visible);
+		}
+	}
+}
+
+void UOSCharSelectWidget::OnMyTeamChangeRejected(const FString& Reason)
+{
+	if (StatusText)
+	{
+		StatusText->SetText(FText::FromString(Reason));
+		StatusText->SetColorAndOpacity(FSlateColor(FLinearColor(0.9f, 0.2f, 0.2f, 1.f)));
+		StatusText->SetVisibility(ESlateVisibility::Visible);
 	}
 }
