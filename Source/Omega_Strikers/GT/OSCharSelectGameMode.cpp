@@ -179,7 +179,7 @@ bool AOSCharSelectGameMode::TryChangeTeam(AOSPlayerState* Player, int32 NewTeamI
 	if ( NewTeamID != 0 && NewTeamID != 1 ) return false;
 	
 	// 이미 같은 팀이면 성공 (변경 불필요)
-	if ( Player->GetTeamID() != NewTeamID ) return true;
+	if ( Player->GetTeamID() == NewTeamID ) return true;
 	
 	// 이동하려는 팀의 현재 인원 체크
 	int32 targetCount = GetTeamCount(NewTeamID);
@@ -236,6 +236,7 @@ void AOSCharSelectGameMode::StartArenaTravel()
 	if ( gi )
 	{
 		gi->ClearCharacterSelections();
+		gi->ClearTeamSelections(); // 팀 선택 초기화
 		
 		for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
 		{
@@ -250,6 +251,7 @@ void AOSCharSelectGameMode::StartArenaTravel()
 			
 			FString playerKey = UOSGameInstance::GetPlayerKey(ps);
 			gi->SaveCharacterSelection(playerKey, charID);
+			gi->SaveTeamSelection(playerKey, ps->GetTeamID()); // 팀 저장
 			
 			LOG_GT(TEXT("저장 : [%s] → %s"), *playerKey, *charID.ToString());
 		}
@@ -295,7 +297,7 @@ void AOSCharSelectGameMode::PostLogin(APlayerController* NewPlayer)
 	gs->FindOrAddEntry(ps);
 	gs->BroadcastCharSelectUpdate();
 	
-	// ★ 세션의 최대 인원수를 RequiredPlayerCount에 세팅
+	// 세션의 최대 인원수를 RequiredPlayerCount에 세팅
 	UOSGameInstance* GI = Cast<UOSGameInstance>(GetGameInstance());
 	if (GI && GI->sessionInterface.IsValid())
 	{
@@ -321,15 +323,15 @@ void AOSCharSelectGameMode::AssignDefaultTeam(AOSPlayerState* PS)
 	// 이미 팀이 배정되어 있으면 스킵 (SeamlessTravel 등)
 	if ( PS->GetTeamID() != -1 ) return;
 	
-	int32 teamACount = GetTeamCount(0);
-	int32 teamBCount = GetTeamCount(1);
+	int32 teamBlueCount = GetTeamCount(0);
+	int32 teamRedCount = GetTeamCount(1);
 	
-	// 인원 적은 팀에 배정, 같으면 A팀
-	int32 assignedTeam = (teamBCount < teamACount) ? 1 : 0;
+	// 인원 적은 팀에 배정, 같으면 블루팀
+	int32 assignedTeam = (teamRedCount < teamBlueCount) ? 1 : 0;
 	PS->SetTeamID(assignedTeam);
 	
 	LOG_GT(TEXT("%s → Team %d 자동 배정 (A:%d, B:%d)"),
-		*PS->GetPlayerName(), assignedTeam, teamACount, teamBCount);
+		*PS->GetPlayerName(), assignedTeam, teamBlueCount, teamRedCount);
 }
 
 // ═══════════════════════════════════════════════════════

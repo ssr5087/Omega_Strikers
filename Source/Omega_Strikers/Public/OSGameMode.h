@@ -52,7 +52,7 @@ public:
 	void SetPlayerPerTeam(int32 ToTalPlayerCount);
 	
 	// ═══════════════════════════════════════════
-	// ★ 캐릭터 → Pawn 매핑
+	// 캐릭터 → Pawn 매핑
 	// ═══════════════════════════════════════════
 	
 	/**
@@ -72,7 +72,10 @@ public:
 	virtual void Logout(AController* Exiting) override;
 	virtual AActor* ChoosePlayerStart_Implementation(AController* Player) override;
 
-	/** ★ 선택된 캐릭터에 맞는 Pawn 클래스 반환 */
+	// Seamless Travel 시 PostLogin 대신 호출됨 — 여기서 팀 복원 + 스폰
+	virtual void HandleSeamlessTravelPlayer(AController*& C) override;
+	
+	/** 선택된 캐릭터에 맞는 Pawn 클래스 반환 */
 	virtual UClass* GetDefaultPawnClassForController_Implementation(AController* InController) override;
 	
 	// ═══════════════════════════════════════════

@@ -104,7 +104,7 @@ void AOSGameMode::BeginPlay()
 }
 
 // ═══════════════════════════════════════════════════════
-// ★ 선택된 캐릭터에 맞는 Pawn 클래스 반환
+// 선택된 캐릭터에 맞는 Pawn 클래스 반환
 // ═══════════════════════════════════════════════════════
 UClass* AOSGameMode::GetDefaultPawnClassForController_Implementation(AController* InController)
 {
@@ -133,7 +133,7 @@ UClass* AOSGameMode::GetDefaultPawnClassForController_Implementation(AController
 	{
 		LOG_GT_E(TEXT("[%s] 캐릭터 미선택 → DefaultPawn"), *playerKey);
 		
-		// ★ 디버그: 저장된 전체 목록 출력
+		// 디버그: 저장된 전체 목록 출력
 		for (const auto& pair : gi->GetAllSelections())
 		{
 			LOG_GT(TEXT("  저장된 키: [%s] → %s"), *pair.Key, *pair.Value.ToString());
@@ -168,32 +168,49 @@ void AOSGameMode::PostLogin(APlayerController* NewPlayer)
 {
 	if (!NewPlayer) return;
 	LOG_GT(TEXT("★ PostLogin 호출됨: %s"), *NewPlayer->GetName());
+
 	// ** 팀 배정
-	int32 assignedTeam = AssignTeam(NewPlayer);
 	AOSPlayerState* ps = NewPlayer->GetPlayerState<AOSPlayerState>();
 	
-	LOG_SR_W(TEXT("Assigned Team : %d"), assignedTeam);
-	if ( ps )
-	{
-		ps->SetTeamID(assignedTeam);
-		LOG_GT(TEXT("Player %s 소속 팀 : %d"), *ps->GetPlayerName(), assignedTeam);
-	}
-
-	// ★ GameInstance에서 선택 캐릭터 로그
+	// GameInstance에서 팀 선택 복원 (CharSelect에서 선택한 팀)
 	UOSGameInstance* gi = Cast<UOSGameInstance>(GetGameInstance());
 	if ( gi && ps )
 	{
 		FString playerKey = UOSGameInstance::GetPlayerKey(ps);
+		
+		// 팀 복원
+		int32 savedTeam = gi->GetTeamSelection(playerKey);
+		if ( savedTeam != -1 )
+		{
+			ps->SetTeamID(savedTeam);
+			LOG_GT(TEXT("Player %s → Team %d (CharSelect에서 복원)"), *ps->GetPlayerName(), savedTeam);
+		}
+		else
+		{
+			// GameInstance에 없으면 자동 배정 (직접 접속 등)
+			int32 assignedTeam = AssignTeam(NewPlayer);
+			ps->SetTeamID(assignedTeam);
+			LOG_GT(TEXT("Player %s → Team %d (자동 배정)"), *ps->GetPlayerName(), assignedTeam);
+		}
+		
+		// 캐릭터 선택 로그
 		FName CharID = gi->GetCharacterSelection(playerKey);
 		LOG_GT(TEXT("Player %s [%s] 선택 캐릭터: %s"),
 			*NewPlayer->GetName(),
 			*playerKey,
 			CharID.IsNone() ? TEXT("(없음)") : *CharID.ToString());
 	}
-
+	else if ( ps )
+	{
+		// GameInstance 없으면 자동 배정
+		int32 assignedTeam = AssignTeam(NewPlayer);
+		ps->SetTeamID(assignedTeam);
+		LOG_GT(TEXT("Player %s → Team %d (GI 없음, 자동 배정)"), *ps->GetPlayerName(), assignedTeam);
+	}
+	
 	Super::PostLogin(NewPlayer);
 	
-	// ★ 여기서 처음 스폰
+	// 여기서 처음 스폰
 	RestartPlayer(NewPlayer);
 	
 	// ** 인원 체크 -> 자동 시작
@@ -282,6 +299,55 @@ AActor* AOSGameMode::ChoosePlayerStart_Implementation(AController* Player)
 	
 	// 매칭 안되면 기본
 	return Super::ChoosePlayerStart_Implementation(Player);
+}
+
+void AOSGameMode::HandleSeamlessTravelPlayer(AController*& C)
+{
+	// Super 먼저 호출 — PlayerState 복원 등 기본 처리
+	// 주의: bStartPlayersAsSpectators=true이면 Super에서 RestartPlayer를 스킵함
+	Super::HandleSeamlessTravelPlayer(C);\
+
+	APlayerController* PC = Cast<APlayerController>(C);
+	if (!PC) return;
+	
+	AOSPlayerState* ps = PC->GetPlayerState<AOSPlayerState>();
+	if (!ps) return;
+	
+	// AGameModeBase 기반이라 Seamless Travel 시 PlayerState가 새로 생성됨
+	// → GameInstance에서 TeamID + 캐릭터 복원 필요
+	UOSGameInstance* gi = Cast<UOSGameInstance>(GetGameInstance());
+	if (gi)
+	{
+		FString playerKey = UOSGameInstance::GetPlayerKey(ps);
+		
+		// 팀 복원
+		int32 savedTeam = gi->GetTeamSelection(playerKey);
+		if (savedTeam != -1)
+		{
+			ps->SetTeamID(savedTeam);
+			LOG_GT(TEXT("★ SeamlessTravel: %s → Team %d (GameInstance에서 복원)"),
+				*ps->GetPlayerName(), savedTeam);
+		}
+		else
+		{
+			// GameInstance에 없으면 자동 배정
+			int32 assignedTeam = AssignTeam(PC);
+			ps->SetTeamID(assignedTeam);
+			LOG_GT(TEXT("★ SeamlessTravel: %s → Team %d (자동 배정)"),
+				*ps->GetPlayerName(), assignedTeam);
+		}
+	}
+	
+	LOG_GT(TEXT("★ HandleSeamlessTravelPlayer: %s (Team %d)"),
+		*ps->GetPlayerName(), ps->GetTeamID());
+	// ★ bStartPlayersAsSpectators=true 때문에 Super에서 스폰 안 했으므로 직접 호출
+	RestartPlayer(PC);
+	
+	// 인원 체크 → 자동 시작
+	int32 totalPlayers = GetTeamPlayerCount(0) + GetTeamPlayerCount(1);
+	LOG_GT(TEXT("전체 플레이어 : %d / %d"), totalPlayers, PlayersPerTeam * 2);
+	
+	if (IsReadyToStart()) TryStartMatch();
 }
 
 // ═══════════════════════════════════════════════════════
@@ -393,7 +459,7 @@ void AOSGameMode::SpawnCoreBall()
 		ActiveCoreBall->OnGoalScored.Clear();
 		ActiveCoreBall->OnGoalScored.AddDynamic(this, &AOSGameMode::OnGoalScored);
 
-		// ★ 모든 플레이어에게 CoreBall 등록
+		// 모든 플레이어에게 CoreBall 등록
 		for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
 		{
 			if (APlayerBase* Player = Cast<APlayerBase>(It->Get()->GetPawn()))
