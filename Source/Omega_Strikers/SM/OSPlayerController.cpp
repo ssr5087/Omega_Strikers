@@ -3,6 +3,7 @@
 
 #include "OSPlayerController.h"
 
+#include "GoalWidget.h"
 #include "OSGameState.h"
 #include "PlayerBase.h"
 #include "PlayerHUDWidget.h"
@@ -123,4 +124,23 @@ void AOSPlayerController::SetScoreBoard(int32 TeamIndex, int32 NewScore)
 	{
 		ScoreBoardWidget->SetScore(BlueScore, RedScore);
 	}
+	
+	GetWorldTimerManager().SetTimer(AddWidgetTimer, this, &AOSPlayerController::AddWidget, 2.0f, false);
+}
+
+void AOSPlayerController::AddWidget()
+{
+	GoalWidget = CreateWidget<UGoalWidget>(GetWorld(), GoalWidgetClass);
+	if (GoalWidget)
+	{
+		GoalWidget->AddToViewport();
+		GoalWidget->PlayGoalAnimation(0);
+		
+		GetWorldTimerManager().SetTimer(GoalAnimTimer, this, &AOSPlayerController::RemoveWidget, 3.0f, false);
+	}
+}
+
+void AOSPlayerController::RemoveWidget()
+{
+	GoalWidget->RemoveFromParent();
 }
