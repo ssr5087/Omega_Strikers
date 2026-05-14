@@ -11,6 +11,7 @@
 #include "Asher_AnimInstance.h"
 #include "Net/UnrealNetwork.h"
 #include "SkillIndicatorBase.h"
+#include "Omega_Strikers/SM/LunaSkillCool.h"
 
 
 // Sets default values
@@ -41,6 +42,17 @@ AAsher::AAsher()
 void AAsher::BeginPlay()
 {
 	Super::BeginPlay();
+	
+	// 내가 조작 중인 캐릭터가 애셔일 때만 UI 붙이기
+	if (IsLocallyControlled())
+	{
+		// UI 붙이기
+		SkillUI = CreateWidget<ULunaSkillCool>(GetWorld(), CoolTimeUI);
+		if (SkillUI)
+		{
+			SkillUI->AddToViewport();
+		}
+	}
 	
 	
 	UE_LOG(LogTemp, Warning, TEXT("Power: %.1f"), CurrentStat.Power);
@@ -144,6 +156,10 @@ void AAsher::Use_CoreHit()
 
 	if (!IsLocallyControlled())
 		return;
+	
+	if (SkillUI)
+		SkillUI->LoadCore();
+	
 
 	ServerRPC_StartCoreHit(CursorDir);
 	ServerRPC_CoreHit(CursorDir);
@@ -157,6 +173,7 @@ void AAsher::Use_PrimarySkill()
 	{
 		return;
 	}
+	
 
 	ServerRPC_StartPrimarySkill(CursorDir);
 }
@@ -675,6 +692,11 @@ void AAsher::MulticastRPC_PlayPrimarySkill_Implementation(FVector2D SkillDir)
 	{
 		Anim->PlayPrimary();
 	}
+	
+	if (IsLocallyControlled() && SkillUI)
+	{
+		SkillUI->LoadPrim();
+	}
 }
 
 void AAsher::MulticastRPC_PlaySecondarySkill_Implementation(FVector2D SkillDir)
@@ -689,6 +711,11 @@ void AAsher::MulticastRPC_PlaySecondarySkill_Implementation(FVector2D SkillDir)
 	{
 		Anim->PlaySecondary();
 	}
+	
+	if (IsLocallyControlled() && SkillUI)
+	{
+		SkillUI->LoadSeco();
+	}
 }
 
 void AAsher::MulticastRPC_PlaySpecialSkill_Implementation(FVector2D SkillDir)
@@ -702,5 +729,9 @@ void AAsher::MulticastRPC_PlaySpecialSkill_Implementation(FVector2D SkillDir)
 	if (UAsher_AnimInstance* Anim = GetAsher_AnimInstance())
 	{
 		Anim->PlaySpecial();
+	}
+	if (IsLocallyControlled() && SkillUI)
+	{
+		SkillUI->LoadSpec();
 	}
 }
