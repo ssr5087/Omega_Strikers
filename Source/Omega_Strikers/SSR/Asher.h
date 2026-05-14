@@ -130,6 +130,13 @@ public:
 	void DoSecondaryDashTrace();
 	void EndSecondaryDash();
 	
+	// 쿨타임 UI
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
+	TSubclassOf<class ULunaSkillCool> CoolTimeUI;
+	
+	UPROPERTY()
+	class ULunaSkillCool* SkillUI;
+	
 	// 애니메이션
 	
 	UAsher_AnimInstance* GetAsher_AnimInstance() const;

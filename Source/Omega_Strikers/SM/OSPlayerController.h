@@ -45,4 +45,16 @@ public:
 	void AddScoreBoard();
 	UFUNCTION()
 	void SetScoreBoard(int32 TeamIndex, int32 NewScore);
+	
+public:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI")
+	TSubclassOf<class UGoalWidget> GoalWidgetClass;
+	
+	UPROPERTY()
+	class UGoalWidget* GoalWidget;
+	
+	FTimerHandle AddWidgetTimer;
+	FTimerHandle GoalAnimTimer;
+	void AddWidget();
+	void RemoveWidget();
 };

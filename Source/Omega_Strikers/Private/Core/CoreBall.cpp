@@ -3,6 +3,7 @@
 
 #include "Core/CoreBall.h"
 
+#include "NiagaraFunctionLibrary.h"
 #include "PlayerBase.h"
 #include "Components/SphereComponent.h"
 #include "Core/GoalZone.h"
@@ -224,12 +225,49 @@ void ACoreBall::Multicast_PlayHitFX_Implementation(FVector Location, FVector Dir
 	// TODO: Niagara VFX 재생
 	// 1차에서 만든 Trail, Glow, Impact 파티클을 여기서 트리거
 	// UNiagaraFunctionLibrary::SpawnSystemAtLocation(...)
+	
+	// Core 타격 VFX 재생
+	if (!CoreHitVFX)
+		return;
+	
+	UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+		GetWorld(),
+		CoreHitVFX,
+		GetActorLocation(),
+		FRotator::ZeroRotator,
+		CoreHitVFXScale
+	);
 }
 
 void ACoreBall::Multicast_PlayGoalFX_Implementation(int32 ScoringTeam)
 {
-	// TODO: 골 연출 VFX 재생
-	// 팀 색상에 따라 파티클 색 변경
+	// 골 연출 VFX 재생
+	
+	if (!GoalVFX)
+		return;
+	
+	UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+		GetWorld(),
+		GoalVFX,
+		GetActorLocation(),
+		FRotator::ZeroRotator,
+		GoalVFXScale
+	);
+	
+	GetWorldTimerManager().SetTimer(GoalTimer,
+	[this]()->void
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+		GetWorld(),
+		GoalVFX,
+		GetActorLocation(),
+		FRotator::ZeroRotator,
+		GoalVFXScale
+	);
+	}, 
+	1.0f,
+	false
+	);
 }
 
 // ═══════════════════════════════════════════════════════

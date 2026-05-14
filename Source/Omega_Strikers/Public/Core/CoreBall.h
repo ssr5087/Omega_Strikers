@@ -4,6 +4,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "NiagaraSystem.h"
 #include "GameFramework/Actor.h"
 #include "Omega_Strikers/SM/OSImpactReceiver.h"
 #include "CoreBall.generated.h"
@@ -237,9 +238,29 @@ private:
 		int32 OtherBodyIndex, bool bFromSweep,
 		const FHitResult& SweepResult);
 	
+	
+	
 	// ═══════════════════════════════════════════
 	// 임팩트 리시버 인터페이스 재정의
 	// ═══════════════════════════════════════════
 public:
 	virtual bool ReceiveImpact_Implementation(const FOSImpactData& ImpactData, AActor* InstigatorActor) override;
+	
+	// 충돌 VFX
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "VFX")
+	TObjectPtr<UNiagaraSystem> GoalVFX;
+	
+	UPROPERTY(EditDefaultsOnly)
+	FVector GoalVFXScale = FVector(30.f);
+	
+	FTimerHandle GoalTimer;
+	
+	// Core 타격 VFX
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "VFX")
+	TObjectPtr<UNiagaraSystem> CoreHitVFX;
+	
+	UPROPERTY(EditDefaultsOnly)
+	FVector CoreHitVFXScale = FVector(1);
+	
+	
 };

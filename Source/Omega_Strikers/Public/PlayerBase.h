@@ -111,7 +111,7 @@ public:
 	float CoolDownRate = 0;
 	
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Stat|Knockback")
-	float KnockbackRatio = 1;
+	float KnockbackRatio = 5.f;
 	
 	bool bCoreHitCoolDown = false;
 	
