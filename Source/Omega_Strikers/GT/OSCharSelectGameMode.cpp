@@ -36,6 +36,18 @@ void AOSCharSelectGameMode::BeginPlay()
 			gi->CreatePendingSession();
 		}
 	}
+	
+	// GameInstance에서 세션 인원 수 → GameState에 세팅
+	if (UOSGameInstance* gi = Cast<UOSGameInstance>(GetGameInstance()))
+	{
+		if (gi->PendingPlayerCount > 0)
+		{
+			if (AOSCharSelectGameState* gs = GetGameState<AOSCharSelectGameState>())
+			{
+				gs->RequiredPlayerCount = gi->PendingPlayerCount;
+			}
+		}
+	}
 }
 
 // ═══════════════════════════════════════════════════════
