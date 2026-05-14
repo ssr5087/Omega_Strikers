@@ -74,7 +74,7 @@ private:
 	UPROPERTY(meta = (BindWidget))
 	UButton* BackButton;
 	
-	// ★ 호스트 전용 — 게임 시작 버튼
+	// 호스트 전용 — 게임 시작 버튼
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> StartGameButton;
 	
@@ -84,6 +84,30 @@ private:
 	// 상태 표시
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UTextBlock> StatusText;
+	
+	// ══════════════════════════════════════
+	//  팀 선택 바인딩
+	// ══════════════════════════════════════
+	
+	// 블루팀 선택 버튼 
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UButton> TeamBlueButton;
+
+	// 레드팀 선택 버튼
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UButton> TeamRedButton;
+
+	// 블루팀 인원 텍스트 (예: "블루팀 (2/3)")
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UTextBlock> TeamBlueText;
+
+	// 레드팀 인원 텍스트 (예: "레드팀 (1/3)")
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UTextBlock> TeamRedText;
+
+	// 현재 내 팀 표시 (예: "현재 팀: A")
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UTextBlock> MyTeamText;
 	
 	// --- 설정 (WBP Details) ---
 	UPROPERTY(EditDefaultsOnly, Category="CharSelect")
@@ -157,17 +181,38 @@ private:
 	// 확정/취소 버튼 상태 갱신
 	void UpdateButtonStates();
 
-	// ★ 게임 시작 버튼 (호스트 전용)
+	// 게임 시작 버튼 (호스트 전용)
 	UFUNCTION()
 	void OnStartGameClicked();
 	void UpdateStartGameButton();
-	
-	UFUNCTION()
-	void OnMyConfirmChanged(AOSPlayerState* Player, bool bConfirmed);
 
 	FTimerHandle BindTimerHandle;
-
 	void TryBindAll();
-	
 	bool bPlayerStateBound = false;
+	
+	// ══════════════════════════════════════
+	//  팀 선택 함수 (신규)
+	// ══════════════════════════════════════
+	
+	UFUNCTION()
+	void OnTeamBlueClicked();
+
+	UFUNCTION()
+	void OnTeamRedClicked();
+
+	void RequestTeamChange(int32 NewTeamID);
+
+	// 팀 UI 갱신 — 인원 수, 내 팀 표시, 버튼 하이라이트
+	void UpdateTeamUI();
+
+	// OnRep_TeamID 콜백 (누군가의 팀이 변경됨)
+	UFUNCTION()
+	void OnAnyTeamChanged(AOSPlayerState* Player, int32 NewTeamID);
+
+	// 팀 변경 거부 콜백
+	UFUNCTION()
+	void OnMyTeamChangeRejected(const FString& Reason);
+
+	// 다른 플레이어 팀 변경도 반영하기 위한 타이머
+	FTimerHandle TeamUITimerHandle;
 };

@@ -1,5 +1,12 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 // 플레이어별 상태 리플리케이션 구현
+// =====================================================
+// OSPlayerState.cpp — 팀 선택 기능 추가 버전
+// =====================================================
+// 추가된 함수:
+//   Server_RequestTeamChange_Implementation
+//   Client_OnTeamChangeRejected_Implementation
+// =====================================================
 
 #include "OSPlayerState.h"
 
@@ -44,10 +51,55 @@ void AOSPlayerState::OnRep_TeamID()
 	LOG_GT(TEXT("Player assigned to Team %d"), TeamID);
 }
 
-void AOSPlayerState::OnRep_bCharacterConfirmed()
+// ═══════════════════════════════════════════════════════
+// ★ 신규 — 팀 변경 요청 (클라이언트 → 서버)
+// ═══════════════════════════════════════════════════════
+void AOSPlayerState::Server_RequestTeamChange_Implementation(int32 NewTeamID)
 {
-	LOG_GT(TEXT("★ OnRep_bCharacterConfirmed: %s, bConfirmed=%d"), *GetPlayerName(), bCharacterConfirmed);
-	OnPlayerConfirmChanged.Broadcast(this, bCharacterConfirmed);
+	// 유효성 체크 — 0(A) 또는 1(B)만 허용
+	if (NewTeamID != 0 && NewTeamID != 1)
+	{
+		Client_OnTeamChangeRejected(TEXT("잘못된 팀 번호입니다."));
+		return;
+	}
+
+	// 이미 같은 팀이면 무시
+	if (TeamID == NewTeamID)
+	{
+		return;
+	}
+
+	// 캐릭터 확정 상태면 팀 변경 불가
+	if (bCharacterConfirmed)
+	{
+		Client_OnTeamChangeRejected(TEXT("캐릭터 확정 후에는 팀을 변경할 수 없습니다."));
+		return;
+	}
+
+	// CharSelectGameMode가 있으면 인원 검증
+	AOSCharSelectGameMode* gm = GetWorld()->GetAuthGameMode<AOSCharSelectGameMode>();
+	if (gm)
+	{
+		bool bOK = gm->TryChangeTeam(this, NewTeamID);
+		if (!bOK)
+		{
+			Client_OnTeamChangeRejected(TEXT("해당 팀이 이미 가득 찼습니다."));
+			return;
+		}
+	}
+
+	// 검증 통과 → 팀 변경
+	SetTeamID(NewTeamID);
+	LOG_GT(TEXT("%s → Team %d 변경 완료"), *GetPlayerName(), NewTeamID);
+}
+
+// ═══════════════════════════════════════════════════════
+// ★ 신규 — 팀 변경 거부 알림 (서버 → 클라이언트)
+// ═══════════════════════════════════════════════════════
+void AOSPlayerState::Client_OnTeamChangeRejected_Implementation(const FString& Reason)
+{
+	LOG_GT(TEXT("팀 변경 거부: %s"), *Reason);
+	OnTeamChangeRejected.Broadcast(Reason);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -55,9 +107,7 @@ void AOSPlayerState::OnRep_bCharacterConfirmed()
 // ═══════════════════════════════════════════════════════
 void AOSPlayerState::Server_SelectCharacter_Implementation(FName CharacterID)
 {
-	// TODO: 중복 선택 방지 검증
 	SelectedCharacter = CharacterID;
-	
 	LOG_GT(TEXT("Player %s selected Character %s"), *GetPlayerName(), *CharacterID.ToString());
 }
 
@@ -67,7 +117,6 @@ void AOSPlayerState::Server_SelectCharacter_Implementation(FName CharacterID)
 void AOSPlayerState::Server_SetReady_Implementation(bool bReady)
 {
 	bIsReady = bReady;
-	
 	LOG_GT(TEXT("Player %s ready = %d"), *GetPlayerName(), bReady);
 }
 
@@ -143,8 +192,6 @@ void AOSPlayerState::Server_RequestConfirmCharacter_Implementation()
 	if ( bOK )
 	{
 		bCharacterConfirmed = true;
-		OnRep_bCharacterConfirmed();
-		
 	}
 	else Client_OnSelectRejected(SelectedCharacter, TEXT("확정 실패 — 캐릭터를 먼저 선택하거나 중복을 확인하세요."));
 }
@@ -156,12 +203,10 @@ void AOSPlayerState::Server_RequestCancelConfirm_Implementation()
 
 	gm->CancelConfirmCharacter(this);
 	bCharacterConfirmed = false;
-	OnRep_bCharacterConfirmed();
 }
 
 void AOSPlayerState::Client_OnSelectRejected_Implementation(FName CharacterID, const FString& Reason)
 {
 	LOG_GT_W(TEXT("선택 거부: %s (%s)"), *CharacterID.ToString(), *Reason);
-
 	OnSelectRejected.Broadcast(CharacterID, Reason);
 }

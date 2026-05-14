@@ -99,6 +99,13 @@ bool AOSCharSelectGameMode::TryConfirmCharacter(AOSPlayerState* Player)
 		return false;
 	}
 	
+	// 팀 미배정이면 확정 불가
+	if (Player->GetTeamID() == -1)
+	{
+		LOG_GT_W(TEXT("%s 팀 미배정, 확정 불가"), *Player->GetPlayerName());
+		return false;
+	}
+	
 	// 레이스 컨디션 방어 - 최종 중복 체크
 	// 다른 플레이어가 '같은' 캐릭터를 이미 확정했는지 확인
 	for (const FOSCharSelectEntry& entry : gs->CharSelectList)
@@ -146,7 +153,57 @@ void AOSCharSelectGameMode::CancelConfirmCharacter(AOSPlayerState* Player)
 	
 	gs->BroadcastCharSelectUpdate();
 }
+// ═══════════════════════════════════════════════════════
+//  ★ 신규 — 팀 변경 검증
+// ═══════════════════════════════════════════════════════
+bool AOSCharSelectGameMode::TryChangeTeam(AOSPlayerState* Player, int32 NewTeamID)
+{
+	if ( !Player ) return false;
+	
+	// 유효한 팀 번호 체크
+	if ( NewTeamID != 0 && NewTeamID != 1 ) return false;
+	
+	// 이미 같은 팀이면 성공 (변경 불필요)
+	if ( Player->GetTeamID() != NewTeamID ) return true;
+	
+	// 이동하려는 팀의 현재 인원 체크
+	int32 targetCount = GetTeamCount(NewTeamID);
+	if (targetCount >= MaxPlayersPerTeam)
+	{
+		LOG_GT_W(TEXT("%s 팀 %d 변경 거부 — 인원 초과 (%d/%d)"), *Player->GetPlayerName(), NewTeamID, targetCount, MaxPlayersPerTeam);
+		return false;
+	}
+	
+	LOG_GT(TEXT("%s 팀 변경 승인: Team %d → Team %d"),
+		*Player->GetPlayerName(), Player->GetTeamID(), NewTeamID);
+	return true;
+}
 
+// ═══════════════════════════════════════════════════════
+//  ★ 신규 — 팀 인원 수
+// ═══════════════════════════════════════════════════════
+int32 AOSCharSelectGameMode::GetTeamCount(int32 TeamID) const
+{
+	int32 count = 0;
+
+	AGameStateBase* gs = GetGameState<AGameStateBase>();
+	if (!gs) return 0;
+
+	for (APlayerState* basePS : gs->PlayerArray)
+	{
+		AOSPlayerState* ps = Cast<AOSPlayerState>(basePS);
+		if (ps && ps->GetTeamID() == TeamID)
+		{
+			count++;
+		}
+	}
+
+	return count;
+}
+
+// ═══════════════════════════════════════════════════════
+//  게임 시작 (호스트 버튼)
+// ═══════════════════════════════════════════════════════
 void AOSCharSelectGameMode::StartArenaTravel()
 {
 	// 전원 확정 검증
@@ -207,7 +264,7 @@ void AOSCharSelectGameMode::StartArenaTravel()
 }
 
 // ═══════════════════════════════════════════════════════
-//  PostLogin — 접속 시 선택 목록에 등록
+//  PostLogin — 접속 시 선택 목록에 등록 + 팀 자동 배정
 // ═══════════════════════════════════════════════════════
 void AOSCharSelectGameMode::PostLogin(APlayerController* NewPlayer)
 {
@@ -233,8 +290,31 @@ void AOSCharSelectGameMode::PostLogin(APlayerController* NewPlayer)
 			gs->RequiredPlayerCount = NamedSession->SessionSettings.NumPublicConnections;
 		}
 	}
+	// 접속 시 인원 적은 팀에 자동 배정 (나중에 UI에서 변경 가능)
+	AssignDefaultTeam(ps);
 	
 	LOG_GT(TEXT("%s 접속 (총 %d 명)"), *ps->GetPlayerName(), gs->CharSelectList.Num());
+}
+
+// ═══════════════════════════════════════════════════════
+//  접속 시 자동 팀 배정
+// ═══════════════════════════════════════════════════════
+void AOSCharSelectGameMode::AssignDefaultTeam(AOSPlayerState* PS)
+{
+	if ( !PS ) return;
+	
+	// 이미 팀이 배정되어 있으면 스킵 (SeamlessTravel 등)
+	if ( PS->GetTeamID() != -1 ) return;
+	
+	int32 teamACount = GetTeamCount(0);
+	int32 teamBCount = GetTeamCount(1);
+	
+	// 인원 적은 팀에 배정, 같으면 A팀
+	int32 assignedTeam = (teamBCount < teamACount) ? 1 : 0;
+	PS->SetTeamID(assignedTeam);
+	
+	LOG_GT(TEXT("%s → Team %d 자동 배정 (A:%d, B:%d)"),
+		*PS->GetPlayerName(), assignedTeam, teamACount, teamBCount);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -243,52 +323,5 @@ void AOSCharSelectGameMode::PostLogin(APlayerController* NewPlayer)
 void AOSCharSelectGameMode::OnAllPlayersConfirmed()
 {
 	LOG_GT(TEXT("=== 전원 확정! 아레나 이동 ==="));
-	
-	/*// ★ GameInstance에 캐릭터 선택 저장
-	UOSGameInstance* gi = Cast<UOSGameInstance>(GetGameInstance());
-	if ( gi )
-	{
-		gi->ClearCharacterSelections();
-		
-		// ★ PlayerController → PlayerState → UniqueNetId 로 저장
-		for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
-		{
-			APlayerController* pc = It->Get();
-			if ( !pc ) continue;
-            
-			AOSPlayerState* ps = Cast<AOSPlayerState>(pc->PlayerState);
-			if ( !ps ) continue;
-            
-			FName charID = ps->GetSelectedCharacter();
-			if ( charID.IsNone() ) continue;
-			
-			FString playerKey = UOSGameInstance::GetPlayerKey(ps);
-			gi->SaveCharacterSelection(playerKey, charID);
-			
-			LOG_GT(TEXT("저장 : [%s] → %s"), *playerKey, *charID.ToString());
-		}
-		
-		LOG_GT(TEXT("GameInstance에 %d명 캐릭터 선택 저장 완료"), gi->GetAllSelections().Num());
-	}
-	else
-	{
-		LOG_GT_W(TEXT("GameInstance 캐스팅 실패! Project Settings → Game Instance Class 확인"));
-	}
-	
-	// 아레나로 이동
-	UWorld* world = GetWorld();
-	if ( world )
-	{
-		FString url = ArenaMapPath + TEXT("?listen");
-		
-		// ★ GameMode 클래스 지정
-		if ( ArenaGameModeClass )
-		{
-			const FString gmPath = ArenaGameModeClass->GetPathName();
-			url = FString::Printf(TEXT("%s?listen?game=%s"), *ArenaMapPath, *gmPath);
-		}
-    
-		LOG_GT(TEXT("ServerTravel URL: %s"), *url);
-		world->ServerTravel(url);
-	}*/
+	// StartArenaTravel()에서 처리하므로 여기에서는 로그만 출력
 }
