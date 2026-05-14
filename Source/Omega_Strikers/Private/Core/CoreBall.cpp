@@ -78,6 +78,7 @@ void ACoreBall::BeginPlay()
 	Rep_Location = GetActorLocation();
 	HomeLocation = GetActorLocation();
 	ClientTargetLocation = GetActorLocation();
+	bGoalOverlapLocked = false;
 }
 
 // ═══════════════════════════════════════════════════════
@@ -288,6 +289,7 @@ void ACoreBall::ResetToCenter()
 	Rep_Location = HomeLocation;
 	Rep_Velocity = FVector::ZeroVector;
 	ClientTargetLocation = HomeLocation;
+	bGoalOverlapLocked = true;
 }
 
 void ACoreBall::SetHomeLocation(const FVector& NewHomeLocation)
@@ -357,6 +359,16 @@ void ACoreBall::ServerPhysicsTick(float DeltaTime)
 	
 	// 속도 제한
 	ClampVelocity();
+
+	// 리셋 직후 골대 재진입으로 즉시 재득점하는 상황 방지
+	if (bGoalOverlapLocked)
+	{
+		const float UnlockDistanceSq = FMath::Square(SphereComp->GetScaledSphereRadius() * 2.f);
+		if (FVector::DistSquared2D(GetActorLocation(), HomeLocation) > UnlockDistanceSq)
+		{
+			bGoalOverlapLocked = false;
+		}
+	}
 	
 	// 연속 타격 리셋 타이머
 	if (Rep_HitCount > 0)
@@ -454,6 +466,13 @@ void ACoreBall::OnSphereOverlap(UPrimitiveComponent* OverlappedComp, AActor* Oth
 	// GoalZone과 오버랩 확인
 	AGoalZone* Goal = Cast<AGoalZone>(OtherActor);
 	if (!Goal) return;
+
+	// 리스폰 직후 같은 골대에 다시 닿는 경우는 무시
+	if (bGoalOverlapLocked)
+	{
+		LOG_SR_W(TEXT("중복 골 체크해서 블락함"))
+		return;
+	}
  
 	// 이미 득점 상태면 무시
 	if (Rep_CoreState == ECoreState::Scored) return;

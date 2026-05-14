@@ -210,6 +210,7 @@ private:
 	FVector HomeLocation = FVector::ZeroVector;
 	float LastHitTime = -999.f; // 히트 쿨다운 체크용
 	float HitCountResetTimer = 0.f; // 연속 타격 리셋 타이머
+	bool bGoalOverlapLocked = false; // 리셋 직후 재득점 방지용
  
 	// 서버 물리 업데이트
 	void ServerPhysicsTick(float DeltaTime);
