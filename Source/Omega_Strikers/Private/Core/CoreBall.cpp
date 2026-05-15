@@ -7,6 +7,7 @@
 #include "PlayerBase.h"
 #include "Components/SphereComponent.h"
 #include "Core/GoalZone.h"
+#include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
 #include "Omega_Strikers/Omega_Strikers.h"
 #include "Omega_Strikers/GT/Aimi.h"
@@ -241,6 +242,12 @@ void ACoreBall::Multicast_PlayHitFX_Implementation(FVector Location, FVector Dir
 		FRotator::ZeroRotator,
 		CoreHitVFXScale
 	);
+	
+	// Core 타격 SFX 재생
+	if (!CoreHitSFX)
+		return;
+	
+	UGameplayStatics::PlaySound2D(this, CoreHitSFX);
 }
 
 void ACoreBall::Multicast_PlayGoalFX_Implementation(int32 ScoringTeam)
@@ -257,6 +264,14 @@ void ACoreBall::Multicast_PlayGoalFX_Implementation(int32 ScoringTeam)
 		FRotator::ZeroRotator,
 		GoalVFXScale
 	);
+	
+	// 골 연출 SFX 재생
+	if (!GoalSFX)
+		return;
+	
+	UGameplayStatics::PlaySound2D(this, GoalSFX);
+	
+	
 	// 1초 뒤 시점에서 이미 Destroy 되어있어서 클라이언트 엔진 크래쉬 발생함
 	// GetWorldTimerManager().SetTimer(GoalTimer,
 	// [this]()->void
