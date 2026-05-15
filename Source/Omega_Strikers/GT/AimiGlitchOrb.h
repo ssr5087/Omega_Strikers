@@ -22,6 +22,11 @@ class UMaterialInstanceDynamic;
  * - 재시전 또는 최대 거리 도달 시 폭발
  * - 폭발 시 범위 내 적/코어를 오브 중심 → 대상 방향으로 밀어냄
  * - 캐릭터와 빔 연결 (시각적)
+ *
+ * ★ 네트워크:
+ *   - bReplicates=true: 서버에서 스폰 → 클라이언트 자동 복제
+ *   - Detonate: 서버에서 판정 → Multicast로 VFX 동기화
+ *   - CurrentRadius: Replicated → 클라이언트 스케일 동기화
  */
 UCLASS()
 class OMEGA_STRIKERS_API AAimiGlitchOrb : public AActor
@@ -36,7 +41,8 @@ protected:
 
 public:
 	virtual void Tick(float DeltaTime) override;
-
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	
 	// ──────────────────────────────────────────
 	//  발사 / 폭발
 	// ──────────────────────────────────────────
@@ -53,6 +59,10 @@ public:
 	// 현재 오브 반지름 (조준 UI에서 사용)
 	float GetCurrentRadius() const { return CurrentRadius; }
 
+	// Multicast RPC — 폭발 VFX를 모든 클라이언트에서 재생
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_OnDetonate(FVector DetonateLocation, float DetonateRadius);
+	
 	// ──────────────────────────────────────────
 	//  오브 속성
 	// ──────────────────────────────────────────
@@ -102,7 +112,7 @@ public:
 	TObjectPtr<UNiagaraSystem> DetonateVFX;
 
 	// ──────────────────────────────────────────
-	//  ★ VFX 에셋 (신규)
+	// VFX 에셋
 	// ──────────────────────────────────────────
 
 	/** 오브 이동 궤적 트레일 (리본 파티클) */
@@ -131,7 +141,7 @@ protected:
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UProjectileMovementComponent> ProjectileMovement;
 
-	// ★ VFX 컴포넌트 (신규)
+	// VFX 컴포넌트
 
 	UPROPERTY(VisibleAnywhere, Category="VFX")
 	TObjectPtr<UNiagaraComponent> TrailFXComp;
@@ -143,13 +153,15 @@ private:
 	// 발사 원점 (최대 거리 판정용)
 	FVector LaunchOrigin;
 
-	// 현재 반지름
+	// 현재 반지름 ★ Replicated: 클라이언트에서 스케일 동기화
+	UPROPERTY(Replicated)
 	float CurrentRadius;
 
 	// 이동 방향
 	FVector MoveDirection;
 
-	// 폭발 완료 체크
+	// 폭발 완료 체크 ★ Replicated: 클라이언트에서 폭발 상태 확인
+	UPROPERTY(Replicated)
 	bool bDetonated = false;
 
 	// 오너 캐릭터 참조
@@ -159,7 +171,7 @@ private:
 	// 현재까지 이동 거리
 	float TraveledDistance = 0.f;
 
-	// ★ 다이나믹 머티리얼 (신규)
+	// 다이나믹 머티리얼
 	UPROPERTY()
 	TObjectPtr<UMaterialInstanceDynamic> OrbMID;
 	
@@ -173,6 +185,6 @@ private:
 	// 반지름 업데이트 ( 콜리전 + 메쉬 스케일 )
 	void UpdateRadius(float NewRadius);
 	
-	/** ★ VFX 비주얼 갱신 — 매 틱 호출 (신규) */
+	// VFX 비주얼 갱신 — 매 틱 호출
 	void UpdateVisualEffects();
 }; 

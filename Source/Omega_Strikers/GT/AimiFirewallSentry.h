@@ -17,6 +17,9 @@ class UStaticMeshComponent;
  * - 지정된 방향으로 기술 억제 방화벽 투사체 연사
  * - 각 화살은 처음 적중한 적만 타격 (관통 X)
  * - 일정 시간 후 자동 소멸
+ * ★ 네트워크:
+ *   - bReplicates=true: 서버에서 스폰 → 클라이언트 자동 복제
+ *   - FireProjectile: 서버에서 판정 → Multicast로 VFX 동기화
  */
 UCLASS()
 class OMEGA_STRIKERS_API AAimiFirewallSentry : public AActor
@@ -76,38 +79,46 @@ public:
 	float SentryHP = 300.f;
 
 	// ──────────────────────────────────────────
-	//  ★ VFX 에셋 (신규)
+	//  VFX 에셋
 	// ──────────────────────────────────────────
 
-	/** 포탑 소환 이펙트 */
+	// 포탑 소환 이펙트
 	UPROPERTY(EditDefaultsOnly, Category="VFX")
 	TObjectPtr<UNiagaraSystem> SpawnVFX;
 
-	/** 포탑 감지 범위 링 (루프) */
+	// 포탑 감지 범위 링 (루프)
 	UPROPERTY(EditDefaultsOnly, Category="VFX")
 	TObjectPtr<UNiagaraSystem> DetectRingVFX;
 
-	/** 발사 머즐플래시 */
+	// 발사 머즐플래시
 	UPROPERTY(EditDefaultsOnly, Category="VFX")
 	TObjectPtr<UNiagaraSystem> MuzzleFlashVFX;
 
-	/** 라인트레이스 히트 임팩트 */
+	// 라인트레이스 히트 임팩트
 	UPROPERTY(EditDefaultsOnly, Category="VFX")
 	TObjectPtr<UNiagaraSystem> HitImpactVFX;
 
-	/** 발사 궤적 빔 (라인트레이스 시각화) */
+	// 발사 궤적 빔 (라인트레이스 시각화)
 	UPROPERTY(EditDefaultsOnly, Category="VFX")
 	TObjectPtr<UNiagaraSystem> BeamTrailVFX;
 
-	/** 소멸 이펙트 */
+	// 소멸 이펙트
 	UPROPERTY(EditDefaultsOnly, Category="VFX")
 	TObjectPtr<UNiagaraSystem> DestroyVFX;
 
+	// Multicast RPC — 발사 VFX를 모든 클라이언트에서 재생
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_FireVFX(FVector Start, FVector End, bool bHit, FVector HitPoint);
+
+	// Multicast RPC — 소멸 VFX
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_DestroyVFX(FVector Location, FRotator Rotation);
+	
 protected:
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UStaticMeshComponent> SentryMesh;
 
-	// ★ VFX 컴포넌트
+	// VFX 컴포넌트
 	UPROPERTY(VisibleAnywhere, Category="VFX")
 	TObjectPtr<UNiagaraComponent> DetectRingComp;
 	
@@ -124,6 +135,6 @@ private:
 	// 투사체 발사 or 라인트레이스 히트
 	void FireProjectile();
 	
-	/** ★ 발사 시 VFX 스폰 (신규) */
+	// 발사 시 VFX 스폰
 	void SpawnFireVFX(const FVector& Start, const FVector& End, bool bHit, const FVector& HitPoint);
 };

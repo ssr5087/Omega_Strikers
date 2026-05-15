@@ -16,6 +16,10 @@
 AAimiFirewallSentry::AAimiFirewallSentry()
 {
 	PrimaryActorTick.bCanEverTick = true;
+	
+	// 리플리케이션 활성화 — 서버에서 스폰 시 클라이언트에 자동 복제
+	bReplicates = true;
+	bAlwaysRelevant = true;
 
 	SentryMesh = CreateDefaultSubobject<UStaticMeshComponent>("SentryMesh");
 	RootComponent = SentryMesh;
@@ -45,19 +49,16 @@ void AAimiFirewallSentry::Tick(float DeltaTime)
 
 	if (!bInitialized) return;
 
+	// 발사 타이밍 및 수명 관리는 서버에서만
+	if (!HasAuthority()) return;
+	
 	ElapsedTime += DeltaTime;
 
 	// 지속 시간 종료
 	if (ElapsedTime >= Duration)
 	{
-		// 소멸 VFX
-		if (DestroyVFX)
-		{
-			UNiagaraFunctionLibrary::SpawnSystemAtLocation(
-				GetWorld(), DestroyVFX, GetActorLocation(),
-				GetActorRotation(), FVector(1.f), true, true,
-				ENCPoolMethod::AutoRelease);
-		}
+		// Multicast: 소멸 VFX를 모든 클라이언트에서 재생
+		Multicast_DestroyVFX(GetActorLocation(), GetActorRotation());
 		
 		LOG_GT(TEXT("Duration expired - destroying"));
 		Destroy();
@@ -102,13 +103,35 @@ void AAimiFirewallSentry::Initialize(AActor* IsOwner, const FVector& FireDirecti
 		DetectRingComp->SetNiagaraVariableFloat(
 			FString("User.RingRadius"), ProjectileRange);
 	}
-
 	
 	LOG_GT(TEXT("Initialized - Dir: %s, Duration: %.1f"), *FireDir.ToString(), Duration);
 }
 
 // ════════════════════════════════════════════════════════════
+//  Multicast_FireVFX — 모든 클라이언트에서 VFX 재생
+// ════════════════════════════════════════════════════════════
+void AAimiFirewallSentry::Multicast_FireVFX_Implementation(FVector Start, FVector End, bool bHit, FVector HitPoint)
+{
+	SpawnFireVFX(Start, End, bHit, HitPoint);
+}
+
+// ════════════════════════════════════════════════════════════
+//  Multicast_DestroyVFX — 모든 클라이언트에서 소멸 VFX 재생
+// ════════════════════════════════════════════════════════════
+void AAimiFirewallSentry::Multicast_DestroyVFX_Implementation(FVector Location, FRotator Rotation)
+{
+	if (DestroyVFX)
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+			GetWorld(), DestroyVFX, Location,
+			Rotation, FVector(1.f), true, true,
+			ENCPoolMethod::AutoRelease);
+	}
+}
+
+// ════════════════════════════════════════════════════════════
 //  FireProjectile — 직선 투사체 or 라인트레이스
+//  서버에서만 실행 (Tick에서 HasAuthority 체크 후 호출)
 // ════════════════════════════════════════════════════════════
 void AAimiFirewallSentry::FireProjectile()
 {
@@ -116,7 +139,7 @@ void AAimiFirewallSentry::FireProjectile()
 
 	if (ProjectileClass)
 	{
-		// BP 투사체 스폰 방식
+		// BP 투사체 스폰 방식 ★ 서버에서 스폰, bReplicates면 자동 복제
 		FActorSpawnParameters spawnParams;
 		spawnParams.Owner = this;
 		spawnParams.Instigator = Cast<APawn>(OwnerCharacter);
@@ -155,11 +178,11 @@ void AAimiFirewallSentry::FireProjectile()
 
 		bool bHit = GetWorld()->LineTraceSingleByChannel(hit, start, end, ECC_Pawn, params);
 		
-		// VFX 스폰 (디버그 라인 대체)
-		SpawnFireVFX(start, end, bHit, bHit ? hit.ImpactPoint : end);
+		// Multicast: VFX를 모든 클라이언트에서 재생
+		Multicast_FireVFX(start, end, bHit, bHit ? hit.ImpactPoint : end);
 
 #if WITH_EDITOR
-		DrawDebugLine(GetWorld(), start, bHit ? hit.ImpactPoint : end, FColor::Magenta, false, FireInterval * 0.8f, 0, 2.f);
+		//DrawDebugLine(GetWorld(), start, bHit ? hit.ImpactPoint : end, FColor::Magenta, false, FireInterval * 0.8f, 0, 2.f);
 #endif
 
 		if (bHit && hit.GetActor())
@@ -178,7 +201,7 @@ void AAimiFirewallSentry::FireProjectile()
 				FOSImpactData data = ownerPlayer->MakeImpactData(*skill);
 				data.Direction = dir2D;
 				
-				// ✅ CoreBall이면 Server RPC 사용
+				// CoreBall이면 Server RPC 사용
 				if (ACoreBall* CoreBall = Cast<ACoreBall>(target))
 				{
 					FVector KnockDir = FVector(data.Direction.X, data.Direction.Y, 0.f).GetSafeNormal();

@@ -28,6 +28,10 @@ class AAimiGlitchOrb;
  *   - 글리치.팝: 폭발 Push Vector = normalize(Target - OrbCenter) × force
  *   - 재시전 시스템: 1클릭 발사 / 2클릭 폭발 (스킬 상태 머신)
  *   - 점멸 + 도착지 부채꼴 히트박스
+ * ★ 네트워크 구조:
+ *   - 클라이언트: Use_XXX() → Server RPC 호출 (에이밍 방향 전달)
+ *   - 서버: 판정 / 스폰 / 쿨다운 처리 → Multicast로 연출 동기화
+ *   - 스폰 액터(Orb, Sentry): bReplicates=true → 자동 복제
  */
 UCLASS()
 class OMEGA_STRIKERS_API AAimi : public APlayerBase
@@ -63,6 +67,34 @@ public:
 	
 	UFUNCTION(Server, Reliable)
 	void Server_PlaySkillMontage(uint8 SkillIndex);
+
+	// ─────────────────────────────────────────────────────────
+	// 스킬별 Server RPC — 판정/스폰을 서버에서 실행
+	// ─────────────────────────────────────────────────────────
+
+	// [Primary] 글리치.팝 — 오브 발사
+	UFUNCTION(Server, Reliable)
+	void Server_FireGlitchOrb(FVector AimDir);
+
+	// [Primary] 글리치.팝 — 오브 재시전 (폭발)
+	UFUNCTION(Server, Reliable)
+	void Server_RecastGlitchOrb();
+
+	// [Secondary] 사이버 스와이프 — 점멸 + 꼬리 강타
+	UFUNCTION(Server, Reliable)
+	void Server_CyberSwipe(FVector AimDir);
+
+	// [Special] 방화벽 파수꾼 — 터렛 설치
+	UFUNCTION(Server, Reliable)
+	void Server_PlaceSentry(FVector AimDir);
+
+	// [Flip] 에너지 미터 — 회피 대시
+	UFUNCTION(Server, Reliable)
+	void Server_Dodge(FVector DashDir);
+
+	// [Flip] 에너지 미터 — 에너지 폭발
+	UFUNCTION(Server, Reliable)
+	void Server_EnergyBurst();
 	
 protected:
 	virtual void BeginPlay() override;
@@ -70,35 +102,6 @@ protected:
 public:
 	virtual void Tick(float DeltaTime) override;
 	UAimiAnimInstance* GetAimiAnim() const;
-
-	// public:
-// 	// DataTable
-// 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stat")
-// 	UDataTable* CharacterStatTable;
-// 	
-// 	// 캐릭터 이름 (Asher 고정이면 기본값 줘도 됨)
-// 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Stat")
-// 	FName CharacterName = "Aimi";
-//
-// 	// 레벨 (나중 대비)
-// 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Stat")
-// 	int32 Level = 1;
-//
-// 	// 현재 스탯 저장
-// 	FCharacterStat CurrentStat;
-//
-// 	// 실제 적용되는 값
-// 	float MaxHP;
-// 	float Power;
-// 	float MoveSpeed;
-// 	float CooldownReduction;
-//
-// 	// 함수
-// 	FCharacterStat* GetStatByLevel(int32 InLevel);
-// 	void ApplyStat(const FCharacterStat& Stat);
-// 	void LevelUp();
-// 	
-public:
 
 	// ════════════════════════════════════════════
 	//  PlayerBase virtual 구현
@@ -185,13 +188,6 @@ protected:
 	UPROPERTY()
 	TObjectPtr<AAimiGlitchOrb> ActiveOrb;
 
-private:
-	// 오브 발사
-	void FireGlitchOrb();
-
-	// 오브 재시전 (폭발)
-	void RecastGlitchOrb();
-
 protected:
 	// ════════════════════════════════════════════
 	//  [Secondary] 사이버 스와이프 — 점멸 + 꼬리 강타
@@ -226,8 +222,6 @@ private:
 	// 점멸 목표 위치 ( 마우스 / 입력 방향 기반 )
 	FVector CachedBlinkTarget;
 
-	void DoCyberSwipe();
-
 	// 점멸 후 딜레이 콜백 - 꼬리 강타 실행
 	void OnCyberSwipeArrived();
 
@@ -246,9 +240,6 @@ protected:
 	// 현재 설치된 센트리 목록
 	UPROPERTY()
 	TArray<TObjectPtr<AAimiFirewallSentry>> ActiveSentries;
-
-private:
-	void PlaceSentry();
 
 protected:
 	// ════════════════════════════════════════════
@@ -272,10 +263,6 @@ protected:
 	// 에너지 폭발 피해
 	UPROPERTY(EditDefaultsOnly, Category = "Flip|Energy")
 	float EnergyBurstDamage = 250.f;
-
-private:
-	void DoDodge();
-	void DoEnergyBurst();
 
 	// ════════════════════════════════════════════
 	//  유틸리티

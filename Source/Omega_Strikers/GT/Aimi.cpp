@@ -31,7 +31,7 @@ AAimi::AAimi()
 }
 
 // ─────────────────────────────────────────────────────────
-// [수정 3] Multicast 몽타주 재생 구현
+// Multicast 몽타주 재생 구현
 // ─────────────────────────────────────────────────────────
 void AAimi::Multicast_PlaySkillMontage_Implementation(uint8 SkillIndex)
 {
@@ -67,25 +67,8 @@ void AAimi::BeginPlay()
 {
 	Super::BeginPlay();
 
-	//CoreHitCool = 0.f;
-	//PrimarySkillCool = 0.f;
-	//SecondaryCool = 0.f;
-	//SpecialCool = 0.f;
-
 	Energy = 0.f;
 	ActiveOrb = nullptr;
-	
-	// // 데이터 셋
-	// FCharacterStat* Stat = GetStatByLevel(Level);
-	//
-	// if (Stat)
-	// {
-	// 	ApplyStat(*Stat);
-	// }
-	// else
-	// {
-	// 	UE_LOG(LogTemp, Warning, TEXT("Stat Load Failed"));
-	// }
 
 	LOG_GT(TEXT("[Aimi] NS_AimIndicator valid: %s"), NS_AimIndicator? TEXT("True") : TEXT("False"));
 
@@ -123,7 +106,12 @@ void AAimi::BeginPlay()
 void AAimi::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	TickCooldowns(DeltaTime);
+	
+	// 쿨다운 틱은 서버에서만 (Authority)
+	if (HasAuthority())
+	{
+		TickCooldowns(DeltaTime);
+	}
 
 	// 활성 오브가 파괴됐으면 참조 정리
 	if (ActiveOrb && (ActiveOrb->IsPendingKillPending() || ActiveOrb->HasDetonated()))
@@ -154,10 +142,9 @@ UAimiAnimInstance* AAimi::GetAimiAnim() const
 // ════════════════════════════════════════════════════════════
 void AAimi::TickCooldowns(float DeltaTime)
 {
-	//if (CoreHitCool	 > 0.f) CoreHitCool	 = FMath::Max(0.f, CoreHitCool	 - DeltaTime);
-	if (PrimarySkillCool   > 0.f) PrimarySkillCool	 = FMath::Max(0.f, PrimarySkillCool	 - DeltaTime);
-	if (SecondaryCool > 0.f) SecondaryCool = FMath::Max(0.f, SecondaryCool - DeltaTime);
-	if (SpecialCool	 > 0.f) SpecialCool	 = FMath::Max(0.f, SpecialCool   - DeltaTime);
+	if (PrimarySkillCool > 0.f) PrimarySkillCool = FMath::Max(0.f, PrimarySkillCool	 - DeltaTime);
+	if (SecondaryCool > 0.f) 	SecondaryCool 	 = FMath::Max(0.f, SecondaryCool - DeltaTime);
+	if (SpecialCool	 > 0.f) 	SpecialCool	 	 = FMath::Max(0.f, SpecialCool   - DeltaTime);
 }
 
 float AAimi::GetAdjustedCD(float Base) const
@@ -169,7 +156,6 @@ float AAimi::GetAdjustedCD(float Base) const
 
 // ════════════════════════════════════════════════════════════
 //  [Strike] 스트라이크 — 근접 약타
-//
 //  에너지 미터 충전: StrikeHit → Energy += EnergyPerStrike
 // ════════════════════════════════════════════════════════════
 void AAimi::Ready_CoreHit()
@@ -215,6 +201,9 @@ void AAimi::DoStrike()
 
 // ════════════════════════════════════════════════════════════
 //  [Primary] 글리치.팝 — 재시전 시스템
+//  ★ 네트워크 흐름:
+//     클라이언트: Use_PrimarySkill → Server_FireGlitchOrb(방향) or Server_RecastGlitchOrb
+//     서버: 오브 스폰(bReplicates=true) / 폭발 판정 + Multicast 몽타주
 // ════════════════════════════════════════════════════════════
 void AAimi::Ready_PrimarySkill()
 {
@@ -234,58 +223,74 @@ void AAimi::Use_PrimarySkill()
 	LOG_GT(TEXT("Use_PrimarySkill called! — bAimingPrimary was %d"), bAimingPrimary);
 	Super::Use_PrimarySkill();
 	
+	// 클라이언트는 Server RPC만 호출
 	if (ActiveOrb && !ActiveOrb->HasDetonated())
 	{
-		RecastGlitchOrb();
+		Server_RecastGlitchOrb();
 	}
 	else
 	{
 		if (PrimarySkillCool > 0.f) return;
-		FireGlitchOrb();
-		PrimarySkillCool = GetAdjustedCD(PrimaryCool_Max);
+		Server_FireGlitchOrb(CachedAimDirection);
 	}
-	
 }
 
-void AAimi::FireGlitchOrb()
+// ────────── Server RPC: 오브 발사 ──────────
+void AAimi::Server_FireGlitchOrb_Implementation(FVector AimDir)
 {
+	// 서버 검증: 쿨다운
+	if (PrimarySkillCool > 0.f) return;
+
 	if (!GlitchOrbClass)
 	{
 		LOG_GT_E(TEXT("GlitchOrbClass not set!"));
 		return;
 	}
 
+	// 방향 벡터 검증 (비정상 입력 방어)
+	AimDir.Z = 0.f;
+	if (AimDir.IsNearlyZero())
+	{
+		AimDir = GetActorForwardVector();
+	}
+	AimDir.Normalize();
+
 	bIsAimingOrb = true;
 
-	const FVector spawnLoc = GetActorLocation() + CachedAimDirection * 60.f;
-	const FVector aimDir = CachedAimDirection;
+	const FVector SpawnLoc = GetActorLocation() + AimDir * 60.f;
 
-	FActorSpawnParameters spawnParams;
-	spawnParams.Owner = this;
-	spawnParams.Instigator = this;
-	spawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = this;
+	SpawnParams.Instigator = this;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-	ActiveOrb = GetWorld()->SpawnActor<AAimiGlitchOrb>(GlitchOrbClass, spawnLoc, aimDir.Rotation(), spawnParams);
+	// ★ 서버에서 스폰 → bReplicates=true면 클라이언트에 자동 복제
+	ActiveOrb = GetWorld()->SpawnActor<AAimiGlitchOrb>(GlitchOrbClass, SpawnLoc, AimDir.Rotation(), SpawnParams);
 
 	if (ActiveOrb)
 	{
-		ActiveOrb->Launch(this, aimDir);
-		LOG_GT(TEXT("Glitch.Pop - Orb launched"));
-		
-		// 몽타주 재생
-		Server_PlaySkillMontage(1);
+		ActiveOrb->Launch(this, AimDir);
+		PrimarySkillCool = GetAdjustedCD(PrimaryCool_Max);
+		Multicast_PlaySkillMontage(1);  // ★ 서버에서 직접 Multicast
+		LOG_GT(TEXT("Glitch.Pop - Orb launched (Server)"));
 	}
 }
 
-void AAimi::RecastGlitchOrb()
+// ────────── Server RPC: 오브 재시전 (폭발) ──────────
+void AAimi::Server_RecastGlitchOrb_Implementation()
 {
 	if (!ActiveOrb || ActiveOrb->HasDetonated()) return;
+	
+	// 서버에서 폭발 → Orb 내부에서 판정 실행
 	ActiveOrb->Detonate();
-	LOG_GT(TEXT("Glitch.Pop - RECAST! Orb Detonated"));
+	LOG_GT(TEXT("Glitch.Pop - RECAST! Orb Detonated (Server)"));
 }
 
 // ════════════════════════════════════════════════════════════
 //  [Secondary] 사이버 스와이프 — 점멸 + 꼬리 강타
+//  ★ 네트워크 흐름:
+//     클라이언트: Use_SecondarySkill → Server_CyberSwipe(방향)
+//     서버: 위치 이동(리플리케이션) + 판정 + Multicast 몽타주
 // ════════════════════════════════════════════════════════════
 void AAimi::Ready_SecondarySkill()
 {
@@ -297,56 +302,69 @@ void AAimi::Use_SecondarySkill()
 {
 	Super::Use_SecondarySkill();
 	if (SecondaryCool > 0.f) return;
-	DoCyberSwipe();
-	SecondaryCool = GetAdjustedCD(SecondaryCool_Max);
+	
+	// 클라이언트는 Server RPC만 호출
+	Server_CyberSwipe(CachedAimDirection);
 }
 
-void AAimi::DoCyberSwipe()
+// ────────── Server RPC: 점멸 + 꼬리 강타 ──────────
+void AAimi::Server_CyberSwipe_Implementation(FVector AimDir)
 {
+	// 서버 검증: 쿨다운
+	if (SecondaryCool > 0.f) return;
+
 	bIsDashing = true;
 	
-	FVector blinkDir = CachedAimDirection;
-	blinkDir.Z = 0.f;
-	blinkDir.Normalize();
-
-	const FVector inputDir = GetCharacterMovement()->GetLastInputVector();
-	if (!inputDir.IsNearlyZero())
+	// 방향 벡터 검증
+	AimDir.Z = 0.f;
+	if (AimDir.IsNearlyZero())
 	{
-		blinkDir = inputDir.GetSafeNormal();
-		blinkDir.Z = 0.f;
+		AimDir = GetActorForwardVector();
+	}
+	AimDir.Normalize();
+
+	FVector BlinkDir = AimDir;
+
+	// 이동 입력이 있으면 그 방향 우선
+	const FVector InputDir = GetCharacterMovement()->GetLastInputVector();
+	if (!InputDir.IsNearlyZero())
+	{
+		BlinkDir = InputDir.GetSafeNormal();
+		BlinkDir.Z = 0.f;
 	}
 
-	const FVector start = GetActorLocation();
-	const FVector target = start + blinkDir * BlinkDistance;
+	const FVector Start = GetActorLocation();
+	const FVector Target = Start + BlinkDir * BlinkDistance;
 
-	FHitResult wallHit;
-	FCollisionQueryParams params;
-	// TODO: 아군 플레이어도 충돌 무시 처리해야함
-	params.AddIgnoredActor(this);
-	bool bBlocked = GetWorld()->LineTraceSingleByChannel(wallHit, start, target, ECC_WorldDynamic, params);
+	FHitResult WallHit;
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(this);
+	bool bBlocked = GetWorld()->LineTraceSingleByChannel(WallHit, Start, Target, ECC_WorldDynamic, Params);
 
-	const FVector finalPos = bBlocked ? wallHit.ImpactPoint - blinkDir * 30.f : target;
+	const FVector FinalPos = bBlocked ? WallHit.ImpactPoint - BlinkDir * 30.f : Target;
 
-	SetActorLocation(finalPos);
-	SetActorRotation(blinkDir.Rotation());
-	CachedBlinkTarget = finalPos;
+	// 서버에서 위치 이동 → Movement 리플리케이션으로 클라이언트 동기화
+	SetActorLocation(FinalPos);
+	SetActorRotation(BlinkDir.Rotation());
+	CachedBlinkTarget = FinalPos;
 
-	LOG_GT(TEXT("Cyber Swipe - Blinked"));
+	LOG_GT(TEXT("Cyber Swipe - Blinked (Server)"));
 
-	FTimerHandle timerHandle;
-	GetWorldTimerManager().SetTimer(timerHandle, this, &AAimi::OnCyberSwipeArrived, 0.05f, false);
+	// 딜레이 후 꼬리 강타 (서버에서 실행)
+	FTimerHandle TimerHandle;
+	GetWorldTimerManager().SetTimer(TimerHandle, this, &AAimi::OnCyberSwipeArrived, 0.05f, false);
 	
-	// 몽타주 재생
-	Server_PlaySkillMontage(2);
+	SecondaryCool = GetAdjustedCD(SecondaryCool_Max);
+	Multicast_PlaySkillMontage(2);  // 서버에서 직접 Multicast
 }
 
 void AAimi::OnCyberSwipeArrived()
 {
+	// 이 함수는 서버 타이머에서 호출됨
 	bIsDashing = false;
 	
 	const FVector origin = GetActorLocation();
 	const FVector forward = GetActorForwardVector();
-	const FVector2D dir2D = FVector2D(forward.X, forward.Y).GetSafeNormal();
 
 	FCharacterSkill* Skill = GetSkillData(TEXT("Aimi_Secondary"));
 	if (!Skill) return;
@@ -360,6 +378,9 @@ void AAimi::OnCyberSwipeArrived()
 
 // ════════════════════════════════════════════════════════════
 //  [Special] 방화벽 파수꾼 — 터렛 설치
+//  ★ 네트워크 흐름:
+//     클라이언트: Use_SpecialSkill → Server_PlaceSentry(방향)
+//     서버: 센트리 스폰(bReplicates=true) + Multicast 몽타주
 // ════════════════════════════════════════════════════════════
 
 void AAimi::Ready_SpecialSkill()
@@ -372,48 +393,64 @@ void AAimi::Use_SpecialSkill()
 {
 	Super::Use_SpecialSkill();
 	if (SpecialCool > 0.f) return;
-	PlaceSentry();
-	SpecialCool = GetAdjustedCD(CD_Special_Max);
+
+	// 클라이언트는 Server RPC만 호출
+	Server_PlaceSentry(CachedAimDirection);
 }
 
-void AAimi::PlaceSentry()
+// ────────── Server RPC: 터렛 설치 ──────────
+void AAimi::Server_PlaceSentry_Implementation(FVector AimDir)
 {
+	// 서버 검증: 쿨다운
+	if (SpecialCool > 0.f) return;
+
 	if (!SentryClass)
 	{
 		LOG_GT_E(TEXT("SentryClass not set!"));
 		return;
 	}
 
+	// 방향 벡터 검증
+	AimDir.Z = 0.f;
+	if (AimDir.IsNearlyZero())
+	{
+		AimDir = GetActorForwardVector();
+	}
+	AimDir.Normalize();
+
+	// 오래된 센트리 정리
 	while (ActiveSentries.Num() >= MaxSentries)
 	{
-		AAimiFirewallSentry* oldest = ActiveSentries[0];
-		if (IsValid(oldest)) oldest->Destroy();
+		AAimiFirewallSentry* Oldest = ActiveSentries[0];
+		if (IsValid(Oldest)) Oldest->Destroy();
 		ActiveSentries.RemoveAt(0);
 	}
 
-	const FVector forward = CachedAimDirection;
-	const FVector spawnLoc = GetActorLocation() + forward * 80.f;
+	const FVector SpawnLoc = GetActorLocation() + AimDir * 80.f;
 
-	FActorSpawnParameters spawnParams;
-	spawnParams.Owner = this;
-	spawnParams.Instigator = this;
-	spawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = this;
+	SpawnParams.Instigator = this;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 
-	AAimiFirewallSentry* sentry = GetWorld()->SpawnActor<AAimiFirewallSentry>(SentryClass, spawnLoc, forward.Rotation(), spawnParams);
+	// 서버에서 스폰 → bReplicates=true면 클라이언트에 자동 복제
+	AAimiFirewallSentry* Sentry = GetWorld()->SpawnActor<AAimiFirewallSentry>(SentryClass, SpawnLoc, AimDir.Rotation(), SpawnParams);
 
-	if(sentry)
+	if(Sentry)
 	{
-		sentry->Initialize(this, forward);
-		ActiveSentries.Add(sentry);
-		LOG_GT(TEXT("Firewall Sentry placed"));
-		
-		// 몽타주 재생
-		Server_PlaySkillMontage(3);
+		Sentry->Initialize(this, AimDir);
+		ActiveSentries.Add(Sentry);
+		SpecialCool = GetAdjustedCD(CD_Special_Max);
+		Multicast_PlaySkillMontage(3);  // ★ 서버에서 직접 Multicast
+		LOG_GT(TEXT("Firewall Sentry placed (Server)"));
 	}
 }
 
 // ════════════════════════════════════════════════════════════
 //  [Flip] 에너지 미터
+//  ★ 네트워크 흐름:
+//     클라이언트: Use_Flip → Server_Dodge(방향) or Server_EnergyBurst
+//     서버: LaunchCharacter / 360° 판정 + Multicast 몽타주
 // ════════════════════════════════════════════════════════════
 void AAimi::Ready_Flip()
 {
@@ -422,51 +459,68 @@ void AAimi::Ready_Flip()
 
 void AAimi::Use_Flip()
 {
-	Energy >= 100.f ? DoEnergyBurst() : DoDodge();
+	// 클라이언트에서 분기 → 해당 Server RPC 호출
+	if (Energy >= 100.f)
+	{
+		Server_EnergyBurst();
+	}
+	else
+	{
+		// 대시 방향은 클라이언트의 이동 입력
+		FVector DashDir = GetCharacterMovement()->GetLastInputVector();
+		if (DashDir.IsNearlyZero()) DashDir = GetActorForwardVector();
+		DashDir.Z = 0.f;
+		DashDir.Normalize();
+		Server_Dodge(DashDir);
+	}
 }
 
-void AAimi::DoDodge()
+// ────────── Server RPC: 회피 대시 ──────────
+void AAimi::Server_Dodge_Implementation(FVector DashDir)
 {
+	// 서버 검증: 에너지가 100 미만일 때만 대시
+	if (Energy >= 100.f) return;
+
 	bIsDashing = true;
-	
-	FVector dashDir = GetCharacterMovement()->GetLastInputVector();
-	if (dashDir.IsNearlyZero()) dashDir = GetActorForwardVector();
-	dashDir.Z = 0.f;
-	dashDir.Normalize();
 
-	LaunchCharacter(dashDir * DodgeDashForce, true, false);
-	LOG_GT(TEXT("Dodge done"));
+	// 방향 벡터 검증
+	DashDir.Z = 0.f;
+	if (DashDir.IsNearlyZero()) DashDir = GetActorForwardVector();
+	DashDir.Normalize();
 
-	// 대시 끝나면 false (0.3f는 대시 지속 시간에 맞게 조절)
-	FTimerHandle timer;
-	GetWorldTimerManager().SetTimer(timer, [this]()
+	LaunchCharacter(DashDir * DodgeDashForce, true, false);
+	Multicast_PlaySkillMontage(4);  // ★ 서버에서 직접 Multicast
+	LOG_GT(TEXT("Dodge done (Server)"));
+
+	// 대시 끝나면 false
+	FTimerHandle Timer;
+	GetWorldTimerManager().SetTimer(Timer, [this]()
 	{
 		bIsDashing = false;
 	}, 0.3f, false);
-	
-	// 몽타주 재생
-	Server_PlaySkillMontage(4);
 }
 
-void AAimi::DoEnergyBurst()
+// ────────── Server RPC: 에너지 폭발 ──────────
+void AAimi::Server_EnergyBurst_Implementation()
 {
-	Energy = 0.f;
+	// 서버 검증: 에너지 100 이상일 때만
+	if (Energy < 100.f) return;
 
-	const FVector origin = GetActorLocation();
-	const FVector forward = GetActorForwardVector();
-	const FVector2D dir2D = FVector2D(forward.X, forward.Y).GetSafeNormal();
+	Energy = 0.f;  // Replicated → 클라이언트 UI 자동 동기화
+
+	const FVector Origin = GetActorLocation();
+	const FVector Forward = GetActorForwardVector();
+	const FVector2D Dir2D = FVector2D(Forward.X, Forward.Y).GetSafeNormal();
 
 	FCharacterSkill* Skill = GetSkillData(TEXT("Aimi_EnergyBurst"));
 	if (!Skill) return;
 		
-	FOSImpactData data = MakeImpactData(*Skill);
-	data.Direction = dir2D;
+	FOSImpactData Data = MakeImpactData(*Skill);
+	Data.Direction = Dir2D;
 	
-	PerformSlash(origin, forward, EnergyBurstRange, 180.f, data);
-	LOG_GT(TEXT("ENERGY BURST! 360°"));
-	
-	// 몽타주 재생
-	Server_PlaySkillMontage(4);
+	PerformSlash(Origin, Forward, EnergyBurstRange, 180.f, Data);
+	Multicast_PlaySkillMontage(4);  // 서버에서 직접 Multicast
+	LOG_GT(TEXT("ENERGY BURST! 360° (Server)"));
 }
 
 // ════════════════════════════════════════════════════════════
@@ -514,7 +568,7 @@ bool AAimi::PerformSlash(const FVector& Origin, const FVector& ForwardDir,
 		ObjectParams, Sphere, Params);
  
 #if WITH_EDITOR
-	DrawDebugSphere(GetWorld(), Origin, Range, 16, FColor::Orange, false, 0.5f);
+	//DrawDebugSphere(GetWorld(), Origin, Range, 16, FColor::Orange, false, 0.5f);
 #endif
  
 	const float CosThreshold = FMath::Cos(FMath::DegreesToRadians(HalfAngleDeg));
@@ -552,8 +606,7 @@ bool AAimi::PerformSlash(const FVector& Origin, const FVector& ForwardDir,
 		FOSImpactData Data = InData;
 		Data.Direction = PushDir2D;
  
-		//IOSImpactReceiver::Execute_ReceiveImpact(Target, Data, this);
-		// ✅ 수정 — CoreBall이면 Server RPC 사용
+		// CoreBall이면 Server RPC 사용
 		if (ACoreBall* CoreBall = Cast<ACoreBall>(Target))
 		{
 			FVector KnockDir = FVector(Data.Direction.X, Data.Direction.Y, 0.f).GetSafeNormal();
@@ -577,7 +630,7 @@ bool AAimi::PerformSlash(const FVector& Origin, const FVector& ForwardDir,
 }
 
 // ════════════════════════════════════════════════════════════
-//  커서 에이밍
+//  커서 에이밍 (클라이언트 전용)
 // ════════════════════════════════════════════════════════════
 FVector AAimi::GetCursorWorldPosition() const
 {
@@ -614,7 +667,7 @@ FVector AAimi::GetAimDirection() const
 }
 
 // ════════════════════════════════════════════════════════════
-//  DrawAimIndicator — 플래그 기반 분기
+//  DrawAimIndicator — 플래그 기반 분기 (클라이언트 전용)
 // ════════════════════════════════════════════════════════════
 void AAimi::DrawAimIndicator()
 {
