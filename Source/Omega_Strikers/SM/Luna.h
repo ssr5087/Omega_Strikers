@@ -139,6 +139,9 @@ public:
 	// Primary Rocket 스폰
 	void SpawnPrimaryRocket();
 	
+	// 스킬 사용 SFX
+	void Primary_Sound();
+	
 	// 애니메이션 종료 후 다시 이동 방향을 바라보게 설정
 	void End_PrimarySkill();
 	
@@ -169,6 +172,9 @@ public:
 	// 보조 스킬 사용 중 위치 값 갱신 함수 호출용 타이머
 	FTimerHandle MoveTimer;
 	
+	// 스킬 사용 SFX
+	void Secondary_Sound();
+	
 	// 위치 값 갱신 함수
 	void Update_SecondaryMove();
 	
@@ -194,6 +200,9 @@ public:
 	
 	// Primary Rocket 스폰
 	void SpawnSpecialRocket();
+	
+	// 스킬 사용 SFX
+	void Special_Sound();
 	
 	// 애니메이션 종료 후 다시 이동 방향을 바라보게 설정
 	void End_SpecialSkill();
