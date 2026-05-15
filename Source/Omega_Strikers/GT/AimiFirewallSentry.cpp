@@ -7,6 +7,7 @@
 #include "NiagaraFunctionLibrary.h"
 #include "PlayerBase.h"
 #include "Core/CoreBall.h"
+#include "GameFramework/ProjectileMovementComponent.h"
 #include "Omega_Strikers/Omega_Strikers.h"
 #include "Omega_Strikers/SM/OSImpactReceiver.h"
 
@@ -20,7 +21,7 @@ AAimiFirewallSentry::AAimiFirewallSentry()
 	RootComponent = SentryMesh;
 	SentryMesh->SetCollisionProfileName(TEXT("BlockAllDynamic"));
 	
-	// ★ 감지 범위 링 나이아가라
+	// 감지 범위 링 나이아가라
 	DetectRingComp = CreateDefaultSubobject<UNiagaraComponent>(TEXT("DetectRingFX"));
 	DetectRingComp->SetupAttachment(RootComponent);
 	DetectRingComp->SetAutoActivate(false);
@@ -31,7 +32,7 @@ void AAimiFirewallSentry::BeginPlay()
 	Super::BeginPlay();
 	CurrentHP = SentryHP;
 	
-	// ★ 감지 링 에셋 할당
+	// 감지 링 에셋 할당
 	if (DetectRingVFX && DetectRingComp)
 	{
 		DetectRingComp->SetAsset(DetectRingVFX);
@@ -49,7 +50,7 @@ void AAimiFirewallSentry::Tick(float DeltaTime)
 	// 지속 시간 종료
 	if (ElapsedTime >= Duration)
 	{
-		// ★ 소멸 VFX
+		// 소멸 VFX
 		if (DestroyVFX)
 		{
 			UNiagaraFunctionLibrary::SpawnSystemAtLocation(
@@ -85,7 +86,7 @@ void AAimiFirewallSentry::Initialize(AActor* IsOwner, const FVector& FireDirecti
 	// 터렛이 발사 방향을 바라보도록 설정
 	SetActorRotation(FireDir.Rotation());
 
-	// ★ 소환 VFX
+	// 소환 VFX
 	if (SpawnVFX)
 	{
 		UNiagaraFunctionLibrary::SpawnSystemAtLocation(
@@ -94,7 +95,7 @@ void AAimiFirewallSentry::Initialize(AActor* IsOwner, const FVector& FireDirecti
 			ENCPoolMethod::AutoRelease);
 	}
 
-	// ★ 감지 링 활성화
+	// 감지 링 활성화
 	if (DetectRingComp && DetectRingComp->GetAsset())
 	{
 		DetectRingComp->Activate();
@@ -125,7 +126,20 @@ void AAimiFirewallSentry::FireProjectile()
 
 		if (proj)
 		{
-			// 투사체에 속도를 부여하는 방법은 BP 또는 ProjectileMovement에서 처리
+			UProjectileMovementComponent* projMove = proj->FindComponentByClass<UProjectileMovementComponent>();
+			if (!projMove)
+			{
+				projMove = NewObject<UProjectileMovementComponent>(proj);
+				projMove->UpdatedComponent = proj->GetRootComponent();
+				projMove->RegisterComponent();
+			}
+			
+			projMove->InitialSpeed = ProjectileSpeed;
+			projMove->MaxSpeed = ProjectileSpeed;
+			projMove->Velocity = FireDir * ProjectileSpeed;
+			projMove->bRotationFollowsVelocity = true;
+			projMove->ProjectileGravityScale = 0.f;
+			
 			LOG_GT(TEXT("Fired projectile -> %s"), *proj->GetName());
 		}
 	}
@@ -141,7 +155,7 @@ void AAimiFirewallSentry::FireProjectile()
 
 		bool bHit = GetWorld()->LineTraceSingleByChannel(hit, start, end, ECC_Pawn, params);
 		
-		// ★ VFX 스폰 (디버그 라인 대체)
+		// VFX 스폰 (디버그 라인 대체)
 		SpawnFireVFX(start, end, bHit, bHit ? hit.ImpactPoint : end);
 
 #if WITH_EDITOR
@@ -182,7 +196,7 @@ void AAimiFirewallSentry::FireProjectile()
 }
 
 // ════════════════════════════════════════════════════════════
-//  ★ SpawnFireVFX — 발사 시 VFX 스폰 (신규)
+// SpawnFireVFX — 발사 시 VFX 스폰 
 // ════════════════════════════════════════════════════════════
 void AAimiFirewallSentry::SpawnFireVFX(const FVector& Start, const FVector& End, bool bHit, const FVector& HitPoint)
 {
