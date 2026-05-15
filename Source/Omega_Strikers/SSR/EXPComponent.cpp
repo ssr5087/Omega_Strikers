@@ -83,8 +83,6 @@ void UEXPComponent::LevelUP()
 	// Delegate (서버용)
 	OnLevelUp.Broadcast(Player->Level);
 	
-	// 이펙트 실행
-	Multicast_LevelUpEffect();
 }
 
 // Replication
@@ -94,22 +92,6 @@ void UEXPComponent::OnRep_CurrentEXP()
 	// UI용
 }
 
-void UEXPComponent::Multicast_LevelUpEffect_Implementation()
-{
-	APlayerBase* Player = Cast<APlayerBase>(GetOwner());
-	if (!Player || !LevelUpFX)
-		return;
-	
-	UNiagaraFunctionLibrary::SpawnSystemAttached(
-		LevelUpFX,
-		Player->GetRootComponent(),
-		NAME_None,
-		FVector::ZeroVector,
-		FRotator::ZeroRotator,
-		EAttachLocation::KeepRelativeOffset,
-		true
-	);
-}
 
 
 

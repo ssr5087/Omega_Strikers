@@ -60,10 +60,4 @@ public:
 	UPROPERTY(BlueprintAssignable)
 	FOnLevelUp OnLevelUp;
 	
-	// 나아이가라 이펙트
-	UPROPERTY(EditAnywhere, Category="Niagara")
-	TObjectPtr<UNiagaraSystem> LevelUpFX;
-	
-	UFUNCTION(NetMulticast, Reliable)
-	void Multicast_LevelUpEffect();
 };
