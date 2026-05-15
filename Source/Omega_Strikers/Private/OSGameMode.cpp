@@ -101,7 +101,7 @@ void AOSGameMode::BeginPlay()
 }
 
 // ═══════════════════════════════════════════════════════
-// ★ 선택된 캐릭터에 맞는 Pawn 클래스 반환
+// 선택된 캐릭터에 맞는 Pawn 클래스 반환
 // ═══════════════════════════════════════════════════════
 UClass* AOSGameMode::GetDefaultPawnClassForController_Implementation(AController* InController)
 {
@@ -130,7 +130,7 @@ UClass* AOSGameMode::GetDefaultPawnClassForController_Implementation(AController
 	{
 		LOG_GT_E(TEXT("[%s] 캐릭터 미선택 → DefaultPawn"), *playerKey);
 		
-		// ★ 디버그: 저장된 전체 목록 출력
+		// 디버그: 저장된 전체 목록 출력
 		for (const auto& pair : gi->GetAllSelections())
 		{
 			LOG_GT(TEXT("  저장된 키: [%s] → %s"), *pair.Key, *pair.Value.ToString());
@@ -211,6 +211,52 @@ void AOSGameMode::Logout(AController* Exiting)
 }
 
 // ═══════════════════════════════════════════════════════
+// Seamless Travel 시 팀 복원 + 스폰
+// ═══════════════════════════════════════════════════════
+void AOSGameMode::HandleSeamlessTravelPlayer(AController*& C)
+{
+	APlayerController* PC = Cast<APlayerController>(C);
+	if (!PC)
+	{
+		Super::HandleSeamlessTravelPlayer(C);
+		return;
+	}
+	
+	AOSPlayerState* ps = PC->GetPlayerState<AOSPlayerState>();
+	
+	// GameInstance에서 Super 호출 전에 TeamID 복원 (ChoosePlayerStart에서 필요)
+	UOSGameInstance* gi = Cast<UOSGameInstance>(GetGameInstance());
+	if (gi && ps)
+	{
+		FString playerKey = UOSGameInstance::GetPlayerKey(ps);
+		int32 savedTeam = gi->GetTeamAssignment(playerKey);
+		
+		if (savedTeam != -1)
+		{
+			ps->SetTeamID(savedTeam);
+			LOG_GT(TEXT("★ HandleSeamlessTravelPlayer: %s → Team %d 복원"),
+				*ps->GetPlayerName(), savedTeam);
+		}
+		else
+		{
+			// 저장된 팀이 없으면 새로 배정
+			int32 assignedTeam = AssignTeam(PC);
+			ps->SetTeamID(assignedTeam);
+			LOG_GT_W(TEXT("★ HandleSeamlessTravelPlayer: %s 팀 미저장 → Team %d 신규 배정"), *ps->GetPlayerName(), assignedTeam);
+		}
+	}
+	
+	// 이제 TeamID가 설정된 상태에서 Super 호출 → ChoosePlayerStart 정상 동작
+	Super::HandleSeamlessTravelPlayer(C);
+	
+	// 인원 체크 → 자동 시작
+	int32 totalPlayers = GetTeamPlayerCount(0) + GetTeamPlayerCount(1);
+	LOG_GT(TEXT("전체 플레이어 : %d / %d"), totalPlayers, PlayersPerTeam * 2);
+	
+	if (IsReadyToStart()) TryStartMatch();
+}
+
+// ═══════════════════════════════════════════════════════
 // 팀 배정 (인원 적은 팀에 자동 배정)
 // ═══════════════════════════════════════════════════════
 int32 AOSGameMode::AssignTeam(APlayerController* NewPlayer)
@@ -244,7 +290,30 @@ int32 AOSGameMode::GetTeamPlayerCount(int32 TeamID) const
 AActor* AOSGameMode::ChoosePlayerStart_Implementation(AController* Player)
 {
 	AOSPlayerState* ps = Player ? Player->GetPlayerState<AOSPlayerState>() : nullptr;
-	int32 teamID = ps ? ps->GetTeamID() : 0;
+	int32 teamID = ps ? ps->GetTeamID() : -1;
+	
+	// Seamless Travel 시 새 PlayerState에 TeamID가 아직 없을 수 있음
+	// → GameInstance에서 직접 조회
+	if (teamID == -1 && ps)
+	{
+		UOSGameInstance* gi = Cast<UOSGameInstance>(GetGameInstance());
+		if (gi)
+		{
+			FString playerKey = UOSGameInstance::GetPlayerKey(ps);
+			teamID = gi->GetTeamAssignment(playerKey);
+			
+			if (teamID != -1)
+			{
+				// 새 PS에도 반영해두기
+				ps->SetTeamID(teamID);
+				LOG_GT(TEXT("ChoosePlayerStart: GameInstance에서 Team %d 복원 [%s]"),
+					teamID, *playerKey);
+			}
+		}
+	}
+	
+	// 그래도 -1이면 기본 0
+	if (teamID == -1) teamID = 0;
 	
 	// PlayerStart의 Tag로 팀 구분
 	// Tag TeamA (0) -> Red, TeamB (1) -> Blue
@@ -252,6 +321,7 @@ AActor* AOSGameMode::ChoosePlayerStart_Implementation(AController* Player)
 	
 	TArray<AActor*> starts;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), APlayerStart::StaticClass(), starts);
+	LOG_GT(TEXT("찾은 PlayerStart 개수 : %d, 태그 : %s"), starts.Num(), *desiredTag);
 	
 	// 태그 매칭 + 아직 미사용인 것만 필터링
 	TArray<AActor*> availableStarts;
@@ -262,6 +332,7 @@ AActor* AOSGameMode::ChoosePlayerStart_Implementation(AController* Player)
 			availableStarts.Add(start);
 		}
 	}
+	LOG_GT(TEXT("태깅된 PlayerStarts %d개"), availableStarts.Num());
 	
 	// 사용 가능한 스폰 포인트가 있으면 하나를 선택하고 "사용됨" 표시
 	if (availableStarts.Num() > 0)

@@ -69,9 +69,10 @@ public:
 	// ═══════════════════════════════════════════
 	virtual void PostLogin(APlayerController* NewPlayer) override;
 	virtual void Logout(AController* Exiting) override;
+	virtual void HandleSeamlessTravelPlayer(AController*& C) override;
 	virtual AActor* ChoosePlayerStart_Implementation(AController* Player) override;
 
-	/** ★ 선택된 캐릭터에 맞는 Pawn 클래스 반환 */
+	/** 선택된 캐릭터에 맞는 Pawn 클래스 반환 */
 	virtual UClass* GetDefaultPawnClassForController_Implementation(AController* InController) override;
 	
 	// ═══════════════════════════════════════════

@@ -29,13 +29,13 @@ void UOSGameInstance::Init()
 		sessionInterface->OnJoinSessionCompleteDelegates.AddUObject(this, &UOSGameInstance::OnJoinSessionComplete);
 	}
 	
-	// ★ 맵 로드 완료 콜백 — CharSelect 맵 로드 후 세션 생성용
+	// 맵 로드 완료 콜백 — CharSelect 맵 로드 후 세션 생성용
 	FCoreUObjectDelegates::PostLoadMapWithWorld.AddUObject(this, &UOSGameInstance::OnPostLoadMap);
 }
 
 void UOSGameInstance::CreateSession(FString roomName, int32 playerCount)
 {
-	// ★ 기존 세션이 있으면 먼저 파괴
+	// 기존 세션이 있으면 먼저 파괴
 	if (sessionInterface->GetNamedSession(FName(mySessionName)))
 	{
 		LOG_GT_W(TEXT("기존 세션 '%s' 파괴 후 재생성"), *mySessionName);
@@ -92,7 +92,7 @@ void UOSGameInstance::CreateSession(FString roomName, int32 playerCount)
 void UOSGameInstance::OnCreateSessionComplete(FName SessionName, bool bWasSuccessful)
 {
 	LOG_GT_W(TEXT("Session Name : %s, bWasSuccessful : %d"), *mySessionName, bWasSuccessful);
-	// ★ ServerTravel은 HostAndCreateSession에서 이미 완료됨 — 여기서는 하지 않음
+	// ServerTravel은 HostAndCreateSession에서 이미 완료됨 — 여기서는 하지 않음
 }
 
 void UOSGameInstance::HostAndCreateSession(FString roomName, int32 playerCount)
@@ -104,7 +104,7 @@ void UOSGameInstance::HostAndCreateSession(FString roomName, int32 playerCount)
 
 	LOG_GT_W(TEXT("★ HostAndCreateSession: ServerTravel 시작, 세션은 맵 로드 후 생성 예정"));
 	
-	// ★ 심리스 트래블 강제 비활성화 — ?listen이 동작하려면 Hard Travel 필수
+	// 심리스 트래블 강제 비활성화 — ?listen이 동작하려면 Hard Travel 필수
 	if (AGameModeBase* GM = GetWorld()->GetAuthGameMode())
 	{
 		GM->bUseSeamlessTravel = false;
@@ -217,9 +217,6 @@ void UOSGameInstance::OnFindSesssionsComplete(bool bWasSuccessful)
 		
 		LOG_SR_W(TEXT("%s"), *sessionInfo.ToString());
 		
-		// PRINTLOG(TEXT("%s : %s(%s) - (%d/%d), %dms"), *roomName, *hostName, *userName, currentPlayerCount, maxPlayerCount, pingSpeed);
-		
-		
 		// 델리게이트로 위젯에 알려주기
 		onSearchCompleted.Broadcast(sessionInfo);
 		
@@ -235,7 +232,7 @@ void UOSGameInstance::JoinSelectedSession(int32 index)
 		return;
 	}
 	
-	// ★ 기존 세션이 남아있으면 먼저 파괴 후 Join
+	// 기존 세션이 남아있으면 먼저 파괴 후 Join
 	if (sessionInterface->GetNamedSession(FName(mySessionName)))
 	{
 		LOG_GT_W(TEXT("기존 세션 '%s' 파괴 후 Join 시도"), *mySessionName);
@@ -263,7 +260,7 @@ void UOSGameInstance::OnJoinSessionComplete(FName SessionName, EOnJoinSessionCom
 		
 		LOG_SR_W(TEXT("Join URL : %s"), *url);
 		
-		// ★ NULL 서브시스템에서 포트 0 문제 강제 수정
+		// NULL 서브시스템에서 포트 0 문제 강제 수정
 		url.ReplaceInline(TEXT(":0"), TEXT(":7777"));
 		
 		LOG_GT_W(TEXT("Join URL (fixed): %s"), *url);
@@ -276,7 +273,7 @@ void UOSGameInstance::OnJoinSessionComplete(FName SessionName, EOnJoinSessionCom
 	else
 	{
 		LOG_SR_W(TEXT("Join Session Failed : %d"), result);
-		// ★ 실패 시 세션 정리 — 다음 시도가 가능하도록
+		// 실패 시 세션 정리 — 다음 시도가 가능하도록
 		sessionInterface->DestroySession(SessionName);
 	}
 }
@@ -297,7 +294,7 @@ void UOSGameInstance::LeaveSession()
 		return;
 	}
 
-	// ★ 호스트인지 판별: bHosting 플래그 또는 세션의 bHosting 상태
+	// 호스트인지 판별: bHosting 플래그 또는 세션의 bHosting 상태
 	if (existingSession->bHosting)
 	{
 		// 호스트 → 세션 파괴 (연결된 클라이언트도 자동으로 끊김)
@@ -394,4 +391,23 @@ FName UOSGameInstance::GetCharacterSelection(const FString& PlayerKey) const
 	return found ? *found : NAME_None;
 }
 
+// ═══════════════════════════════════════════════════════
+//  ★ 팀 배정 저장/조회
+// ═══════════════════════════════════════════════════════
+void UOSGameInstance::SaveTeamAssignment(const FString& PlayerKey, int32 TeamID)
+{
+	TeamAssignments.Add(PlayerKey, TeamID);
+	LOG_GT(TEXT("팀 저장 [%s] -> Team %d"), *PlayerKey, TeamID);
+}
 
+int32 UOSGameInstance::GetTeamAssignment(const FString& PlayerKey) const
+{
+	const int32* found = TeamAssignments.Find(PlayerKey);
+	return found ? *found : -1;
+}
+
+void UOSGameInstance::ClearTeamAssignments()
+{
+	TeamAssignments.Empty();
+	LOG_GT(TEXT("팀 배정 초기화"));
+}
