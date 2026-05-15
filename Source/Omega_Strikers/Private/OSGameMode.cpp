@@ -24,7 +24,7 @@ AOSGameMode::AOSGameMode()
 	// 심리스 트래블 지원
 	bUseSeamlessTravel = true;
 	
-	// ★ 기본 폰도 PlayerBase로 — DefaultPawn 스폰 방지
+	// 기본 폰도 PlayerBase로 — DefaultPawn 스폰 방지
 	DefaultPawnClass = APlayerBase::StaticClass();
 }
 
@@ -32,6 +32,8 @@ void AOSGameMode::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	// PlayerStart 사용 기록 초기화
+	ResetUsedPlayerStarts();
 	// GameInstance에서 인원 수 가져와 팀당 인원 설정
 	if (UOSGameInstance* gi = Cast<UOSGameInstance>(GetGameInstance()))
 	{
@@ -237,7 +239,7 @@ int32 AOSGameMode::GetTeamPlayerCount(int32 TeamID) const
 }
 
 // ═══════════════════════════════════════════════════════
-// 스폰 위치 선택 (팀별 PlayerStart)
+// 스폰 위치 선택 (팀별 PlayerStart — 중복 배정 방지)
 // ═══════════════════════════════════════════════════════
 AActor* AOSGameMode::ChoosePlayerStart_Implementation(AController* Player)
 {
@@ -251,14 +253,37 @@ AActor* AOSGameMode::ChoosePlayerStart_Implementation(AController* Player)
 	TArray<AActor*> starts;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), APlayerStart::StaticClass(), starts);
 	
-	// 태그 매칭되는 것 중 랜덤 선택
+	// 태그 매칭 + 아직 미사용인 것만 필터링
+	TArray<AActor*> availableStarts;
+	for (AActor* start : starts)
+	{
+		if (start->ActorHasTag(FName(*desiredTag)) && !UsedPlayerStarts.Contains(start))
+		{
+			availableStarts.Add(start);
+		}
+	}
+	
+	// 사용 가능한 스폰 포인트가 있으면 하나를 선택하고 "사용됨" 표시
+	if (availableStarts.Num() > 0)
+	{
+		AActor* chosen = availableStarts[FMath::RandRange(0, availableStarts.Num() - 1)];
+		UsedPlayerStarts.Add(chosen);
+		LOG_GT(TEXT("Team%d → PlayerStart [%s] 배정 (남은 %d개)"),
+			teamID, *chosen->GetName(), availableStarts.Num() - 1);
+		return chosen;
+	}
+	
+	// 모든 팀 PlayerStart가 소진된 경우 — 전체 팀 Start 중 랜덤 (fallback)
 	TArray<AActor*> teamStarts;
 	for (AActor* start : starts)
 	{
 		if (start->ActorHasTag(FName(*desiredTag))) teamStarts.Add(start);
 	}
-	
-	if (teamStarts.Num() > 0) return teamStarts[FMath::RandRange(0, teamStarts.Num() - 1)];
+	if (teamStarts.Num() > 0)
+	{
+		LOG_GT_W(TEXT("Team%d: 모든 PlayerStart 소진 → fallback 랜덤 배정"), teamID);
+		return teamStarts[FMath::RandRange(0, teamStarts.Num() - 1)];
+	}
 	
 	// 매칭 안되면 기본
 	return Super::ChoosePlayerStart_Implementation(Player);
@@ -271,7 +296,7 @@ bool AOSGameMode::IsReadyToStart() const
 {
 	int32 teamA = GetTeamPlayerCount(0);
 	int32 teamB = GetTeamPlayerCount(1);
-	LOG_SM_E(TEXT("IsReadyToStart : %d"),teamA >= PlayersPerTeam && teamB >= PlayersPerTeam);
+	LOG_SM(TEXT("IsReadyToStart : %d"),teamA >= PlayersPerTeam && teamB >= PlayersPerTeam);
 	return teamA >= PlayersPerTeam && teamB >= PlayersPerTeam;
 }
 
@@ -302,8 +327,7 @@ void AOSGameMode::StartCountdown()
 	gs->SetMatchPhase(EOSMatchPhase::Countdown);
 	
 	// 카운트 다운 후 라운드 시작
-	GetWorldTimerManager().SetTimer(
-		CountdownTimer, this, &AOSGameMode::StartRound, CountdownDuration, false);
+	GetWorldTimerManager().SetTimer(CountdownTimer, this, &AOSGameMode::StartRound, CountdownDuration, false);
 }
 
 void AOSGameMode::StartRound()
@@ -373,7 +397,7 @@ void AOSGameMode::SpawnCoreBall()
 		ActiveCoreBall->OnGoalScored.Clear();
 		ActiveCoreBall->OnGoalScored.AddDynamic(this, &AOSGameMode::OnGoalScored);
 
-		// ★ 모든 플레이어에게 CoreBall 등록
+		// 모든 플레이어에게 CoreBall 등록
 		for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
 		{
 			if (APlayerBase* Player = Cast<APlayerBase>(It->Get()->GetPawn()))
@@ -457,6 +481,12 @@ void AOSGameMode::EndMatch(int32 WinningTeam)
 	LOG_GT(TEXT("==MATCH OVER== Team %d WINS!"), WinningTeam);
 
 	// TODO: 결과 화면 -> 일정 시간 후 로비로 복귀
+}
+
+void AOSGameMode::ResetUsedPlayerStarts()
+{
+	UsedPlayerStarts.Empty();
+	LOG_GT(TEXT("UsedPlayerStarts 초기화 완료"));
 }
 
 // 경험치 EXPOrb 스폰
