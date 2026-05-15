@@ -95,6 +95,9 @@ void AAimi::BeginPlay()
 		false
 		);
 	
+	// 내가 조종 중인 캐릭터일 때만
+	if (!IsLocallyControlled()) {return;}
+	
 	// UI 붙이기
 	SkillUI = CreateWidget<ULunaSkillCool>(GetWorld(), CoolTimeUI);
 	if (SkillUI)
