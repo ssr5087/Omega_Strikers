@@ -38,6 +38,12 @@ public:
 	UPROPERTY()
 	class UScoreBoardWidget* ScoreBoardWidget;
 	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI")
+	TSubclassOf<class UResultWidget> ResultWidgetClass;
+	
+	UPROPERTY()
+	class UResultWidget* ResultWidget;
+	
 	int32 BlueScore = 0;
 	int32 RedScore = 0;
 	
