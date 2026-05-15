@@ -13,6 +13,7 @@
 #include "Components/BoxComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Net/UnrealNetwork.h"
 #include "Omega_Strikers/Omega_Strikers.h"
@@ -84,7 +85,6 @@ void ALuna::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	
-	GEngine->AddOnScreenDebugMessage(300000, 1, FColor::Magenta, FString::Printf(TEXT("%.2f, %.2f"), HPComp->CurHP, HPComp->MaxHP));
 }
 
 // Called to bind functionality to input
@@ -208,6 +208,11 @@ void ALuna::SpawnPrimaryRocket()
 	}
 }
 
+void ALuna::Primary_Sound()
+{
+	UGameplayStatics::PlaySound2D(this, PrimarySFX);
+}
+
 void ALuna::End_PrimarySkill()
 {
 	// 서버 & 클라 둘 다 노티파이를 타고 옴
@@ -250,6 +255,11 @@ void ALuna::Use_SecondarySkill()
 	ServerRPC_StartSecondarySkill(CursorDir);
 }
 
+void ALuna::Secondary_Sound()
+{
+	UGameplayStatics::PlaySound2D(this, SecondarySFX);
+}
+
 void ALuna::Update_SecondaryMove()
 {
 	// 서버에서만 처리(서버 RPC에서 타이머 호출 중임)
@@ -266,7 +276,6 @@ void ALuna::Update_SecondaryMove()
 	bIsChangingDirection = false;
 	NewDir = CurDir;
 	
-	
 	// 방향 지정
 	FVector MoveDir = CurDir;
 	MoveDir.Z = 0.0f;
@@ -280,10 +289,6 @@ void ALuna::OnDashOverlap(UPrimitiveComponent* OverlappedComponent, AActor* Othe
 {
 	// 서버에서만 충돌 처리
 	if (!HasAuthority()) {return;}
-	
-	UE_LOG(LogTemp, Warning, TEXT("Dash Overlap / OtherActor: %s / OtherComp: %s"),
-		OtherActor ? *OtherActor->GetName() : TEXT("NULL"),
-		OtherComp ? *OtherComp->GetName() : TEXT("NULL"));
 	
 	// 보조 스킬 처리 중일 때만 활성화
 	if (!bIsProcessingSecondary) {return;}
@@ -416,6 +421,11 @@ void ALuna::SpawnSpecialRocket()
 	}
 }
 
+void ALuna::Special_Sound()
+{
+	UGameplayStatics::PlaySound2D(this, SpecialSFX);
+}
+
 void ALuna::End_SpecialSkill()
 {
 	// 서버 & 클라 둘 다 노티파이를 타고 옴. but 서버에서만 실행
@@ -461,6 +471,9 @@ void ALuna::ServerRPC_StartPrimarySkill_Implementation(FVector2D SpawnDir)
 	// 애니메이션 실행 transition 세팅
 	bPrimaryAnimTrans = true;
 	
+	// 사운드 재생
+	Primary_Sound();
+	
 	// 발사 방향 저장
 	PrimaryDir = SpawnDir;
 	
@@ -487,6 +500,9 @@ void ALuna::MulticastRPC_StartPrimaryLook_Implementation()
 	}
 	GetCharacterMovement()->bOrientRotationToMovement = false;
 	SetActorRotation(UKismetMathLibrary::MakeRotFromXZ(FVector(PrimaryDir.X, PrimaryDir.Y, 0), GetActorUpVector()));
+	
+	// 사운드 재생
+	Primary_Sound();
 }
 
 // ---------------- Secondary ----------------
@@ -495,6 +511,9 @@ void ALuna::ServerRPC_StartSecondarySkill_Implementation(FVector2D StartDir)
 {
 	// [Secondary] 직접 타고 이동 - 맨 처음 충돌 객체 저장 - 멈춤 - 저장된 객체에 값 전달
 	if (bSecondarySkillCoolDown) {return;}
+	
+	// 사운드 재생
+	Secondary_Sound();
 	
 	// 즉각적으로 이동을 멈추고, 속도를 0으로 만들고, 이미 입력된 속도 벡터 값을 소모해버린 후 최대 속력 변경
 	GetCharacterMovement()->StopMovementImmediately();
@@ -546,6 +565,9 @@ void ALuna::MulticastRPC_StartSecondaryCool_Implementation()
 	{
 		skillUI->LoadSeco();
 	}
+	
+	// 사운드 재생
+	Secondary_Sound();
 }
 
 void ALuna::ServerRPC_UpdateSecondaryDirection_Implementation(FVector2D AimDir)
@@ -596,6 +618,9 @@ void ALuna::ServerRPC_StartSpecialSkill_Implementation(FVector SpawnLoc)
 	// 애니메이션 transition
 	bSpecialAnimTrans = true;
 	
+	// 사운드 재생
+	Special_Sound();
+	
 	// 발사 위치 지정
 	SpecialLoc = SpawnLoc;
 	
@@ -622,4 +647,7 @@ void ALuna::MulticastRPC_StartSpecialLook_Implementation()
 	}
 	GetCharacterMovement()->bOrientRotationToMovement = false;
 	SetActorRotation(UKismetMathLibrary::MakeRotFromXZ(FVector(CursorDir.X, CursorDir.Y, 0), GetActorUpVector()));
+
+	// 사운드 재생
+	Special_Sound();
 }
