@@ -571,3 +571,18 @@ void APlayerBase::HandleLevelUp(int32 NewLevel)
 	// 여기서 이펙트
 	// PlayLevelupEffect();
 }
+
+// 사운드 설정
+void APlayerBase::Multicast_PlaySFX_Implementation(USoundBase* Sound)
+{
+	if (!Sound)
+	{
+		return;
+	}
+	
+	UGameplayStatics::PlaySoundAtLocation(
+		this,
+		Sound,
+		GetActorLocation()
+	);
+}

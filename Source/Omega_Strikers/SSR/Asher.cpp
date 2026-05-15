@@ -697,6 +697,9 @@ void AAsher::MulticastRPC_PlayPrimarySkill_Implementation(FVector2D SkillDir)
 	{
 		SkillUI->LoadPrim();
 	}
+	
+	// 소리 재생
+	Multicast_PlaySFX(PrimarySFX);
 }
 
 void AAsher::MulticastRPC_PlaySecondarySkill_Implementation(FVector2D SkillDir)
@@ -716,6 +719,9 @@ void AAsher::MulticastRPC_PlaySecondarySkill_Implementation(FVector2D SkillDir)
 	{
 		SkillUI->LoadSeco();
 	}
+	
+	// 소리 재생
+	Multicast_PlaySFX(SecondarySFX);
 }
 
 void AAsher::MulticastRPC_PlaySpecialSkill_Implementation(FVector2D SkillDir)
@@ -734,4 +740,7 @@ void AAsher::MulticastRPC_PlaySpecialSkill_Implementation(FVector2D SkillDir)
 	{
 		SkillUI->LoadSpec();
 	}
+	
+	// 소리 재생
+	Multicast_PlaySFX(SpecialSFX);
 }
