@@ -200,7 +200,7 @@ protected:
 	// ════════════════════════════════════════════
 	// 점멸 거리
 	UPROPERTY(EditDefaultsOnly, Category = "Secondary|CyberSwipe")
-	float BlinkDistance = 500.f;
+	float BlinkDistance = 2000.f;
 
 	// 도착지 타격 범위
 	UPROPERTY(EditDefaultsOnly, Category = "Secondary|CyberSwipe")

@@ -206,7 +206,7 @@ void AAimiGlitchOrb::ExecuteExplosion()
 
 #if WITH_EDITOR
 	// 디버그: 폭발 범위 시각화
-	DrawDebugSphere(GetWorld(), orbCenter, explosionRadius, 24, FColor::Magenta, false, 1.5f);
+	//DrawDebugSphere(GetWorld(), orbCenter, explosionRadius, 24, FColor::Magenta, false, 1.5f);
 #endif
 
 	for (const FOverlapResult& overlap : overlaps)
