@@ -231,5 +231,33 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Indicator")
 	TSubclassOf<ASkillIndicatorBase> SpecialIndicatorClass;
+	
+	// 사운드 세팅
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "SFX")
+	class USoundBase* CoreHitSFX;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "SFX")
+	class USoundBase* PrimarySFX;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "SFX")
+	class USoundBase* SecondarySFX;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "SFX")
+	class USoundBase* SpecialSFX;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "SFX")
+	class USoundBase* WalkSFX;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "SFX")
+	class USoundBase* PrimaryEditionalSFX;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "SFX")
+	class USoundBase* SecondaryEditionalSFX;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "SFX")
+	class USoundBase* SpecialEditionalSFX;
+	
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_PlaySFX(USoundBase* Sound);
 };
 
