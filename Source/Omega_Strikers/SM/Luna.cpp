@@ -173,6 +173,7 @@ void ALuna::Ready_PrimarySkill()
 
 void ALuna::Use_PrimarySkill()
 {
+	Super::Use_PrimarySkill();
 	// 입력되면 플레이어 -> 마우스 커서 방향 벡터만 매개변수로 서버 RPC 전달
 	ServerRPC_StartPrimarySkill(CursorDir);
 }
@@ -224,13 +225,14 @@ void ALuna::Ready_SecondarySkill()
 	{
 		return;
 	}
-
 	Super::Ready_SecondarySkill();
+
 	ShowSkillIndicator(SecondaryIndicatorClass, ESkillType::Secondary);
 }
 
 void ALuna::Use_SecondarySkill()
 {
+	Super::Use_SecondarySkill();
 	// 소유 캐릭터에서만 처리
 	if (!IsLocallyControlled()) {return;}
 	
@@ -384,6 +386,7 @@ void ALuna::Ready_SpecialSkill()
 
 void ALuna::Use_SpecialSkill()
 {
+	Super::Use_SpecialSkill();
 	// 입력되면 마우스 커서 위치 벡터만 매개변수로 서버 RPC 전달
 	ServerRPC_StartSpecialSkill(MouseCursorLoc);	
 }
