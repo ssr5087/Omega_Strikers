@@ -11,12 +11,17 @@
 #include "PlayerBase.h"
 #include "Core/CoreBall.h"
 #include "Engine/OverlapResult.h"
+#include "Net/UnrealNetwork.h"
 #include "Omega_Strikers/SM/OSImpactReceiver.h"
 
 AAimiGlitchOrb::AAimiGlitchOrb()
 {
 	PrimaryActorTick.bCanEverTick = true;
 
+	// 리플리케이션 활성화 — 서버에서 스폰 시 클라이언트에 자동 복제
+	bReplicates = true;
+	bAlwaysRelevant = true;
+	
 	// Collision
 	CollisionSphere = CreateDefaultSubobject<USphereComponent>(TEXT("CollisionSphere"));
 	CollisionSphere->SetSphereRadius(InitRadius);
@@ -29,7 +34,7 @@ AAimiGlitchOrb::AAimiGlitchOrb()
 	OrbMesh->SetupAttachment(RootComponent);
 	OrbMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
-	// ★ VFX 컴포넌트 — 오브에 직접 부착
+	// VFX 컴포넌트 — 오브에 직접 부착
 	TrailFXComp = CreateDefaultSubobject<UNiagaraComponent>(TEXT("TrailFX"));
 	TrailFXComp->SetupAttachment(RootComponent);
 	TrailFXComp->SetAutoActivate(false);
@@ -41,9 +46,19 @@ AAimiGlitchOrb::AAimiGlitchOrb()
 	ProjectileMovement->bRotationFollowsVelocity = false;
 	ProjectileMovement->ProjectileGravityScale = 0.f; // 탑뷰 -> 중력 없음
 	ProjectileMovement->bShouldBounce = false;
+	ProjectileMovement->SetIsReplicated(true);
 
 	// 기본값
 	CurrentRadius = InitRadius;
+}
+
+// 리플리케이션 프로퍼티 등록
+void AAimiGlitchOrb::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	
+	DOREPLIFETIME(AAimiGlitchOrb, CurrentRadius);
+	DOREPLIFETIME(AAimiGlitchOrb, bDetonated);
 }
 
 void AAimiGlitchOrb::BeginPlay()
@@ -52,29 +67,27 @@ void AAimiGlitchOrb::BeginPlay()
 	CurrentRadius = InitRadius;
 	UpdateRadius(CurrentRadius);
 	
-	// ★ 다이나믹 머티리얼 생성
+	// 다이나믹 머티리얼 생성
 	if (GlitchMaterial && OrbMesh)
 	{
 		OrbMID = UMaterialInstanceDynamic::Create(GlitchMaterial, this);
 		OrbMesh->SetMaterial(0, OrbMID);
 	}
 
-	// ★ 나이아가라 에셋 할당 + 활성화
+	// 나이아가라 에셋 할당 + 활성화
 	if (TrailVFX && TrailFXComp)
 	{
 		TrailFXComp->SetAsset(TrailVFX);
-		// Launch() 때 켜기
 	}
 
 	if (AuraVFX && AuraFXComp)
 	{
 		AuraFXComp->SetAsset(AuraVFX);
-		// Launch() 때 켜기
 	}
 }
 
 // ════════════════════════════════════════════════════════════
-//  Launch — 캐릭터에서 호출
+//  Launch — 서버에서 호출 (Aimi::Server_FireGlitchOrb)
 // ════════════════════════════════════════════════════════════
 
 void AAimiGlitchOrb::Launch(AActor* InOwner, const FVector& Direction)
@@ -84,10 +97,10 @@ void AAimiGlitchOrb::Launch(AActor* InOwner, const FVector& Direction)
 	LaunchOrigin = GetActorLocation();
 	TraveledDistance = 0.f;
 
-	// ProjectileMovement에 속도 설정
+	// ProjectileMovement에 속도 설정 (SetIsReplicated→클라이언트 동기화)
 	ProjectileMovement->Velocity = MoveDirection * OrbSpeed;
 
-	// ★ VFX 활성화
+	// VFX 활성화
 	if (TrailFXComp && TrailFXComp->GetAsset())
 	{
 		TrailFXComp->Activate();
@@ -103,8 +116,8 @@ void AAimiGlitchOrb::Launch(AActor* InOwner, const FVector& Direction)
 
 // ════════════════════════════════════════════════════════════
 //  Tick — 성장 + 최대 거리 체크
-//
-//  ★ 반지름 성장 공식: r(t) = min(MaxRadius, InitialRadius + t × GrowthRate)
+//  반지름 성장 공식: r(t) = min(MaxRadius, InitialRadius + t × GrowthRate)
+//  서버에서만 반지름 갱신 (Replicated → 클라이언트 동기화)
 // ════════════════════════════════════════════════════════════
 
 void AAimiGlitchOrb::Tick(float DeltaTime)
@@ -126,20 +139,41 @@ void AAimiGlitchOrb::Tick(float DeltaTime)
 		LOG_GT(TEXT("Max distance reached (%.0f) - auto detonating"), TraveledDistance);
 		Detonate();
 	}
+
+	// 모든 머신에서 비주얼 갱신 (Replicated된 CurrentRadius 기반)
+	UpdateRadius(CurrentRadius);
+	UpdateVisualEffects();
 }
 
 // ════════════════════════════════════════════════════════════
 //  Detonate — 재시전 또는 자동 폭발
+//  판정은 서버, VFX는 Multicast
 // ════════════════════════════════════════════════════════════
 void AAimiGlitchOrb::Detonate()
 {
 	if (bDetonated) return;
-	bDetonated = true;
+	bDetonated = true; // Replicated → 클라이언트도 알게 됨
 
 	// 이동 정지
 	ProjectileMovement->StopMovementImmediately();
 
-	// ★ VFX 정리
+	// 서버에서 폭발 판정
+	ExecuteExplosion();
+
+	// Multicast: 모든 클라이언트에서 VFX 재생
+	Multicast_OnDetonate(GetActorLocation(), CurrentRadius);
+
+	LOG_GT(TEXT("Detonated at %s - Radius: %.0f, ExplosionR: %.0f (Server)"),
+		*GetActorLocation().ToString(), CurrentRadius, CurrentRadius * ExplosionRadiusMultiplier);
+
+	// 소멸 (약간의 딜레이로 VFX 재생 보장)
+	SetLifeSpan(0.3f);
+}
+
+// Multicast: 폭발 VFX (모든 클라이언트에서 실행)
+void AAimiGlitchOrb::Multicast_OnDetonate_Implementation(FVector DetonateLocation, float DetonateRadius)
+{
+	// VFX 정리
 	if (TrailFXComp && TrailFXComp->IsActive())
 	{
 		TrailFXComp->Deactivate();
@@ -149,30 +183,25 @@ void AAimiGlitchOrb::Detonate()
 		AuraFXComp->Deactivate();
 	}
 
-	// 메시 숨기기 (폭발 VFX가 대체)
+	// 메시 숨기기
 	if (OrbMesh)
 	{
 		OrbMesh->SetVisibility(false);
 	}
 	
-	// VFX
+	// 폭발 VFX
 	if (DetonateVFX)
 	{
-		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), DetonateVFX, GetActorLocation(), FRotator::ZeroRotator, FVector(CurrentRadius / InitRadius));
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+			GetWorld(), DetonateVFX, DetonateLocation,
+			FRotator::ZeroRotator,
+			FVector(DetonateRadius / FMath::Max(InitRadius, 1.f)));
 	}
-
-	// 폭발 판정
-	ExecuteExplosion();
-
-	LOG_GT(TEXT("Detonated at %s - Radius: %.0f, ExplosionR: %.0f"), *GetActorLocation().ToString(), CurrentRadius, CurrentRadius * ExplosionRadiusMultiplier);
-
-	// 소멸 (약간의 딜레이로 VFX 재생 보장)
-	SetLifeSpan(0.3f);
 }
 
 // ════════════════════════════════════════════════════════════
 //  ExecuteExplosion
-//
+//  서버에서만 실행
 //  ★ 핵심 수학 — Explosion Push Vector
 //
 //  1. 오브 중심 기준 구형 오버랩으로 범위 내 Actor 수집
@@ -262,7 +291,7 @@ void AAimiGlitchOrb::ExecuteExplosion()
 		LOG_GT(TEXT("Hit %s - Dir:(%.2f, %.2f) CoreKB:%.0f PlayerKB:%.0f (Attn:%.2f)"), *target->GetName(), pushDir2D.X, pushDir2D.Y, data.CoreKnockbackPower, data.PlayerKnockbackPower, attenuation);
 
 #if WITH_EDITOR
-	DrawDebugDirectionalArrow(GetWorld(), orbCenter, orbCenter + pushDir * 200.f, 20.f, FColor::Magenta, false, 1.5f);		
+	//DrawDebugDirectionalArrow(GetWorld(), orbCenter, orbCenter + pushDir * 200.f, 20.f, FColor::Magenta, false, 1.5f);		
 #endif
 	}
 	
@@ -288,7 +317,7 @@ void AAimiGlitchOrb::UpdateRadius(float NewRadius)
 }
 
 // ════════════════════════════════════════════════════════════
-//  ★ UpdateVisualEffects — 매 틱 호출 (신규)
+//  UpdateVisualEffects — 매 틱 호출
 // ════════════════════════════════════════════════════════════
 void AAimiGlitchOrb::UpdateVisualEffects()
 {
