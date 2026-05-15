@@ -145,6 +145,15 @@ public:
 	bool bGoalScoredThisSequence = false;
 	void ClearActiveCoreBall();
 
+	// ═══════════════════════════════════════════
+	// PlayerStart 중복 배정 방지
+	// ═══════════════════════════════════════════
+	// 이미 배정된 PlayerStart 목록 (라운드 시작 시 초기화)
+	UPROPERTY()
+	TSet<AActor*> UsedPlayerStarts;
+	
+	// 라운드/매치 시작 전 사용 기록 초기화
+	void ResetUsedPlayerStarts();
 public:
 	// 경험치오브 스폰액터 관리
 	UPROPERTY(EditAnywhere)
