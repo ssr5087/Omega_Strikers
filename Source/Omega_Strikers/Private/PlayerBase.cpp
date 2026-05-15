@@ -7,6 +7,7 @@
 #include "InputAction.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "NiagaraFunctionLibrary.h"
 #include "OSPlayerState.h"
 #include "Blueprint/UserWidget.h"
 #include "Components/CapsuleComponent.h"
@@ -119,6 +120,8 @@ void APlayerBase::BeginPlay()
 	if (EXPComp)
 	{
 		EXPComp->OnLevelUp.AddUniqueDynamic(this, &APlayerBase::HandleLevelUp);
+		
+		LOG_SR_W(TEXT("Bind Success"));
 	}
 }
 
@@ -564,10 +567,38 @@ void APlayerBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 	DOREPLIFETIME(APlayerBase, Level);
 }
 
+// 레벨업 이펙트 
+void APlayerBase::Multicast_LevelUpEffect_Implementation()
+{
+	LOG_SR_W(TEXT("Multicast Called"));
+	
+	UE_LOG(LogTemp, Warning, TEXT("Actor : %s"), *GetName());
+	UE_LOG(LogTemp, Warning, TEXT("Class : %s"), *GetClass()->GetName());
+	UE_LOG(LogTemp, Warning, TEXT("FX : %s"),
+		LevelUpFX ? *LevelUpFX->GetName() : TEXT("NULL"));
+	
+	if (!LevelUpFX)
+	{
+		LOG_SR_W(TEXT("LevelUpFX Is Null"));
+		return;
+	}
+		
+	// 여기서 이펙트
+	UNiagaraFunctionLibrary::SpawnSystemAttached(
+		LevelUpFX,
+		GetRootComponent(),
+		NAME_None,
+		FVector::ZeroVector,
+		FRotator::ZeroRotator,
+		EAttachLocation::KeepRelativeOffset,
+		true
+	);
+}
+
 // EXPComp 레벨업 관리
 void APlayerBase::HandleLevelUp(int32 NewLevel)
 {
-	LOG_SR_W(TEXT("Player LevelIp : %d"), NewLevel);
+	LOG_SR_W(TEXT("HandleLevelUP"));
 	
 	FCharacterStat* Stat = GetStatByLevel(NewLevel);
 	
@@ -576,8 +607,11 @@ void APlayerBase::HandleLevelUp(int32 NewLevel)
 		ApplyStat(*Stat);
 	}
 	
-	// 여기서 이펙트
-	// PlayLevelupEffect();
+	if (HasAuthority())
+	{
+		Multicast_LevelUpEffect();
+	}
+	
 }
 
 void APlayerBase::InitTeamFromPlayerState()

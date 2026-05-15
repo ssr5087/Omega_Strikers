@@ -2,6 +2,8 @@
 
 
 #include "EXPComponent.h"
+
+#include "NiagaraFunctionLibrary.h"
 #include "Omega_Strikers/Public/PlayerBase.h"
 
 #include "Net/UnrealNetwork.h"
@@ -69,6 +71,8 @@ void UEXPComponent::LevelUP()
 	if (!Player)
 		return;
 	
+	if (Player->Level >= 10)
+		return;
 	// CurrentEXP = 0;
 	
 	Player->Level++;
@@ -78,6 +82,7 @@ void UEXPComponent::LevelUP()
 	
 	// Delegate (서버용)
 	OnLevelUp.Broadcast(Player->Level);
+	
 }
 
 // Replication
@@ -86,6 +91,7 @@ void UEXPComponent::OnRep_CurrentEXP()
 {
 	// UI용
 }
+
 
 
 
