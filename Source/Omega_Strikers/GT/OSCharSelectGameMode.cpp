@@ -169,7 +169,7 @@ void AOSCharSelectGameMode::CancelConfirmCharacter(AOSPlayerState* Player)
 	gs->BroadcastCharSelectUpdate();
 }
 // ═══════════════════════════════════════════════════════
-//  ★ 신규 — 팀 변경 검증
+// 팀 변경 검증
 // ═══════════════════════════════════════════════════════
 bool AOSCharSelectGameMode::TryChangeTeam(AOSPlayerState* Player, int32 NewTeamID)
 {
@@ -195,7 +195,7 @@ bool AOSCharSelectGameMode::TryChangeTeam(AOSPlayerState* Player, int32 NewTeamI
 }
 
 // ═══════════════════════════════════════════════════════
-//  ★ 신규 — 팀 인원 수
+// 팀 인원 수
 // ═══════════════════════════════════════════════════════
 int32 AOSCharSelectGameMode::GetTeamCount(int32 TeamID) const
 {
@@ -236,6 +236,7 @@ void AOSCharSelectGameMode::StartArenaTravel()
 	if ( gi )
 	{
 		gi->ClearCharacterSelections();
+		gi->ClearTeamAssignments();
 		
 		for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
 		{
@@ -244,14 +245,17 @@ void AOSCharSelectGameMode::StartArenaTravel()
             
 			AOSPlayerState* ps = Cast<AOSPlayerState>(pc->PlayerState);
 			if ( !ps ) continue;
-            
-			FName charID = ps->GetSelectedCharacter();
-			if ( charID.IsNone() ) continue;
 			
 			FString playerKey = UOSGameInstance::GetPlayerKey(ps);
-			gi->SaveCharacterSelection(playerKey, charID);
+            
+			// 캐릭터 선택 저장
+			FName charID = ps->GetSelectedCharacter();
+			if ( !charID.IsNone() ) gi->SaveCharacterSelection(playerKey, charID); 
 			
-			LOG_GT(TEXT("저장 : [%s] → %s"), *playerKey, *charID.ToString());
+			// 팀 배정 저장
+			gi->SaveTeamAssignment(playerKey, ps->GetTeamID());
+			
+			LOG_GT(TEXT("저장 : [%s] → %s (Team %d)"), *playerKey, *charID.ToString(), ps->GetTeamID());
 		}
 		
 		LOG_GT(TEXT("GameInstance에 %d명 캐릭터 선택 저장 완료"), gi->GetAllSelections().Num());
@@ -295,7 +299,7 @@ void AOSCharSelectGameMode::PostLogin(APlayerController* NewPlayer)
 	gs->FindOrAddEntry(ps);
 	gs->BroadcastCharSelectUpdate();
 	
-	// ★ 세션의 최대 인원수를 RequiredPlayerCount에 세팅
+	// 세션의 최대 인원수를 RequiredPlayerCount에 세팅
 	UOSGameInstance* GI = Cast<UOSGameInstance>(GetGameInstance());
 	if (GI && GI->sessionInterface.IsValid())
 	{
