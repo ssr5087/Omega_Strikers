@@ -56,7 +56,7 @@ public:
 	FRotator IndicatorMeshRotation = FRotator::ZeroRotator;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Indicator")
-	FVector IndicatorWorldOffset = FVector(0.f, 0.f, 100.f);
+	FVector IndicatorWorldOffset = FVector(0.f, 0.f, 10.f);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Indicator")
 	float IndicatorYawOffset = 0.f;

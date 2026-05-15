@@ -11,6 +11,7 @@
 #include "Asher_AnimInstance.h"
 #include "Net/UnrealNetwork.h"
 #include "SkillIndicatorBase.h"
+#include "Omega_Strikers/Omega_Strikers.h"
 #include "Omega_Strikers/SM/LunaSkillCool.h"
 
 
@@ -120,8 +121,6 @@ void AAsher::Ready_PrimarySkill()
 
 	Super::Ready_PrimarySkill();
 	ShowSkillIndicator(PrimaryIndicatorClass, ESkillType::Primary);
-	
-	UE_LOG(LogTemp, Warning, TEXT("1234"));
 }
 
 void AAsher::Ready_SecondarySkill()
@@ -132,6 +131,7 @@ void AAsher::Ready_SecondarySkill()
 	}
 
 	Super::Ready_SecondarySkill();
+	
 	ShowSkillIndicator(SecondaryIndicatorClass, ESkillType::Secondary);
 }
 
