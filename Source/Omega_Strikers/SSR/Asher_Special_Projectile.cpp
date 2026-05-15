@@ -123,6 +123,8 @@ void AAsher_Special_Projectile::OnHitOverlap(UPrimitiveComponent* OverlappedComp
 	// 맞아도 되는 대상인지 체크
 	if (IOSImpactReceiver::Execute_ReceiveImpact(OtherActor, Data, GetOwner()))
 	{
+		Multicast_PlayHitSFX(GetActorLocation());
+		
 		const FRotator ProjectileRotation = GetActorRotation();
 		
 		// Shield 생성
