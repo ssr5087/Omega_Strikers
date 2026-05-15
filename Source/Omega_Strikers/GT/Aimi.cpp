@@ -18,6 +18,7 @@
 #include "Omega_Strikers/SM/HPComponent.h"
 #include "Omega_Strikers/SSR/CharacterSkill.h"
 #include "AimiAnimInstance.h"
+#include "SkillIndicatorBase.h"
 #include "Net/UnrealNetwork.h"
 #include "Blueprint/UserWidget.h"
 #include "Omega_Strikers/SM/LunaSkillCool.h"
@@ -120,6 +121,67 @@ void AAimi::BeginPlay()
 	}
 }
 
+void AAimi::ShowSkillIndicator(TSubclassOf<ASkillIndicatorBase> Class, ESkillType Type)
+{
+	if (!IsLocallyControlled()) return;
+	if (!Class) return;
+
+	ASkillIndicatorBase* Indicator =
+		GetWorld()->SpawnActor<ASkillIndicatorBase>(Class);
+
+	if (!Indicator) return;
+
+	Indicator->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
+
+	ConfigureSkillIndicator(Type, Indicator);
+
+	switch (Type)
+	{
+	case ESkillType::Primary:
+		PrimaryIndicator = Indicator;
+		break;
+
+	case ESkillType::Secondary:
+		SecondaryIndicator = Indicator;
+		break;
+
+	case ESkillType::Special:
+		SpecialIndicator = Indicator;
+		break;
+	}
+}
+
+void AAimi::HideAllIndicators()
+{
+}
+
+void AAimi::ConfigureSkillIndicator(ESkillType SkillType, class ASkillIndicatorBase* Indicator)
+{
+	if (!Indicator) return;
+
+	float Range = 0.f;
+
+	switch (SkillType)
+	{
+	case ESkillType::Primary:
+		Range = PrimaryCool_Max; // 또는 PrimaryRange로 바꿔도 됨
+		Indicator->IndicatorMode = EIndicatorMode::TargetLocation;
+		break;
+
+	case ESkillType::Secondary:
+		Range = BlinkDistance;
+		Indicator->IndicatorMode = EIndicatorMode::Directional;
+		break;
+
+	case ESkillType::Special:
+		Range = 800.f;
+		Indicator->IndicatorMode = EIndicatorMode::TargetLocation;
+		break;
+	}
+
+	Indicator->SetIndicatorRange(Range);
+}
+
 void AAimi::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
@@ -220,13 +282,17 @@ void AAimi::Ready_PrimarySkill()
 {
 	Super::Ready_PrimarySkill();
 	LOG_GT(TEXT("Ready_PrimarySkill called! bAimingPrimary will be set true. PrimarySkillCool: %.1f"), PrimarySkillCool);
+	
+	if (!IsLocallyControlled()) return;
 	if (PrimarySkillCool > 0.f) return;
 	
 	if (ActiveOrb && !ActiveOrb->HasDetonated())
 	{
 		// 재시전 대기 UI
-		
 	}
+	
+	ShowSkillIndicator(PrimaryIndicatorClass, ESkillType::Primary);
+
 }
 
 void AAimi::Use_PrimarySkill()
@@ -289,8 +355,12 @@ void AAimi::RecastGlitchOrb()
 // ════════════════════════════════════════════════════════════
 void AAimi::Ready_SecondarySkill()
 {
-	if (SecondaryCool > 0.f) return;
 	Super::Ready_SecondarySkill();
+	if (!IsLocallyControlled()) return;
+	if (SecondaryCool > 0.f) return;
+	
+	ShowSkillIndicator(SecondaryIndicatorClass, ESkillType::Secondary);
+
 }
 
 void AAimi::Use_SecondarySkill()
@@ -364,8 +434,11 @@ void AAimi::OnCyberSwipeArrived()
 
 void AAimi::Ready_SpecialSkill()
 {
-	if (SpecialCool > 0.f) return;
 	Super::Ready_SpecialSkill();
+	if (!IsLocallyControlled()) return;
+	if (SpecialCool > 0.f) return;
+	
+	ShowSkillIndicator(SpecialIndicatorClass, ESkillType::Special);
 }
 
 void AAimi::Use_SpecialSkill()

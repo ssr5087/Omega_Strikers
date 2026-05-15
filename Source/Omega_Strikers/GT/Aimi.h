@@ -334,4 +334,20 @@ public:
 	
 	UPROPERTY()
 	class ULunaSkillCool* SkillUI;
+	
+	// 스킬 사거리 표시
+	UPROPERTY()
+	ASkillIndicatorBase* PrimaryIndicator;
+
+	UPROPERTY()
+	ASkillIndicatorBase* SecondaryIndicator;
+
+	UPROPERTY()
+	ASkillIndicatorBase* SpecialIndicator;
+	
+	void ShowSkillIndicator(TSubclassOf<ASkillIndicatorBase> Class, ESkillType Type);
+	
+	void HideAllIndicators();
+
+	virtual void ConfigureSkillIndicator(ESkillType SkillType, ASkillIndicatorBase* Indicator);
 };
