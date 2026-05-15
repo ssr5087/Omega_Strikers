@@ -7,6 +7,7 @@
 #include "Components/BoxComponent.h"
 #include "Omega_Strikers/SM/OSImpactReceiver.h"
 #include "PlayerBase.h"
+#include "Kismet/GameplayStatics.h"
 
 
 // Sets default values
@@ -144,4 +145,17 @@ void AAsher_Special_Projectile::OnHitOverlap(UPrimitiveComponent* OverlappedComp
 		}
 		Destroy();
 	}
+}
+
+// 충돌시 Shield 사운드 생성
+void AAsher_Special_Projectile::Multicast_PlayHitSFX_Implementation(FVector Location)
+{
+	if (!SpecialHitSFX)
+		return;
+	
+	UGameplayStatics::PlaySoundAtLocation(
+	this,
+	SpecialHitSFX,
+	Location
+	);
 }
