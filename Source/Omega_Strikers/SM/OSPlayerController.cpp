@@ -7,6 +7,7 @@
 #include "OSGameState.h"
 #include "PlayerBase.h"
 #include "PlayerHUDWidget.h"
+#include "ResultWidget.h"
 #include "ScoreBoardWidget.h"
 #include "Blueprint/UserWidget.h"
 #include "Components/TextBlock.h"
@@ -130,6 +131,23 @@ void AOSPlayerController::SetScoreBoard(int32 TeamIndex, int32 NewScore, int32 S
 	}
 	
 	GetWorldTimerManager().SetTimer(AddWidgetTimer, this, &AOSPlayerController::AddWidget, 2.0f, false);
+	
+	if (NewScore >= 5 && ResultWidgetClass)
+	{
+		ResultWidget = CreateWidget<UResultWidget>(GetWorld(), ResultWidgetClass);
+		if (ResultWidget)
+		{
+			ResultWidget->SetScore(BlueScore, RedScore);
+			FTimerHandle ResultWidgetTimer;
+			GetWorldTimerManager().SetTimer(
+				ResultWidgetTimer,
+				[this]()->void
+				{
+					ResultWidget->AddToViewport();
+				},
+				5.0f, false);
+		}
+	}
 }
 
 void AOSPlayerController::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
