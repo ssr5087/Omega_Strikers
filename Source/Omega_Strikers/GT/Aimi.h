@@ -38,20 +38,32 @@ public:
 	AAimi();
 
 	// 대시 체크
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	UPROPERTY(Replicated, EditDefaultsOnly, BlueprintReadOnly)
 	bool bIsDashing = false;
 
 	// 글리치팝 오브 날리는 중인지 체크
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	UPROPERTY(Replicated, EditDefaultsOnly, BlueprintReadOnly)
 	bool bIsAimingOrb = false;
 
 	// Sentry 설치중인지 체크
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	UPROPERTY(Replicated, EditDefaultsOnly, BlueprintReadOnly)
 	bool bIsPlacingSentry = false;
 
 	// 서지 중인지 체크
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	UPROPERTY(Replicated, EditDefaultsOnly, BlueprintReadOnly)
 	bool bIsSurging = false;
+	
+	// ─────────────────────────────────────────────────────────
+	// Multicast RPC — 몽타주를 모든 클라이언트에서 재생
+	// ─────────────────────────────────────────────────────────
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_PlaySkillMontage(uint8 SkillIndex);
+	
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	
+	UFUNCTION(Server, Reliable)
+	void Server_PlaySkillMontage(uint8 SkillIndex);
+	
 protected:
 	virtual void BeginPlay() override;
 

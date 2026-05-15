@@ -18,6 +18,7 @@
 #include "Omega_Strikers/SM/HPComponent.h"
 #include "Omega_Strikers/SSR/CharacterSkill.h"
 #include "AimiAnimInstance.h"
+#include "Net/UnrealNetwork.h"
 
 AAimi::AAimi()
 {
@@ -25,6 +26,39 @@ AAimi::AAimi()
 
 	// Power, Speed 등은 PlayerBase에서 관리
 	CharacterName = "Aimi";
+}
+
+// ─────────────────────────────────────────────────────────
+// [수정 3] Multicast 몽타주 재생 구현
+// ─────────────────────────────────────────────────────────
+void AAimi::Multicast_PlaySkillMontage_Implementation(uint8 SkillIndex)
+{
+	UAimiAnimInstance* Anim = GetAimiAnim();
+	if (!Anim) return;
+
+	switch (SkillIndex)
+	{
+		case 0: Anim->PlayStrike();      break;
+		case 1: Anim->PlayGlitchOrb();   break;
+		case 2: Anim->PlayCyberSwipe();  break;
+		case 3: Anim->PlayPlaceSentry(); break;
+		case 4: Anim->PlayFlip();        break;
+	}
+}
+
+void AAimi::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	
+	DOREPLIFETIME(AAimi, bIsDashing);
+	DOREPLIFETIME(AAimi, bIsAimingOrb);
+	DOREPLIFETIME(AAimi, bIsPlacingSentry);
+	DOREPLIFETIME(AAimi, bIsSurging);
+}
+
+void AAimi::Server_PlaySkillMontage_Implementation(uint8 SkillIndex)
+{
+	Multicast_PlaySkillMontage(SkillIndex);
 }
 
 void AAimi::BeginPlay()
@@ -141,7 +175,7 @@ void AAimi::Use_CoreHit()
 	Super::Use_CoreHit();
 	
 	// 몽타주 재생
-	if (UAimiAnimInstance* anim = GetAimiAnim()) anim->PlayStrike();
+	Server_PlaySkillMontage(0);  // Strike
 }
 
 // PlayerBase에서 이미 평타 구현 되어있어서 안쓸 듯...
@@ -230,7 +264,7 @@ void AAimi::FireGlitchOrb()
 		LOG_GT(TEXT("Glitch.Pop - Orb launched"));
 		
 		// 몽타주 재생
-		if (UAimiAnimInstance* anim = GetAimiAnim()) anim->PlayGlitchOrb();
+		Server_PlaySkillMontage(1);
 	}
 }
 
@@ -294,7 +328,7 @@ void AAimi::DoCyberSwipe()
 	GetWorldTimerManager().SetTimer(timerHandle, this, &AAimi::OnCyberSwipeArrived, 0.05f, false);
 	
 	// 몽타주 재생
-	if (UAimiAnimInstance* anim = GetAimiAnim()) anim->PlayCyberSwipe();
+	Server_PlaySkillMontage(2);
 }
 
 void AAimi::OnCyberSwipeArrived()
@@ -365,7 +399,7 @@ void AAimi::PlaceSentry()
 		LOG_GT(TEXT("Firewall Sentry placed"));
 		
 		// 몽타주 재생
-		if (UAimiAnimInstance* anim = GetAimiAnim()) anim->PlayPlaceSentry();
+		Server_PlaySkillMontage(3);
 	}
 }
 
@@ -402,7 +436,7 @@ void AAimi::DoDodge()
 	}, 0.3f, false);
 	
 	// 몽타주 재생
-	if (UAimiAnimInstance* anim = GetAimiAnim()) anim->PlayFlip();
+	Server_PlaySkillMontage(4);
 }
 
 void AAimi::DoEnergyBurst()
@@ -423,7 +457,7 @@ void AAimi::DoEnergyBurst()
 	LOG_GT(TEXT("ENERGY BURST! 360°"));
 	
 	// 몽타주 재생
-	if (UAimiAnimInstance* anim = GetAimiAnim()) anim->PlayFlip();
+	Server_PlaySkillMontage(4);
 }
 
 // ════════════════════════════════════════════════════════════
