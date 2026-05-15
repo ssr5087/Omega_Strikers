@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "NiagaraSystem.h"
 #include "Components/ActorComponent.h"
 #include "EXPComponent.generated.h"
 
@@ -58,4 +59,5 @@ public:
 	
 	UPROPERTY(BlueprintAssignable)
 	FOnLevelUp OnLevelUp;
+	
 };

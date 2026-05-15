@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "NiagaraSystem.h"
 #include "GameFramework/Character.h"
 #include "Omega_Strikers/SM/OSImpactReceiver.h"
 #include "Omega_Strikers/SSR/CharacterSkill.h"
@@ -211,6 +212,13 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Component")
 	TObjectPtr<class UEXPComponent> EXPComp;
 	
+	// 경험치 이펙트
+	UPROPERTY(EditDefaultsOnly, Category="FX")
+	TObjectPtr<UNiagaraSystem> LevelUpFX;
+	
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_LevelUpEffect();
+	
 	
 	// 레벨업 함수 추가
 	UFUNCTION()
@@ -265,5 +273,7 @@ public:
 	
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void OnRep_PlayerState() override;
+	
+	
 };
 

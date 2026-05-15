@@ -72,5 +72,10 @@ public:
 		const FHitResult& SweepResult
 	);
 	
+	// 사운드 shield 충돌시  
+	UPROPERTY(EditDefaultsOnly, Category="SFX")
+	class USoundBase* SpecialHitSFX;
 	
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_PlayHitSFX(FVector Location);
 };

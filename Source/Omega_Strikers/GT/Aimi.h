@@ -324,4 +324,14 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<class UNiagaraComponent> DecalIndicatorComp;
+	
+	
+public:
+	// 스킬 UI 작업 (작성자 SSR) 
+	// 쿨타임 UI
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
+	TSubclassOf<class ULunaSkillCool> CoolTimeUI;
+	
+	UPROPERTY()
+	class ULunaSkillCool* SkillUI;
 };
