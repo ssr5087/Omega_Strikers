@@ -7,6 +7,7 @@
 #include "InputAction.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "OSPlayerState.h"
 #include "Blueprint/UserWidget.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/WidgetComponent.h"
@@ -479,6 +480,13 @@ void APlayerBase::ServerRPC_CoreHit_Implementation(FVector2D HitDir)
 		return;
 	}
 	
+	// 사운드 에셋 재생
+	if (CoreHitSFX)
+	{
+		UGameplayStatics::PlaySound2D(this, CoreHitSFX);
+		Multicast_PlaySFX(CoreHitSFX);
+	}
+	
 	// 데이터 셋 불러오기
 	FCharacterSkill* Skill = GetSkillData(FName(TEXT("Aimi_Strike")));
 	
@@ -570,6 +578,40 @@ void APlayerBase::HandleLevelUp(int32 NewLevel)
 	
 	// 여기서 이펙트
 	// PlayLevelupEffect();
+}
+
+void APlayerBase::InitTeamFromPlayerState()
+{
+	AOSPlayerState* ps = GetPlayerState<AOSPlayerState>();
+	if (ps)
+	{
+		int32 TeamID = ps->GetTeamID();
+		if (TeamID == 0)
+		{
+			TeamSide = EOSTeam::Blue;
+		}
+		else if (TeamID == 1)
+		{
+			TeamSide = EOSTeam::Red;
+		}
+		LOG_SM_W(TEXT("너 팀 어디니? : %d"), TeamID);
+	}
+}
+
+void APlayerBase::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+	LOG_SM_W(TEXT("빙의 되었니?"));
+	// 서버에서 Possess 되었을 때
+	InitTeamFromPlayerState();
+}
+
+void APlayerBase::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+	LOG_SM_W(TEXT("플레이어 스테이트 동기화됐니?"));
+	// 클라에서 PlayerState 되었을 때
+	InitTeamFromPlayerState();
 }
 
 // 사운드 설정

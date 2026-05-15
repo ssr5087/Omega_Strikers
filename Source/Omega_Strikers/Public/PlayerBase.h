@@ -259,5 +259,11 @@ public:
 	
 	UFUNCTION(NetMulticast, Unreliable)
 	void Multicast_PlaySFX(USoundBase* Sound);
+	
+	// 팀 세팅
+	void InitTeamFromPlayerState();
+	
+	virtual void PossessedBy(AController* NewController) override;
+	virtual void OnRep_PlayerState() override;
 };
 

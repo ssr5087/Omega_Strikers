@@ -75,7 +75,7 @@ void ALuna_PrimaryRocket::BeginPlay()
 		[this]()->void
 		{
 			this->Destroy();
-		}, 10.f, false);
+		}, 1.1f, false);
 }
 
 // Called every frame
