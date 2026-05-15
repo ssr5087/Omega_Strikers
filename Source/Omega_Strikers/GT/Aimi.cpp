@@ -18,6 +18,8 @@
 #include "Omega_Strikers/SM/HPComponent.h"
 #include "Omega_Strikers/SSR/CharacterSkill.h"
 #include "AimiAnimInstance.h"
+#include "Blueprint/UserWidget.h"
+#include "Omega_Strikers/SM/LunaSkillCool.h"
 
 AAimi::AAimi()
 {
@@ -75,6 +77,13 @@ void AAimi::BeginPlay()
 		EAttachLocation::KeepWorldPosition,
 		false
 		);
+	
+	// UI 붙이기
+	SkillUI = CreateWidget<ULunaSkillCool>(GetWorld(), CoolTimeUI);
+	if (SkillUI)
+	{
+		SkillUI->AddToViewport();
+	}
 }
 
 void AAimi::Tick(float DeltaTime)

@@ -2,6 +2,8 @@
 
 
 #include "EXPComponent.h"
+
+#include "NiagaraFunctionLibrary.h"
 #include "Omega_Strikers/Public/PlayerBase.h"
 
 #include "Net/UnrealNetwork.h"
@@ -69,6 +71,8 @@ void UEXPComponent::LevelUP()
 	if (!Player)
 		return;
 	
+	if (Player->Level >= 10)
+		return;
 	// CurrentEXP = 0;
 	
 	Player->Level++;
@@ -78,6 +82,9 @@ void UEXPComponent::LevelUP()
 	
 	// Delegate (서버용)
 	OnLevelUp.Broadcast(Player->Level);
+	
+	// 이펙트 실행
+	Multicast_LevelUpEffect();
 }
 
 // Replication
@@ -85,6 +92,23 @@ void UEXPComponent::LevelUP()
 void UEXPComponent::OnRep_CurrentEXP()
 {
 	// UI용
+}
+
+void UEXPComponent::Multicast_LevelUpEffect_Implementation()
+{
+	APlayerBase* Player = Cast<APlayerBase>(GetOwner());
+	if (!Player || !LevelUpFX)
+		return;
+	
+	UNiagaraFunctionLibrary::SpawnSystemAttached(
+		LevelUpFX,
+		Player->GetRootComponent(),
+		NAME_None,
+		FVector::ZeroVector,
+		FRotator::ZeroRotator,
+		EAttachLocation::KeepRelativeOffset,
+		true
+	);
 }
 
 
