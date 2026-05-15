@@ -266,5 +266,11 @@ public:
 	UPROPERTY(EditDefaultsOnly)
 	FVector CoreHitVFXScale = FVector(1);
 	
+	// Core 타격 SFX
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "VFX")
+	TObjectPtr<USoundBase> CoreHitSFX;
 	
+	// 골 SFX
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "VFX")
+	TObjectPtr<USoundBase> GoalSFX;
 };
