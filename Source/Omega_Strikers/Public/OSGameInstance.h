@@ -71,7 +71,7 @@ public:
 	// 맵 로드 완료 후 호출
 	void CreatePendingSession();
 	
-	// ★ 맵 로드 완료 콜백
+	// 맵 로드 완료 콜백
 	void OnPostLoadMap(UWorld* LoadedWorld);
 	
 public:
@@ -105,7 +105,7 @@ public:
 	FSearchStateSignature onSearchState;
 
 	// ═══════════════════════════════════════════════════════
-	//  ★ 캐릭터 선택 저장 (ServerTravel 시 PlayerState 소멸 대비)
+	// 캐릭터 선택 저장 (ServerTravel 시 PlayerState 소멸 대비)
 	// ═══════════════════════════════════════════════════════
 
 	/** 캐릭터 선택 저장 */
@@ -122,7 +122,18 @@ public:
 
 	/** PlayerState에서 고유 키 추출 헬퍼 */
 	static FString GetPlayerKey(const APlayerState* PS);
+	
+	// ═══════════════════════════════════════════════════════
+	//  ★ 팀 배정 저장 (Seamless Travel 시 PlayerState 소멸 대비)
+	// ═══════════════════════════════════════════════════════
+	void SaveTeamAssignment(const FString& PlayerKey, int32 TeamID);
+	int32 GetTeamAssignment(const FString& PlayerKey) const;
+	void ClearTeamAssignments();
+	
 private:
 	UPROPERTY()
 	TMap<FString, FName> CharacterSelections;
+	
+	UPROPERTY()
+	TMap<FString, int32> TeamAssignments;
 };
