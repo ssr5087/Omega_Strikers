@@ -259,6 +259,9 @@ void UOSCharSelectWidget::UpdatePreview(FName CharacterID)
 
 			if (PreviewCharacter)
 			{
+				// 스폰 직후에 리플리케이션 끄기
+				PreviewCharacter->SetReplicates(false);
+				
 				// 프리뷰용이므로 이동/AI 비활성화
 				PreviewCharacter->DisableInput(nullptr);
 				if (auto* Movement = PreviewCharacter->GetCharacterMovement())
