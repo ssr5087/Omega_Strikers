@@ -133,6 +133,13 @@ private:
 	// 전신(프리뷰용) 경로: T_UI_Portrait_Full_{내부명}
 	UPROPERTY(EditDefaultsOnly, Category = "CharSelect|Texture")
 	FString FullPath = TEXT("/Game/Resource/UI/Art/Characters/Full");
+
+	// 3D 프리뷰용
+	UPROPERTY(EditDefaultsOnly, Category="CharSelect|Preview")
+	TMap<FName, TSubclassOf<ACharacter>> CharacterBPMap;  // 캐릭터ID → BP 클래스
+
+	UPROPERTY()
+	TObjectPtr<ACharacter> PreviewCharacter;  // 현재 스폰된 프리뷰 캐릭터
 	
 	// --- 내부 ---
 	FName SelectedID;
