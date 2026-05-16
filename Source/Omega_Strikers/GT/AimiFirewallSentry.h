@@ -134,6 +134,10 @@ private:
 
 	// 투사체 발사 or 라인트레이스 히트
 	void FireProjectile();
+
+	// 투사체 오버랩 콜백 — 첫 적중 처리 후 파괴 
+	UFUNCTION()
+	void OnProjectileOverlap(AActor* OverlappedActor, AActor* OtherActor);
 	
 	// 발사 시 VFX 스폰
 	void SpawnFireVFX(const FVector& Start, const FVector& End, bool bHit, const FVector& HitPoint);

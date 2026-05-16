@@ -149,6 +149,7 @@ void AAimiFirewallSentry::FireProjectile()
 
 		if (proj)
 		{
+			// ── 이동 컴포넌트 ──
 			UProjectileMovementComponent* projMove = proj->FindComponentByClass<UProjectileMovementComponent>();
 			if (!projMove)
 			{
@@ -162,6 +163,16 @@ void AAimiFirewallSentry::FireProjectile()
 			projMove->Velocity = FireDir * ProjectileSpeed;
 			projMove->bRotationFollowsVelocity = true;
 			projMove->ProjectileGravityScale = 0.f;
+
+			// ── 충돌 설정 (Pawn 오버랩) ──
+			if (UPrimitiveComponent* rootPrim = Cast<UPrimitiveComponent>(proj->GetRootComponent()))
+			{
+				rootPrim->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+				rootPrim->SetCollisionResponseToAllChannels(ECR_Ignore);
+				rootPrim->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+				rootPrim->SetGenerateOverlapEvents(true);
+			}
+			proj->OnActorBeginOverlap.AddDynamic(this, &AAimiFirewallSentry::OnProjectileOverlap);
 			
 			LOG_GT(TEXT("Fired projectile -> %s"), *proj->GetName());
 		}
@@ -195,6 +206,12 @@ void AAimiFirewallSentry::FireProjectile()
 				APlayerBase* ownerPlayer = Cast<APlayerBase>(GetOwner());
 				if (!ownerPlayer) return;
 
+				// 같은 팀 플레이어는 무시
+				if (APlayerBase* targetPlayer = Cast<APlayerBase>(target))
+				{
+					if (targetPlayer->TeamSide == ownerPlayer->TeamSide) return;
+				}
+				
 				FCharacterSkill* skill = ownerPlayer->GetSkillData(TEXT("Aimi_Primary"));
 				if (!skill) return;
 	
@@ -216,6 +233,55 @@ void AAimiFirewallSentry::FireProjectile()
 			}
 		}
 	}
+}
+
+// ════════════════════════════════════════════════════════════
+// OnProjectileOverlap — 투사체 적중 처리 (첫 적중만, 관통 X)
+// 서버에서만 판정 (투사체도 서버 스폰)
+// ════════════════════════════════════════════════════════════
+void AAimiFirewallSentry::OnProjectileOverlap(AActor* OverlappedActor, AActor* OtherActor)
+{
+	if (!HasAuthority()) return;
+	if (!OtherActor || OtherActor == this || OtherActor == OwnerCharacter) return;
+	if (!OtherActor->Implements<UOSImpactReceiver>()) return;
+
+	APlayerBase* ownerPlayer = Cast<APlayerBase>(OwnerCharacter);
+	if (!ownerPlayer) return;
+
+	// 같은 팀 플레이어는 무시
+	if (APlayerBase* targetPlayer = Cast<APlayerBase>(OtherActor))
+	{
+		if (targetPlayer->TeamSide == ownerPlayer->TeamSide) return;
+	}
+
+	FCharacterSkill* skill = ownerPlayer->GetSkillData(TEXT("Aimi_Primary"));
+	if (!skill) return;
+
+	FOSImpactData data = ownerPlayer->MakeImpactData(*skill);
+	const FVector2D dir2D = FVector2D(FireDir.X, FireDir.Y).GetSafeNormal();
+	data.Direction = dir2D;
+	data.CoreKnockbackPower = ProjectileCoreKnockback;
+	data.PlayerKnockbackPower = ProjectilePlayerKnockback;
+	data.PlayerDamage = ProjectileDamage;
+
+	if (ACoreBall* CoreBall = Cast<ACoreBall>(OtherActor))
+	{
+		FVector KnockDir = FVector(dir2D.X, dir2D.Y, 0.f).GetSafeNormal();
+		CoreBall->Server_HitCore(OverlappedActor->GetActorLocation(), KnockDir, data.CoreKnockbackPower);
+	}
+	else
+	{
+		IOSImpactReceiver::Execute_ReceiveImpact(OtherActor, data, this);
+	}
+
+	// Multicast: 히트 VFX
+	Multicast_FireVFX(OverlappedActor->GetActorLocation(),
+		OtherActor->GetActorLocation(), true, OtherActor->GetActorLocation());
+
+	LOG_GT(TEXT("Projectile hit %s"), *OtherActor->GetName());
+
+	// 첫 적중만 — 투사체 파괴
+	OverlappedActor->Destroy();
 }
 
 // ════════════════════════════════════════════════════════════
