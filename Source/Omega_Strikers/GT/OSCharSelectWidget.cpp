@@ -12,6 +12,10 @@
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
 #include "Components/UniformGridPanel.h"
+#include "GameFramework/Character.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/PlayerStart.h"
+#include "Kismet/GameplayStatics.h"
 #include "Omega_Strikers/Omega_Strikers.h"
 #include "Omega_Strikers/SSR/CharacterStat.h"
 
@@ -20,6 +24,12 @@ void UOSCharSelectWidget::NativeConstruct()
 	Super::NativeConstruct();
 
 	GetWorld()->GetTimerManager().ClearTimer(BindTimerHandle);
+
+	// 시작부터 텍스쳐 프리뷰 숨기기
+	if (PreviewImage)
+	{
+		PreviewImage->SetVisibility(ESlateVisibility::Hidden);
+	}
 	
 	// UI 전용 입력 모드로 전환 - 마우스는 위젯에서만 동작
 	if (APlayerController* pc = GetOwningPlayer())
@@ -205,7 +215,7 @@ void UOSCharSelectWidget::BuildGrid()
 void UOSCharSelectWidget::UpdatePreview(FName CharacterID)
 {
 	// 전신 이미지 자동 로드
-	if (PreviewImage != nullptr)
+	/*if (PreviewImage != nullptr)
 	{
 		UTexture2D* fullBody = LoadCharIconTexture(CharacterID, TEXT("FullBody"));
 		if (fullBody != nullptr)
@@ -216,6 +226,50 @@ void UOSCharSelectWidget::UpdatePreview(FName CharacterID)
 		else
 		{
 			PreviewImage->SetVisibility(ESlateVisibility::Hidden);
+		}
+	}*/
+
+	// ── 기존 텍스쳐 프리뷰 숨기기 ──
+	if (PreviewImage)
+	{
+		PreviewImage->SetVisibility(ESlateVisibility::Hidden);
+	}
+
+	// ── 기존 프리뷰 캐릭터 제거 ──
+	if (PreviewCharacter)
+	{
+		PreviewCharacter->Destroy();
+		PreviewCharacter = nullptr;
+	}
+
+	// ── 새 캐릭터 스폰 ──
+	TSubclassOf<ACharacter>* BPClass = CharacterBPMap.Find(CharacterID);
+	if (BPClass && *BPClass)
+	{
+		// PlayerStart 위치 찾기
+		AActor* StartSpot = UGameplayStatics::GetActorOfClass(
+			GetWorld(), APlayerStart::StaticClass());
+
+		if (StartSpot)
+		{
+			FActorSpawnParameters Params;
+			Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+			PreviewCharacter = GetWorld()->SpawnActor<ACharacter>(*BPClass, StartSpot->GetActorTransform(), Params);
+
+			if (PreviewCharacter)
+			{
+				// 스폰 직후에 리플리케이션 끄기
+				PreviewCharacter->SetReplicates(false);
+				
+				// 프리뷰용이므로 이동/AI 비활성화
+				PreviewCharacter->DisableInput(nullptr);
+				if (auto* Movement = PreviewCharacter->GetCharacterMovement())
+				{
+					Movement->GravityScale = 0.f;
+					Movement->StopMovementImmediately();
+				}
+			}
 		}
 	}
 	
