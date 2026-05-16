@@ -149,6 +149,9 @@ void AAimiFirewallSentry::FireProjectile()
 
 		if (proj)
 		{
+			proj->SetReplicates(true);
+			proj->SetReplicateMovement(true);
+			
 			// ── 이동 컴포넌트 ──
 			UProjectileMovementComponent* projMove = proj->FindComponentByClass<UProjectileMovementComponent>();
 			if (!projMove)
