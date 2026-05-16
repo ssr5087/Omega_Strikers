@@ -171,6 +171,15 @@ void AAimi::Ready_CoreHit()
 void AAimi::Use_CoreHit()
 {
 	Super::Use_CoreHit();
+
+	if (!IsLocallyControlled()) return;
+
+	// 스킬 UI 쿨다운 표시
+	if (SkillUI) SkillUI->LoadCore();
+
+	// PlayerBase의 서버 판정 RPC 호출
+	const FVector2D AimDir2D = FVector2D(CachedAimDirection.X, CachedAimDirection.Y);
+	ServerRPC_CoreHit(AimDir2D);
 	
 	// 몽타주 재생
 	Server_PlaySkillMontage(0);  // Strike

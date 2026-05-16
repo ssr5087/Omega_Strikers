@@ -4,6 +4,7 @@
 #include "HPComponent.h"
 
 #include "Net/UnrealNetwork.h"
+#include "Omega_Strikers/Omega_Strikers.h"
 
 
 // Sets default values for this component's properties
@@ -75,6 +76,7 @@ void UHPComponent::UpdateMaxHP(float NewMax)
 
 void UHPComponent::ApplyDamage(float DamageAmount)
 {
+	LOG_GT(TEXT("ApplyDamage 호출"));
 	// 서버에서만 실행
 	if (!IsServer()) {return;}
 	

@@ -340,6 +340,7 @@ void APlayerBase::ApllyTeamSide(EOSTeam team)
 
 bool APlayerBase::ReceiveImpact_Implementation(const FOSImpactData& ImpactData, AActor* InstigatorActor)
 {
+	LOG_GT(TEXT("★ ReceiveImpact 진입! Target=%s Authority=%d"), *GetName(), HasAuthority());
 	// 넉백, 체력 상태는 서버에서만 관리
 	if (!HasAuthority()) {return false;}
 	if (bIsProcessingImpact)
