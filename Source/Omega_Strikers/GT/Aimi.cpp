@@ -18,6 +18,7 @@
 #include "Omega_Strikers/SM/HPComponent.h"
 #include "Omega_Strikers/SSR/CharacterSkill.h"
 #include "AimiAnimInstance.h"
+#include "SkillIndicatorBase.h"
 #include "Net/UnrealNetwork.h"
 #include "Blueprint/UserWidget.h"
 #include "Omega_Strikers/SM/LunaSkillCool.h"
@@ -41,9 +42,15 @@ void AAimi::Multicast_PlaySkillMontage_Implementation(uint8 SkillIndex)
 	switch (SkillIndex)
 	{
 		case 0: Anim->PlayStrike();      break;
-		case 1: Anim->PlayGlitchOrb();   break;
-		case 2: Anim->PlayCyberSwipe();  break;
-		case 3: Anim->PlayPlaceSentry(); break;
+		case 1: Anim->PlayGlitchOrb();
+				Multicast_PlaySFX(PrimarySFX);
+				break;
+		case 2: Anim->PlayCyberSwipe();
+				Multicast_PlaySFX(SecondarySFX);
+				break;
+		case 3: Anim->PlayPlaceSentry();
+				Multicast_PlaySFX(SpecialSFX);
+				break;
 		case 4: Anim->PlayFlip();        break;
 	}
 }
@@ -104,6 +111,38 @@ void AAimi::BeginPlay()
 	{
 		SkillUI->AddToViewport();
 	}
+}
+
+void AAimi::ConfigureSkillIndicator(ESkillType SkillType, ASkillIndicatorBase* Indicator)
+{
+	Super::ConfigureSkillIndicator(SkillType, Indicator);
+	
+	if (!Indicator)
+	{
+		return;
+	}
+
+	float IndicatorRange = 0.f;
+
+	switch (SkillType)
+	{
+	case ESkillType::Primary:
+		IndicatorRange = 1200.f;
+		break;
+
+	case ESkillType::Secondary:
+		IndicatorRange = 2000.f;
+		break;
+
+	case ESkillType::Special:
+		IndicatorRange = 1000.f;
+		break;
+
+	default:
+		return;
+	}
+
+	Indicator->SetIndicatorRange(IndicatorRange);
 }
 
 void AAimi::Tick(float DeltaTime)
@@ -226,14 +265,20 @@ void AAimi::Ready_PrimarySkill()
 	if (ActiveOrb && !ActiveOrb->HasDetonated())
 	{
 		// 재시전 대기 UI
-		
 	}
+	ShowSkillIndicator(PrimaryIndicatorClass, ESkillType::Primary);
 }
 
 void AAimi::Use_PrimarySkill()
 {
 	LOG_GT(TEXT("Use_PrimarySkill called! — bAimingPrimary was %d"), bAimingPrimary);
 	Super::Use_PrimarySkill();
+	
+	
+	if (IsLocallyControlled() && SkillUI)
+	{
+		SkillUI->LoadPrim();
+	}
 	
 	// 클라이언트는 Server RPC만 호출
 	if (ActiveOrb && !ActiveOrb->HasDetonated())
@@ -308,12 +353,21 @@ void AAimi::Ready_SecondarySkill()
 {
 	if (SecondaryCool > 0.f) return;
 	Super::Ready_SecondarySkill();
+	
+	ShowSkillIndicator(SecondaryIndicatorClass, ESkillType::Secondary);
 }
 
 void AAimi::Use_SecondarySkill()
 {
 	Super::Use_SecondarySkill();
+	
 	if (SecondaryCool > 0.f) return;
+	
+	if (IsLocallyControlled() && SkillUI)
+	{
+		SkillUI->LoadSeco();
+	}
+	
 	
 	// 클라이언트는 Server RPC만 호출
 	Server_CyberSwipe(CachedAimDirection);
@@ -399,12 +453,19 @@ void AAimi::Ready_SpecialSkill()
 {
 	if (SpecialCool > 0.f) return;
 	Super::Ready_SpecialSkill();
+	
+	ShowSkillIndicator(SpecialIndicatorClass, ESkillType::Special);
 }
 
 void AAimi::Use_SpecialSkill()
 {
 	Super::Use_SpecialSkill();
 	if (SpecialCool > 0.f) return;
+	
+	if (IsLocallyControlled() && SkillUI)
+	{
+		SkillUI->LoadSpec();
+	}
 
 	// 클라이언트는 Server RPC만 호출
 	Server_PlaceSentry(CachedAimDirection);

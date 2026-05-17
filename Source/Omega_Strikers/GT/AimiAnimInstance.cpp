@@ -48,12 +48,16 @@ void UAimiAnimInstance::PlayStrike()
 {
     if (StrikeMontage && !Montage_IsPlaying(StrikeMontage))
         Montage_Play(StrikeMontage);
+    
+    
 }
 
 void UAimiAnimInstance::PlayGlitchOrb()
 {
     if (GlitchOrbMontage && !Montage_IsPlaying(GlitchOrbMontage))
         Montage_Play(GlitchOrbMontage);
+    
+    
 }
 
 void UAimiAnimInstance::PlayCyberSwipe()
