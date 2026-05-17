@@ -56,6 +56,8 @@ void UAimiAnimInstance::PlayGlitchOrb()
 {
     if (GlitchOrbMontage && !Montage_IsPlaying(GlitchOrbMontage))
         Montage_Play(GlitchOrbMontage);
+    
+    
 }
 
 void UAimiAnimInstance::PlayCyberSwipe()

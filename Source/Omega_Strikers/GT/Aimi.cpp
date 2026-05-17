@@ -42,9 +42,15 @@ void AAimi::Multicast_PlaySkillMontage_Implementation(uint8 SkillIndex)
 	switch (SkillIndex)
 	{
 		case 0: Anim->PlayStrike();      break;
-		case 1: Anim->PlayGlitchOrb();   break;
-		case 2: Anim->PlayCyberSwipe();  break;
-		case 3: Anim->PlayPlaceSentry(); break;
+		case 1: Anim->PlayGlitchOrb();
+				Multicast_PlaySFX(PrimarySFX);
+				break;
+		case 2: Anim->PlayCyberSwipe();
+				Multicast_PlaySFX(SecondarySFX);
+				break;
+		case 3: Anim->PlayPlaceSentry();
+				Multicast_PlaySFX(SpecialSFX);
+				break;
 		case 4: Anim->PlayFlip();        break;
 	}
 }
@@ -268,6 +274,12 @@ void AAimi::Use_PrimarySkill()
 	LOG_GT(TEXT("Use_PrimarySkill called! — bAimingPrimary was %d"), bAimingPrimary);
 	Super::Use_PrimarySkill();
 	
+	
+	if (IsLocallyControlled() && SkillUI)
+	{
+		SkillUI->LoadPrim();
+	}
+	
 	// 클라이언트는 Server RPC만 호출
 	if (ActiveOrb && !ActiveOrb->HasDetonated())
 	{
@@ -348,7 +360,14 @@ void AAimi::Ready_SecondarySkill()
 void AAimi::Use_SecondarySkill()
 {
 	Super::Use_SecondarySkill();
+	
 	if (SecondaryCool > 0.f) return;
+	
+	if (IsLocallyControlled() && SkillUI)
+	{
+		SkillUI->LoadSeco();
+	}
+	
 	
 	// 클라이언트는 Server RPC만 호출
 	Server_CyberSwipe(CachedAimDirection);
@@ -442,6 +461,11 @@ void AAimi::Use_SpecialSkill()
 {
 	Super::Use_SpecialSkill();
 	if (SpecialCool > 0.f) return;
+	
+	if (IsLocallyControlled() && SkillUI)
+	{
+		SkillUI->LoadSpec();
+	}
 
 	// 클라이언트는 Server RPC만 호출
 	Server_PlaceSentry(CachedAimDirection);
