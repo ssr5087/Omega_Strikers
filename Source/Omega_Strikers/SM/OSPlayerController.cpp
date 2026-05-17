@@ -120,8 +120,38 @@ void AOSPlayerController::AddScoreBoard()
 
 void AOSPlayerController::SetScoreBoard(int32 TeamIndex, int32 NewScore, int32 ScorerID)
 {
-	if (TeamIndex == 0) {BlueScore = NewScore;}
-	else {RedScore = NewScore;}
+	if (TeamIndex == 0 && BlueScore != NewScore)
+	{
+		BlueScore = NewScore;
+		switch (ScorerID)
+		{
+		case 1:
+			B3++;
+			break;
+		case 2:
+			B1++;
+			break;
+		default:
+			B2++;
+			break;
+		}
+	}
+	else if (TeamIndex == 1 && RedScore != NewScore)
+	{
+		RedScore = NewScore;
+		switch (ScorerID)
+		{
+		case 1:
+			R3++;
+			break;
+		case 2:
+			R1++;
+			break;
+		default:
+			R2++;
+			break;
+		}
+	}
 	
 	ScorerIndex = ScorerID;
 	
@@ -137,7 +167,7 @@ void AOSPlayerController::SetScoreBoard(int32 TeamIndex, int32 NewScore, int32 S
 		ResultWidget = CreateWidget<UResultWidget>(GetWorld(), ResultWidgetClass);
 		if (ResultWidget)
 		{
-			ResultWidget->SetScore(BlueScore, RedScore);
+			ResultWidget->SetScore(BlueScore, RedScore, B1, B2, B3, R1, R2, R3);
 			FTimerHandle ResultWidgetTimer;
 			GetWorldTimerManager().SetTimer(
 				ResultWidgetTimer,

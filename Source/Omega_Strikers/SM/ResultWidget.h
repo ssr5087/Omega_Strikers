@@ -15,6 +15,9 @@ class OMEGA_STRIKERS_API UResultWidget : public UUserWidget
 	GENERATED_BODY()
 	
 public:
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+	class UWidgetSwitcher* WidgetSwitcher;
+	
 	UPROPERTY(meta=(BindWidget))
 	class UTextBlock* txt_BlueScore;
 	
@@ -39,5 +42,5 @@ public:
 	UPROPERTY(meta=(BindWidget))
 	class UTextBlock* txt_Score_R3;
 	
-	void SetScore(int32 blue, int32 red);
+	void SetScore(int32 blue, int32 red, int32 B1, int32 B2, int32 B3, int32 R1,int32 R2, int32 R3);
 };

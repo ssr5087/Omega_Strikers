@@ -119,9 +119,9 @@ public:
 	bool bSpecialSkillCoolDown = false;
 	
 	// 각 스킬 쿨타임
-	float PrimarySkillCool = 0.5f;		// 6.5
+	float PrimarySkillCool = 6.5f;		// 6.5
 	float SecondarySkillCool = 14.f;	// 14
-	float SpecialSkillCool = 1.5f;		// 35
+	float SpecialSkillCool = 35.f;		// 35
 	
 	// ----------------- Primary -----------------
 	
