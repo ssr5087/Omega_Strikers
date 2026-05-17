@@ -5,39 +5,15 @@
 
 #include "Components/TextBlock.h"
 
-void UResultWidget::SetScore(int32 blue, int32 red)
+void UResultWidget::SetScore(int32 blue, int32 red, int32 B1, int32 B2, int32 B3, int32 R1,int32 R2, int32 R3)
 {
 	txt_BlueScore->SetText(FText::AsNumber(blue));
 	txt_RedScore->SetText(FText::AsNumber(red));
 	
-	txt_Score_B2->SetText(FText::AsNumber(3));
-	txt_Score_R2->SetText(FText::AsNumber(3));
-	
-	switch (blue)
-	{
-		case 4:
-			txt_Score_B3->SetText(FText::AsNumber(1));
-			break;
-		case 5:
-			txt_Score_B1->SetText(FText::AsNumber(1));
-			txt_Score_B3->SetText(FText::AsNumber(1));
-			break;
-		default:
-			txt_Score_B2->SetText(FText::AsNumber(blue));
-			break;
-	}
-	
-	switch (red)
-	{
-		case 4:
-			txt_Score_R3->SetText(FText::AsNumber(1));
-			break;
-		case 5:
-			txt_Score_R1->SetText(FText::AsNumber(1));
-			txt_Score_R3->SetText(FText::AsNumber(1));
-			break;
-		default:
-			txt_Score_R2->SetText(FText::AsNumber(red));
-			break;
-	}
+	txt_Score_B1->SetText(FText::AsNumber(B1));
+	txt_Score_R1->SetText(FText::AsNumber(R1));
+	txt_Score_B2->SetText(FText::AsNumber(B2));
+	txt_Score_R2->SetText(FText::AsNumber(R2));
+	txt_Score_B3->SetText(FText::AsNumber(B3));
+	txt_Score_R3->SetText(FText::AsNumber(R3));
 }

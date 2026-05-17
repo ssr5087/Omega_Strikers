@@ -30,6 +30,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Luna|Components")
 	TObjectPtr<class UStaticMeshComponent> RocketMesh;
 	
+	// 폭발 이펙트
+	UPROPERTY(EditDefaultsOnly, Category="FX")
+	TObjectPtr<class UNiagaraSystem> ExplosionVFX;
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Rocket")
 	float Luna_Power = 50.0f;
 	
@@ -49,4 +53,12 @@ public:
 	
 	UFUNCTION()
 	void OnSpecialRocketOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+	UPROPERTY(ReplicatedUsing=OnRep_VFX)
+	FVector ActorLocation;
+	
+	UFUNCTION(NetMulticast, Reliable)
+	void OnRep_VFX();
+	
+	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 };

@@ -4,10 +4,12 @@
 #include "Luna_SpecialRocket.h"
 
 #include "Luna.h"
+#include "NiagaraFunctionLibrary.h"
 #include "PlayerBase.h"
 #include "Components/BoxComponent.h"
 #include "Core/CoreBall.h"
 #include "Kismet/GameplayStatics.h"
+#include "Net/UnrealNetwork.h"
 #include "Omega_Strikers/Omega_Strikers.h"
 
 
@@ -112,7 +114,33 @@ void ALuna_SpecialRocket::OnSpecialRocketOverlap(UPrimitiveComponent* Overlapped
 				IOSImpactReceiver::Execute_ReceiveImpact(actor, SpecialFarImpactData, OwnerActorRef);
 			}
 		}
+		ActorLocation = GetActorLocation();
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+			GetWorld(),
+			ExplosionVFX,
+			ActorLocation,
+			FRotator::ZeroRotator
+		);
 		Destroy();
 	}
 }
+
+void ALuna_SpecialRocket::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	
+	DOREPLIFETIME(ALuna_SpecialRocket, ActorLocation);
+}
+
+void ALuna_SpecialRocket::OnRep_VFX_Implementation()
+{
+	UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+			GetWorld(),
+			ExplosionVFX,
+			ActorLocation,
+			FRotator::ZeroRotator
+		);
+}
+
+
 

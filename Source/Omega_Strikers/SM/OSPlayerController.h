@@ -69,4 +69,6 @@ public:
 	
 	void AddWidget();
 	void RemoveWidget();
+	
+	int32 B1 = 0, B2 = 0, B3 = 0, R1 = 0, R2 = 0, R3 = 0;
 };
