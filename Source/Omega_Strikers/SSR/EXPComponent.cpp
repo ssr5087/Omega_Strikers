@@ -13,8 +13,8 @@
 UEXPComponent::UEXPComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
-	SetIsReplicated(true);
-	
+	//SetIsReplicated(true);
+	SetIsReplicatedByDefault(true);
 }
 
 void UEXPComponent::BeginPlay()
