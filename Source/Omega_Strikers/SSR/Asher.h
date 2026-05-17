@@ -63,7 +63,7 @@ public:
 	bool bPrimary_SkillCoolDown = false;
 	
 	// 스킬 쿨타임 시간
-	float Primary_SkillCool = 4.0f;
+	float Primary_SkillCool = 10.f;
 	
 	// 1타
 	void DoPrimaryHit1();
@@ -88,7 +88,7 @@ public:
 	FTimerHandle SpecialSkillTimer;
 	
 	// 스킬 쿨타임 시간
-	float Special_SkillCool = 4.0f;
+	float Special_SkillCool = 40.0f;
 	
 	EOSTeam MyTeam = EOSTeam::Blue;
 	
@@ -107,7 +107,7 @@ public:
 	FTimerHandle SecondaryDashTimer;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Secondary")
-	float Secondary_SkillCool = 4.0f;
+	float Secondary_SkillCool = 14.5f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Secondary")
 	float Secondary_DashDistance = 700.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Secondary")

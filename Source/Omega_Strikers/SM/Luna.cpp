@@ -93,6 +93,7 @@ void ALuna::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 }
 
+// 스킬 사거리 표시
 void ALuna::ConfigureSkillIndicator(ESkillType SkillType, ASkillIndicatorBase* Indicator)
 {
 	Super::ConfigureSkillIndicator(SkillType, Indicator);

@@ -48,6 +48,8 @@ void UAimiAnimInstance::PlayStrike()
 {
     if (StrikeMontage && !Montage_IsPlaying(StrikeMontage))
         Montage_Play(StrikeMontage);
+    
+    
 }
 
 void UAimiAnimInstance::PlayGlitchOrb()

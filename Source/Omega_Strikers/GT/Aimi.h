@@ -98,6 +98,7 @@ public:
 	
 protected:
 	virtual void BeginPlay() override;
+	virtual void ConfigureSkillIndicator(ESkillType SkillType, ASkillIndicatorBase* Indicator);
 
 public:
 	virtual void Tick(float DeltaTime) override;

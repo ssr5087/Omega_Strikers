@@ -18,6 +18,7 @@
 #include "Omega_Strikers/SM/HPComponent.h"
 #include "Omega_Strikers/SSR/CharacterSkill.h"
 #include "AimiAnimInstance.h"
+#include "SkillIndicatorBase.h"
 #include "Net/UnrealNetwork.h"
 #include "Blueprint/UserWidget.h"
 #include "Omega_Strikers/SM/LunaSkillCool.h"
@@ -104,6 +105,38 @@ void AAimi::BeginPlay()
 	{
 		SkillUI->AddToViewport();
 	}
+}
+
+void AAimi::ConfigureSkillIndicator(ESkillType SkillType, ASkillIndicatorBase* Indicator)
+{
+	Super::ConfigureSkillIndicator(SkillType, Indicator);
+	
+	if (!Indicator)
+	{
+		return;
+	}
+
+	float IndicatorRange = 0.f;
+
+	switch (SkillType)
+	{
+	case ESkillType::Primary:
+		IndicatorRange = 1200.f;
+		break;
+
+	case ESkillType::Secondary:
+		IndicatorRange = 2000.f;
+		break;
+
+	case ESkillType::Special:
+		IndicatorRange = 1000.f;
+		break;
+
+	default:
+		return;
+	}
+
+	Indicator->SetIndicatorRange(IndicatorRange);
 }
 
 void AAimi::Tick(float DeltaTime)
@@ -226,8 +259,8 @@ void AAimi::Ready_PrimarySkill()
 	if (ActiveOrb && !ActiveOrb->HasDetonated())
 	{
 		// 재시전 대기 UI
-		
 	}
+	ShowSkillIndicator(PrimaryIndicatorClass, ESkillType::Primary);
 }
 
 void AAimi::Use_PrimarySkill()
@@ -308,6 +341,8 @@ void AAimi::Ready_SecondarySkill()
 {
 	if (SecondaryCool > 0.f) return;
 	Super::Ready_SecondarySkill();
+	
+	ShowSkillIndicator(SecondaryIndicatorClass, ESkillType::Secondary);
 }
 
 void AAimi::Use_SecondarySkill()
@@ -399,6 +434,8 @@ void AAimi::Ready_SpecialSkill()
 {
 	if (SpecialCool > 0.f) return;
 	Super::Ready_SpecialSkill();
+	
+	ShowSkillIndicator(SpecialIndicatorClass, ESkillType::Special);
 }
 
 void AAimi::Use_SpecialSkill()
