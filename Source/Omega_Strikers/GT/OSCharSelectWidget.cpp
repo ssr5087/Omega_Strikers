@@ -9,6 +9,7 @@
 #include "OSGameInstance.h"
 #include "OSPlayerState.h"
 #include "Components/Button.h"
+#include "Components/CapsuleComponent.h"
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
 #include "Components/UniformGridPanel.h"
@@ -257,6 +258,19 @@ void UOSCharSelectWidget::UpdatePreview(FName CharacterID)
 
 			PreviewCharacter = GetWorld()->SpawnActor<ACharacter>(*BPClass, StartSpot->GetActorTransform(), Params);
 
+			// 프리뷰 캐릭터 스폰 후 — 바닥 정렬
+			if (PreviewCharacter)
+			{
+				float actorZ = PreviewCharacter->GetActorLocation().Z;
+				float capsuleBottom = actorZ- PreviewCharacter->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+				float floorZ = StartSpot->GetActorLocation().Z;
+    
+				// 캡슐 바닥이 바닥면에 닿도록 보정
+				float offset = floorZ - capsuleBottom - 60.f;
+				PreviewCharacter->AddActorWorldOffset(FVector(0, 0, offset));
+				LOG_GT(TEXT("캐릭터 선택 프리뷰 Z offset : %.1f"), offset);
+			}
+			
 			if (PreviewCharacter)
 			{
 				// 스폰 직후에 리플리케이션 끄기
